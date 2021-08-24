@@ -1080,7 +1080,7 @@ void Group::GroupLoot(Loot* loot, WorldObject* pLootedObject)
                 Player* member = itr->GetSource();
                 if (!member || !member->GetSession())
                     continue;
-                if (member->IsAtGroupRewardDistance(pLootedObject))
+                if (member->IsAtLootRewardDistance(pLootedObject))
                 {
                     r->totalPlayersRolling++;
                     RollVote vote = member->GetPassOnGroupLoot() ? PASS : NOT_EMITED_YET;
@@ -1166,7 +1166,7 @@ void Group::GroupLoot(Loot* loot, WorldObject* pLootedObject)
             if (!member || !member->GetSession())
                 continue;
 
-            if (member->IsAtGroupRewardDistance(pLootedObject))
+            if (member->IsAtLootRewardDistance(pLootedObject))
             {
                 r->totalPlayersRolling++;
                 RollVote vote = NOT_EMITED_YET;
@@ -1231,7 +1231,7 @@ void Group::NeedBeforeGreed(Loot* loot, WorldObject* lootedObject)
                 if (!playerToRoll || !playerToRoll->GetSession())
                     continue;
 
-                if (playerToRoll->IsAtGroupRewardDistance(lootedObject))
+                if (playerToRoll->IsAtLootRewardDistance(lootedObject))
                 {
                     r->totalPlayersRolling++;
                     RollVote vote = playerToRoll->GetPassOnGroupLoot() ? PASS : NOT_EMITED_YET;
@@ -1305,7 +1305,7 @@ void Group::NeedBeforeGreed(Loot* loot, WorldObject* lootedObject)
             if (!playerToRoll || !playerToRoll->GetSession())
                 continue;
 
-            if (playerToRoll->IsAtGroupRewardDistance(lootedObject))
+            if (playerToRoll->IsAtLootRewardDistance(lootedObject))
             {
                 r->totalPlayersRolling++;
                 RollVote vote = NOT_EMITED_YET;
@@ -1376,32 +1376,26 @@ void Group::MasterLoot(Loot* loot, WorldObject* pLootedObject)
         i->is_blocked = !i->is_underthreshold;
     }
 
-    uint32 real_count = 0;
-
-    WorldPacket data(SMSG_LOOT_MASTER_LIST, 1 + GetMembersCount() * 8);
-    data << uint8(GetMembersCount());
-
+    std::vector<Player*> looters;
     for (GroupReference* itr = GetFirstMember(); itr != nullptr; itr = itr->next())
     {
         Player* looter = itr->GetSource();
         if (!looter->IsInWorld())
             continue;
+        
+        if (looter->IsAtLootRewardDistance(pLootedObject))
+            looters.push_back(looter);
 
-        if (looter->IsAtGroupRewardDistance(pLootedObject))
-        {
-            data << uint64(looter->GetGUID());
-            ++real_count;
-        }
     }
 
-    data.put<uint8>(0, real_count);
+    WorldPacket data(SMSG_LOOT_MASTER_LIST, 1 + looters.size() * (1 + 8));
+    data << uint8(looters.size());
 
-    for (GroupReference* itr = GetFirstMember(); itr != nullptr; itr = itr->next())
-    {
-        Player* looter = itr->GetSource();
-        if (looter->IsAtGroupRewardDistance(pLootedObject))
-            looter->SendDirectMessage(&data);
-    }
+    for (Player* looter : looters)
+        data << looter->GetGUID();
+
+    for (Player* looter : looters)
+        looter->GetSession()->SendPacket(&data);
 }
 
 bool Group::CountRollVote(ObjectGuid playerGUID, ObjectGuid Guid, uint8 Choice)
@@ -1963,7 +1957,7 @@ void Group::UpdateLooterGuid(WorldObject* pLootedObject, bool ifneed)
         {
             // not update if only update if need and ok
             Player* looter = ObjectAccessor::FindPlayer(guid_itr->guid);
-            if (looter && looter->IsAtGroupRewardDistance(pLootedObject))
+            if (looter && looter->IsAtLootRewardDistance(pLootedObject))
                 return;
         }
         ++guid_itr;
@@ -1974,7 +1968,7 @@ void Group::UpdateLooterGuid(WorldObject* pLootedObject, bool ifneed)
     for (member_citerator itr = guid_itr; itr != m_memberSlots.end(); ++itr)
     {
         if (Player* player = ObjectAccessor::FindPlayer(itr->guid))
-            if (player->IsAtGroupRewardDistance(pLootedObject))
+            if (player->IsAtLootRewardDistance(pLootedObject))
             {
                 pNewLooter = player;
                 break;
@@ -1987,7 +1981,7 @@ void Group::UpdateLooterGuid(WorldObject* pLootedObject, bool ifneed)
         for (member_citerator itr = m_memberSlots.begin(); itr != guid_itr; ++itr)
         {
             if (Player* player = ObjectAccessor::FindPlayer(itr->guid))
-                if (player->IsAtGroupRewardDistance(pLootedObject))
+                if (player->IsAtLootRewardDistance(pLootedObject))
                 {
                     pNewLooter = player;
                     break;
