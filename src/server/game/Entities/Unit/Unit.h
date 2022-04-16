@@ -871,6 +871,7 @@ class TC_GAME_API Unit : public WorldObject
         void CombatStop(bool includingCast = false, bool mutualPvP = true);
         void CombatStopWithPets(bool includingCast = false);
         void StopAttackFaction(uint32 faction_id);
+        void StopAttackingInvalidTarget();
         Unit* SelectNearbyTarget(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE) const;
         void SendMeleeAttackStop(Unit* victim = nullptr);
         void SendMeleeAttackStart(Unit* victim);
