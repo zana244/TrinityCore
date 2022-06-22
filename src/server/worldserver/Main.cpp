@@ -21,6 +21,7 @@
 
 // @tswow-begin
 #include "TSLibLoader.h"
+#include "TSProfile.h"
 // @tswow-end
 #include "Common.h"
 #include "AppenderDB.h"
@@ -58,6 +59,7 @@
 #include <openssl/opensslv.h>
 #include <openssl/crypto.h>
 #include <boost/asio/signal_set.hpp>
+#include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <csignal>
@@ -69,8 +71,6 @@ namespace fs = boost::filesystem;
 #ifndef _TRINITY_CORE_CONFIG
     #define _TRINITY_CORE_CONFIG  "worldserver.conf"
 #endif
-
-#define WORLD_SLEEP_CONST 1
 
 #ifdef _WIN32
 #include "ServiceWin32.h"
@@ -211,7 +211,7 @@ extern int main(int argc, char** argv)
         []()
         {
             TC_LOG_INFO("server.worldserver", "Using configuration file %s.", sConfigMgr->GetFilename().c_str());
-            TC_LOG_INFO("server.worldserver", "Using SSL version: %s (library: %s)", OPENSSL_VERSION_TEXT, SSLeay_version(SSLEAY_VERSION));
+            TC_LOG_INFO("server.worldserver", "Using SSL version: %s (library: %s)", OPENSSL_VERSION_TEXT, OpenSSL_version(OPENSSL_VERSION));
             TC_LOG_INFO("server.worldserver", "Using Boost version: %i.%i.%i", BOOST_VERSION / 100000, BOOST_VERSION / 100 % 1000, BOOST_VERSION % 100);
         }
     );
@@ -219,7 +219,7 @@ extern int main(int argc, char** argv)
     for (std::string const& key : overriddenKeys)
         TC_LOG_INFO("server.worldserver", "Configuration field '%s' was overridden with environment variable.", key.c_str());
 
-    OpenSSLCrypto::threadsSetup();
+    OpenSSLCrypto::threadsSetup(boost::dll::program_location().remove_filename());
 
     std::shared_ptr<void> opensslHandle(nullptr, [](void*) { OpenSSLCrypto::threadsCleanup(); });
 
@@ -380,7 +380,13 @@ extern int main(int argc, char** argv)
         FreezeDetector::Start(freezeDetector);
         TC_LOG_INFO("server.worldserver", "Starting up anti-freeze thread (%u seconds max stuck time)...", coreStuckTime);
     }
-
+    // @tswow-begin
+#ifdef TRACY_ENABLE
+    TC_LOG_INFO("server.worldserver", "Tracy: Enabled");
+#else
+    TC_LOG_INFO("server.worldserver", "Tracy: Disabled");
+#endif
+    // @tswow-end
     TC_LOG_INFO("server.worldserver", "%s (worldserver-daemon) ready...", GitRevision::GetFullVersion());
 
     sScriptMgr->OnStartup();
@@ -480,6 +486,8 @@ void ShutdownCLIThread(std::thread* cliThread)
 
 void WorldUpdateLoop()
 {
+    tracy::SetThreadName("Main"); // @tswow-line tracy
+    uint32 minUpdateDiff = uint32(sConfigMgr->GetIntDefault("MinWorldUpdateTime", 1));
     uint32 realCurrTime = 0;
     uint32 realPrevTime = getMSTime();
 
@@ -494,10 +502,10 @@ void WorldUpdateLoop()
         realCurrTime = getMSTime();
 
         uint32 diff = getMSTimeDiff(realPrevTime, realCurrTime);
-        if (!diff)
+        if (diff < minUpdateDiff)
         {
             // sleep until enough time passes that we can update all timers
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::sleep_for(Milliseconds(minUpdateDiff - diff));
             continue;
         }
 

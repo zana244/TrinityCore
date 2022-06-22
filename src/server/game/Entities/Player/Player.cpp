@@ -107,7 +107,9 @@
 #include "WorldSession.h"
 #include "WorldStatePackets.h"
 // @tswow-begin
+#include "TSProfile.h"
 #include "TSEvents.h"
+#include "TSFactionTemplate.h"
 #include "TSQuest.h"
 #include "TSPlayer.h"
 #include "TSCreature.h"
@@ -186,11 +188,9 @@ uint32 const MAX_MONEY_AMOUNT = static_cast<uint32>(std::numeric_limits<int32>::
 Player::Player(WorldSession* session): Unit(true)
 // @tswow-begin
 , m_msg_buffer(TSPlayer(this))
+, m_db_json(DBJsonEntityType::PLAYER,0)
 // @tswow-end
 {
-    m_speakTime = 0;
-    m_speakCount = 0;
-
     m_objectType |= TYPEMASK_PLAYER;
     m_objectTypeId = TYPEID_PLAYER;
 
@@ -212,6 +212,9 @@ Player::Player(WorldSession* session): Unit(true)
 
     m_usedTalentCount = 0;
     m_questRewardTalentCount = 0;
+    // @tswow-begin
+    m_questRewardPermTalentCount = 0;
+    // @tswow-end
 
     m_regenTimer = 0;
     m_regenTimerCount = 0;
@@ -475,6 +478,9 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     /// @todo need more checks against packet modifications
 
     Object::_Create(guidlow, 0, HighGuid::Player);
+    // @tswow-begin
+    m_db_json = TSDBJson(DBJsonEntityType::PLAYER, GetGUID().GetRawValue());
+    // @tswow-end
 
     m_name = createInfo->Name;
 
@@ -523,17 +529,17 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
 
     SetRace(createInfo->Race);
     SetClass(createInfo->Class);
-    SetGender(createInfo->Gender);
+    SetGender(Gender(createInfo->Gender));
     SetPowerType(Powers(powertype), false);
     InitDisplayIds();
     if (sWorld->getIntConfig(CONFIG_GAME_TYPE) == REALM_TYPE_PVP || sWorld->getIntConfig(CONFIG_GAME_TYPE) == REALM_TYPE_RPPVP)
     {
-        SetByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_PVP);
-        SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+        SetPvpFlag(UNIT_BYTE2_FLAG_PVP);
+        SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED);
     }
-    SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_REGENERATE_POWER);
-    SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);               // fix cast time showed in spell tooltip on client
-    SetFloatValue(UNIT_FIELD_HOVERHEIGHT, 1.0f);            // default for players in 3.0.3
+    SetUnitFlag2(UNIT_FLAG2_REGENERATE_POWER);
+    SetModCastingSpeed(1.0f);               // fix cast time showed in spell tooltip on client
+    SetHoverHeight(1.0f);            // default for players in 3.0.3
 
     SetInt32Value(PLAYER_FIELD_WATCHED_FACTION_INDEX, uint32(-1));  // -1 is default value
 
@@ -543,7 +549,7 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     SetHairColorId(createInfo->HairColor);
     SetFacialStyle(createInfo->FacialHair);
     SetRestState((GetSession()->IsARecruiter() || GetSession()->GetRecruiterId() != 0) ? REST_STATE_RAF_LINKED : REST_STATE_NOT_RAF_LINKED);
-    SetNativeGender(createInfo->Gender);
+    SetNativeGender(Gender(createInfo->Gender));
     SetArenaFaction(0);
 
     SetUInt32Value(PLAYER_GUILDID, 0);
@@ -1022,6 +1028,7 @@ void Player::SetDrunkValue(uint8 newDrunkValue, uint32 itemId /*= 0*/)
 
 void Player::Update(uint32 p_time)
 {
+    TC_ZONE_SCOPED(ENTITY_PROFILE) // @tswow-line tracy
     if (!IsInWorld())
         return;
 
@@ -1314,9 +1321,10 @@ void Player::Update(uint32 p_time)
                 ++itr;
         }
     }
-
-    if (GetClass() == CLASS_DEATH_KNIGHT)
+    //@tswow-begin
+    if (HasRunes())
     {
+    //@tswow-end
         // Update rune timers
         for (uint8 i = 0; i < MAX_RUNES; ++i)
         {
@@ -1990,8 +1998,8 @@ void Player::RemoveFromWorld()
 void Player::SetObjectScale(float scale)
 {
     Unit::SetObjectScale(scale);
-    SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, scale * DEFAULT_PLAYER_BOUNDING_RADIUS);
-    SetFloatValue(UNIT_FIELD_COMBATREACH, scale * DEFAULT_PLAYER_COMBAT_REACH);
+    SetBoundingRadius(scale * DEFAULT_PLAYER_BOUNDING_RADIUS);
+    SetCombatReach(scale * DEFAULT_PLAYER_COMBAT_REACH);
 }
 
 bool Player::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo const& spellEffectInfo, WorldObject const* caster) const
@@ -2018,10 +2026,15 @@ void Player::RegenerateAll()
     Regenerate(POWER_MANA);
 
     // Runes act as cooldowns, and they don't need to send any data
-    if (GetClass() == CLASS_DEATH_KNIGHT)
+    //@tswow-begin
+    if (HasRunes())
+    {
+    //@tswow-end
         for (uint8 i = 0; i < MAX_RUNES; ++i)
             if (uint32 cd = GetRuneCooldown(i))
                 SetRuneCooldown(i, (cd > m_regenTimer) ? cd - m_regenTimer : 0);
+
+    }
 
     if (m_regenTimerCount >= 2000)
     {
@@ -2034,7 +2047,8 @@ void Player::RegenerateAll()
         }
 
         Regenerate(POWER_RAGE);
-        if (GetClass() == CLASS_DEATH_KNIGHT)
+        //@tswow-begin
+        if (HasRunes())
             Regenerate(POWER_RUNIC_POWER);
 
         m_regenTimerCount -= 2000;
@@ -2274,7 +2288,7 @@ bool Player::CanInteractWithQuestGiver(Object* questGiver) const
     return false;
 }
 
-Creature* Player::GetNPCIfCanInteractWith(ObjectGuid const& guid, uint32 npcflagmask) const
+Creature* Player::GetNPCIfCanInteractWith(ObjectGuid const& guid, NPCFlags npcFlags) const
 {
     // unit checks
     if (!guid)
@@ -2300,7 +2314,7 @@ Creature* Player::GetNPCIfCanInteractWith(ObjectGuid const& guid, uint32 npcflag
         return nullptr;
 
     // appropriate npc type
-    if (npcflagmask && !creature->HasFlag(UNIT_NPC_FLAGS, npcflagmask))
+    if (npcFlags && !creature->HasNpcFlag(npcFlags))
         return nullptr;
 
     // not allow interaction under control, but allow with own pets
@@ -2385,12 +2399,12 @@ void Player::SetGameMaster(bool on)
         m_ExtraFlags |= PLAYER_EXTRA_GM_ON;
         SetFaction(FACTION_FRIENDLY);
         SetFlag(PLAYER_FLAGS, PLAYER_FLAGS_GM);
-        SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_ALLOW_CHEAT_SPELLS);
+        SetUnitFlag2(UNIT_FLAG2_ALLOW_CHEAT_SPELLS);
 
         if (Pet* pet = GetPet())
             pet->SetFaction(FACTION_FRIENDLY);
 
-        RemoveByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_FFA_PVP);
+        RemovePvpFlag(UNIT_BYTE2_FLAG_FFA_PVP);
         ResetContestedPvP();
 
         CombatStopWithPets();
@@ -2415,14 +2429,14 @@ void Player::SetGameMaster(bool on)
         m_ExtraFlags &= ~ PLAYER_EXTRA_GM_ON;
         SetFactionForRace(GetRace());
         RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_GM);
-        RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_ALLOW_CHEAT_SPELLS);
+        RemoveUnitFlag2(UNIT_FLAG2_ALLOW_CHEAT_SPELLS);
 
         if (Pet* pet = GetPet())
             pet->SetFaction(GetFaction());
 
         // restore FFA PvP Server state
         if (sWorld->IsFFAPvPRealm())
-            SetByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_FFA_PVP);
+            SetPvpFlag(UNIT_BYTE2_FLAG_FFA_PVP);
 
         // restore FFA PvP area state, remove not allowed for GM mounts
         UpdateArea(m_areaUpdateId);
@@ -2755,7 +2769,7 @@ void Player::InitStatsForLevel(bool reapplyMods)
     UpdateSkillsForLevel();
 
     // set default cast time multiplier
-    SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);
+    SetModCastingSpeed(1.0f);
 
     // reset size before reapply auras
     SetObjectScale(1.0f);
@@ -2799,12 +2813,12 @@ void Player::InitStatsForLevel(bool reapplyMods)
     SetFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, 0.0f);
     SetFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, 0.0f);
 
-    SetInt32Value(UNIT_FIELD_ATTACK_POWER,            0);
-    SetInt32Value(UNIT_FIELD_ATTACK_POWER_MODS,       0);
-    SetFloatValue(UNIT_FIELD_ATTACK_POWER_MULTIPLIER, 0.0f);
-    SetInt32Value(UNIT_FIELD_RANGED_ATTACK_POWER,     0);
-    SetInt32Value(UNIT_FIELD_RANGED_ATTACK_POWER_MODS, 0);
-    SetFloatValue(UNIT_FIELD_RANGED_ATTACK_POWER_MULTIPLIER, 0.0f);
+    SetAttackPower(0);
+    SetAttackPowerModPos(0);
+    SetAttackPowerMultiplier(0.0f);
+    SetRangedAttackPower(0);
+    SetRangedAttackPowerModPos(0);
+    SetRangedAttackPowerMultiplier(0.0f);
 
     // Base crit values (will be recalculated in UpdateAllStats() at loading and in _ApplyAllStatBonuses() at reset
     SetFloatValue(PLAYER_CRIT_PERCENTAGE, 0.0f);
@@ -2854,25 +2868,25 @@ void Player::InitStatsForLevel(bool reapplyMods)
     SetMaxHealth(classInfo.basehealth);                     // stamina bonus will applied later
 
     // cleanup mounted state (it will set correctly at aura loading if player saved at mount.
-    SetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID, 0);
+    SetMountDisplayId(0);
 
     // cleanup unit flags (will be re-applied if need at aura load).
-    RemoveFlag(UNIT_FIELD_FLAGS,
+    RemoveUnitFlag(
         UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_REMOVE_CLIENT_CONTROL | UNIT_FLAG_NOT_ATTACKABLE_1 |
         UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC  | UNIT_FLAG_LOOTING          |
         UNIT_FLAG_PET_IN_COMBAT  | UNIT_FLAG_SILENCED     | UNIT_FLAG_PACIFIED         |
         UNIT_FLAG_STUNNED        | UNIT_FLAG_IN_COMBAT    | UNIT_FLAG_DISARMED         |
         UNIT_FLAG_CONFUSED       | UNIT_FLAG_FLEEING      | UNIT_FLAG_UNINTERACTIBLE   |
         UNIT_FLAG_SKINNABLE      | UNIT_FLAG_MOUNT        | UNIT_FLAG_ON_TAXI          );
-    SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);   // must be set
+    SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED);   // must be set
 
-    SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_REGENERATE_POWER);// must be set
+    SetUnitFlag2(UNIT_FLAG2_REGENERATE_POWER);// must be set
 
     // cleanup player flags (will be re-applied if need at aura load), to avoid have ghost flag without ghost aura, for example.
     RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK | PLAYER_FLAGS_DND | PLAYER_FLAGS_GM | PLAYER_FLAGS_GHOST | PLAYER_ALLOW_ONLY_ABILITY);
 
-    RemoveStandFlags(UNIT_STAND_FLAGS_ALL);                 // one form stealth modified bytes
-    RemoveByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_FFA_PVP | UNIT_BYTE2_FLAG_SANCTUARY);
+    RemoveVisFlag(UNIT_VIS_FLAGS_ALL);                 // one form stealth modified bytes
+    RemovePvpFlag(UNIT_BYTE2_FLAG_FFA_PVP | UNIT_BYTE2_FLAG_SANCTUARY);
 
     // restore if need some important flags
     SetUInt32Value(PLAYER_FIELD_BYTES2, 0);                 // flags empty by default
@@ -3412,7 +3426,6 @@ bool Player::AddSpell(uint32 spellId, bool active, bool learning, bool dependent
 
     // update used talent points count
     m_usedTalentCount += talentCost;
-
     // update free primary prof.points (if any, can be none in case GM .learn prof. learning)
     if (uint32 freeProfs = GetFreePrimaryProfessionPoints())
     {
@@ -3884,6 +3897,13 @@ uint32 Player::ResetTalentsCost() const
 
 bool Player::ResetTalents(bool no_cost)
 {
+    // @tswow-begin
+    FIRE(
+          Player,OnTalentsResetEarly
+        , TSPlayer(this)
+        , TSMutable<bool>(&no_cost)
+    );
+    // @tswow-end
     sScriptMgr->OnPlayerTalentsReset(this, no_cost);
 
     // not need after this call
@@ -3931,7 +3951,7 @@ bool Player::ResetTalents(bool no_cost)
         if ((GetClassMask() & talentTabInfo->ClassMask) == 0)
             continue;
 
-        for (int8 rank = MAX_TALENT_RANK-1; rank >= 0; --rank)
+        for (int8 rank = MAX_TALENT_RANK - 1; rank >= 0; --rank)
         {
             // skip non-existing talent ranks
             if (talentInfo->SpellRank[rank] == 0)
@@ -3975,6 +3995,14 @@ bool Player::ResetTalents(bool no_cost)
             RemovePet(nullptr, PET_SAVE_NOT_IN_SLOT, true);
     }
     */
+
+    // @tswow-begin
+    FIRE(
+          Player,OnTalentsResetLate
+        , TSPlayer(this)
+        , no_cost
+    );
+    // @tswow-end
 
     return true;
 }
@@ -4447,6 +4475,13 @@ void Player::DeleteFromDB(ObjectGuid playerguid, uint32 accountId, bool updateRe
             return;
     }
 
+    // @tswow-begin
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_JSON_DATA);
+    stmt->setUInt32(0, DBJsonEntityType::PLAYER);
+    stmt->setUInt32(1, guid);
+    trans->Append(stmt);
+    // @tswow-end
+
     CharacterDatabase.CommitTransaction(trans);
 
     if (updateRealmChars)
@@ -4557,7 +4592,7 @@ void Player::BuildPlayerRepop()
         SetMovement(MOVE_UNROOT);
 
     // BG - remove insignia related
-    RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
+    RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
 
     int32 corpseReclaimDelay = CalculateCorpseReclaimDelay();
 
@@ -4589,7 +4624,7 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
     RemoveAurasDueToSpell(8326);                            // SPELL_AURA_GHOST
 
     if (GetSession()->IsARecruiter() || (GetSession()->GetRecruiterId() != 0))
-        SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_REFER_A_FRIEND);
+        SetDynamicFlag(UNIT_DYNFLAG_REFER_A_FRIEND);
 
     setDeathState(ALIVE);
 
@@ -4668,9 +4703,9 @@ void Player::KillPlayer()
     StopMirrorTimers();                                     //disable timers(bars)
 
     setDeathState(CORPSE);
-    //SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_IN_PVP);
+    //SetUnitFlag(UNIT_FLAG_NOT_IN_PVP);
 
-    SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_NONE);
+    ReplaceAllDynamicFlags(UNIT_DYNFLAG_NONE);
     ApplyModFlag(PLAYER_FIELD_BYTES, PLAYER_FIELD_BYTE_RELEASE_TIMER, !sMapStore.LookupEntry(GetMapId())->Instanceable() && !HasAuraType(SPELL_AURA_PREVENT_RESURRECTION));
 
     // 6 minutes until repop at graveyard
@@ -5721,7 +5756,7 @@ inline int SkillGainChance(Player* player, uint32 skillId, uint32 SkillValue, ui
     else
         chance = sWorld->getIntConfig(CONFIG_SKILL_CHANCE_ORANGE)*10;
 
-    FIRE(PlayerOnCalcSkillGainChance
+    FIRE(Player,OnCalcSkillGainChance
         , TSPlayer(player)
         , TSMutable<int>(&chance)
         , skillId
@@ -7106,13 +7141,13 @@ void Player::UpdateArea(uint32 newArea)
     pvpInfo.IsInNoPvPArea = false;
     if (area && area->IsSanctuary())    // in sanctuary
     {
-        SetByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_SANCTUARY);
+        SetPvpFlag(UNIT_BYTE2_FLAG_SANCTUARY);
         pvpInfo.IsInNoPvPArea = true;
         if (!duel && GetCombatManager().HasPvPCombat())
             CombatStopWithPets();
     }
     else
-        RemoveByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_SANCTUARY);
+        RemovePvpFlag(UNIT_BYTE2_FLAG_SANCTUARY);
 
     uint32 const areaRestFlag = (GetTeam() == ALLIANCE) ? AREA_FLAG_REST_ZONE_ALLIANCE : AREA_FLAG_REST_ZONE_HORDE;
     if (area && area->Flags & areaRestFlag)
@@ -8522,7 +8557,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 go->SetLootGenerationTime();
 
                 // @tswow-begin
-                FIRE_MAP(go->GetGOInfo()->events,GameObjectOnGenerateLoot,TSGameObject(go),TSPlayer(this));
+                FIRE_ID(go->GetGOInfo()->events.id,GameObject,OnGenerateLoot,TSGameObject(go),TSPlayer(this));
                 // @tswow-end
 
                 // get next RR player (for next loot)
@@ -8635,7 +8670,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                     break;
             }
             // @tswow-begin
-            FIRE(PlayerOnGenerateItemLoot,TSPlayer(this),TSItem(item),TSLoot(loot),loot_type);
+            FIRE(Player,OnGenerateItemLoot,TSPlayer(this),TSItem(item),TSLoot(loot),loot_type);
             // @tswow-end
         }
     }
@@ -8677,7 +8712,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
             permission = OWNER_PERMISSION;
 
         // @tswow-begin
-        FIRE(PlayerOnLootCorpse,TSPlayer(this),TSCorpse(bones));
+        FIRE(Player,OnLootCorpse,TSPlayer(this),TSCorpse(bones));
         // @tswow-end
     }
     else
@@ -8705,7 +8740,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
             {
                 // @tswow-begin
                 bool b = creature->CanGeneratePickPocketLoot();
-                FIRE_MAP(creature->GetCreatureTemplate()->events,CreatureOnCanGeneratePickPocketLoot,TSCreature(creature),TSPlayer(this),TSMutable<bool>(&b));
+                FIRE_ID(creature->GetCreatureTemplate()->events.id,Creature,OnCanGeneratePickPocketLoot,TSCreature(creature),TSPlayer(this),TSMutable<bool>(&b));
                 if (b)
                 // @tswow-end
                 {
@@ -8721,7 +8756,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                     loot->gold = uint32(10 * (a + b) * sWorld->getRate(RATE_DROP_MONEY));
                     permission = OWNER_PERMISSION;
                     // @tswow-begin
-                    FIRE_MAP(creature->GetCreatureTemplate()->events,CreatureOnGeneratePickPocketLoot,TSCreature(creature),TSPlayer(this),TSLoot(loot));
+                    FIRE_ID(creature->GetCreatureTemplate()->events.id,Creature,OnGeneratePickPocketLoot,TSCreature(creature),TSPlayer(this),TSLoot(loot));
                     // @tswow-end
                 }
                 else
@@ -8734,7 +8769,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
         else
         {
             // exploit fix
-            if (!creature->HasFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE))
+            if (!creature->HasDynamicFlag(UNIT_DYNFLAG_LOOTABLE))
             {
                 SendLootError(guid, LOOT_ERROR_DIDNT_KILL);
                 return;
@@ -8787,7 +8822,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 // Set new loot recipient
                 creature->SetLootRecipient(this, false);
                 // @tswow-begin
-                FIRE_MAP(creature->GetCreatureTemplate()->events,CreatureOnGenerateSkinningLoot,TSCreature(creature),TSPlayer(this),TSLoot(loot));
+                FIRE_ID(creature->GetCreatureTemplate()->events.id,Creature,OnGenerateSkinningLoot,TSCreature(creature),TSPlayer(this),TSLoot(loot));
                 // @tswow-end
             }
             // set group rights only for loot_type != LOOT_SKINNING
@@ -8851,7 +8886,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
         loot->AddLooter(GetGUID());
 
         if (loot_type == LOOT_CORPSE && !guid.IsItem())
-            SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_LOOTING);
+            SetUnitFlag(UNIT_FLAG_LOOTING);
     }
     else
         SendLootError(GetLootGUID(), LOOT_ERROR_DIDNT_KILL);
@@ -11562,8 +11597,8 @@ InventoryResult Player::CanEquipItem(uint8 slot, uint16 &dest, Item* pItem, bool
             dest = ((INVENTORY_SLOT_BAG_0 << 8) | eslot);
             // @tswow-begin
             uint32 evtRes = EQUIP_ERR_OK;
-            FIRE_MAP(pProto->events
-                , ItemOnCanEquip
+            FIRE_ID(pProto->events.id
+                , Item,OnCanEquip
                 , TSItem(pItem)
                 , TSPlayer(const_cast<Player*>(this))
                 , slot
@@ -11622,8 +11657,8 @@ InventoryResult Player::CanUnequipItem(uint16 pos, bool swap) const
 
     // @tswow-begin
     uint32 status = static_cast<uint32>(InventoryResult::EQUIP_ERR_OK);
-    FIRE_MAP( pProto->events
-            , ItemOnUnequip
+    FIRE_ID( pProto->events.id
+            , Item,OnUnequip
             , TSItem(pItem)
             , TSPlayer(const_cast<Player*>(this))
             , swap
@@ -11648,8 +11683,8 @@ InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec &dest
 
     // @tswow-begin
     uint32 eventRes = static_cast<uint32>(InventoryResult::EQUIP_ERR_OK);
-    FIRE_MAP( pProto->events
-            , ItemOnBank
+    FIRE_ID( pProto->events.id
+            , Item,OnBank
             , TSItem(pItem)
             , TSPlayer(const_cast<Player*>(this))
             , bag
@@ -11895,8 +11930,8 @@ InventoryResult Player::CanUseItem(Item* pItem, bool not_loading) const
             // @tswow-begin
             {
                 uint32 evtRes = static_cast<uint32>(InventoryResult::EQUIP_ERR_OK);
-                FIRE_MAP( pProto->events
-                        , ItemOnCanUse
+                FIRE_ID( pProto->events.id
+                        , Item,OnCanUse
                         , TSItem(pItem)
                         , TSPlayer(const_cast<Player*>(this))
                         , TSMutable<uint32>(&evtRes)
@@ -11952,8 +11987,8 @@ InventoryResult Player::CanUseItem(ItemTemplate const* proto) const
             return EQUIP_ERR_NONE;
     // @tswow-begin
     uint32 res = EQUIP_ERR_OK;
-    FIRE_MAP(proto->events
-        , ItemOnCanUseType
+    FIRE_ID(proto->events.id
+        , Item,OnCanUseType
         , TSItemTemplate(proto)
         , TSPlayer(const_cast<Player*>(this))
         , TSMutable<uint32>(&res)
@@ -11978,8 +12013,8 @@ InventoryResult Player::CanRollForItemInLFG(ItemTemplate const* proto, WorldObje
 
     // @tswow-begin
     int32 evtRes = -1;
-    FIRE_MAP( proto->events
-            , ItemOnLFGRollEarly
+    FIRE_ID( proto->events.id
+            , Item,OnLFGRollEarly
             , TSItemTemplate(proto)
             , TSWorldObject(const_cast<WorldObject*>(lootedObject))
             , TSPlayer(const_cast<Player*>(this))
@@ -12399,9 +12434,9 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
         ApplyEquipCooldown(pItem2);
 
         // @tswow-begin
-        FIRE_MAP(
-              pItem2->GetTemplate()->events
-            , ItemOnEquip
+        FIRE_ID(
+              pItem2->GetTemplate()->events.id
+            , Item,OnEquip
             , TSItem(pItem2)
             , TSPlayer(this)
             , slot
@@ -12419,9 +12454,9 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
     UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_EPIC_ITEM, slot, pItem->GetEntry());
 
     // @tswow-begin
-    FIRE_MAP(
-          pItem->GetTemplate()->events
-        , ItemOnEquip
+    FIRE_ID(
+          pItem->GetTemplate()->events.id
+        , Item,OnEquip
         , TSItem(pItem)
         , TSPlayer(this)
         , slot
@@ -12647,8 +12682,8 @@ void Player::DestroyItem(uint8 bag, uint8 slot, bool update)
         // @tswow-begin
         {
             bool evtCanDestroy = true;
-            FIRE_MAP( pItem->GetTemplate()->events
-                    , ItemOnDestroyEarly
+            FIRE_ID( pItem->GetTemplate()->events.id
+                    , Item,OnDestroyEarly
                     , TSItem(pItem)
                     , TSPlayer(this)
                     , TSMutable<bool>(&evtCanDestroy)
@@ -13683,7 +13718,7 @@ void Player::SendSellError(SellResult msg, Creature* creature, ObjectGuid guid, 
 bool Player::IsUseEquipedWeapon(bool mainhand) const
 {
     // disarm applied only to mainhand weapon
-    return !IsInFeralForm() && (!mainhand || !HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISARMED));
+    return !IsInFeralForm() && (!mainhand || !HasUnitFlag(UNIT_FLAG_DISARMED));
 }
 
 void Player::SetCanTitanGrip(bool value, uint32 penaltySpellId /*= 0*/)
@@ -14539,14 +14574,14 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
                 if (!optionBroadcastText)
                 {
                     /// Find localizations from database.
-                    if (GossipMenuItemsLocale const* gossipMenuLocale = sObjectMgr->GetGossipMenuItemsLocale(MAKE_PAIR32(menuId, itr->second.OptionID)))
+                    if (GossipMenuItemsLocale const* gossipMenuLocale = sObjectMgr->GetGossipMenuItemsLocale(menuId, itr->second.OptionID))
                         ObjectMgr::GetLocaleString(gossipMenuLocale->OptionText, locale, strOptionText);
                 }
 
                 if (!boxBroadcastText)
                 {
                     /// Find localizations from database.
-                    if (GossipMenuItemsLocale const* gossipMenuLocale = sObjectMgr->GetGossipMenuItemsLocale(MAKE_PAIR32(menuId, itr->second.OptionID)))
+                    if (GossipMenuItemsLocale const* gossipMenuLocale = sObjectMgr->GetGossipMenuItemsLocale(menuId, itr->second.OptionID))
                         ObjectMgr::GetLocaleString(gossipMenuLocale->BoxText, locale, strBoxText);
                 }
             }
@@ -14565,7 +14600,7 @@ void Player::SendPreparedGossip(WorldObject* source)
     if (source->GetTypeId() == TYPEID_UNIT)
     {
         // in case no gossip flag and quest menu not empty, open quest menu (client expect gossip menu with this flag)
-        if (!source->ToCreature()->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP) && !PlayerTalkClass->GetQuestMenu().Empty())
+        if (!source->ToCreature()->HasNpcFlag(UNIT_NPC_FLAG_GOSSIP) && !PlayerTalkClass->GetQuestMenu().Empty())
         {
             SendPreparedQuest(source->GetGUID());
             return;
@@ -15149,10 +15184,10 @@ void Player::AddQuestAndCheckCompletion(Quest const* quest, Object* questGiver)
         case TYPEID_UNIT:
             PlayerTalkClass->ClearMenus();
             // @tswow-begin
-            FIRE_MAP(questGiver->ToCreature()->GetCreatureTemplate()->events,CreatureOnQuestAccept,TSCreature(questGiver->ToCreature()),TSPlayer(this),TSQuest(quest));
-            FIRE_MAP(
-                  quest->events
-                , QuestOnAccept
+            FIRE_ID(questGiver->ToCreature()->GetCreatureTemplate()->events.id,Creature,OnQuestAccept,TSCreature(questGiver->ToCreature()),TSPlayer(this),TSQuest(quest));
+            FIRE_ID(
+                  quest->events.id
+                , Quest,OnAccept
                 , TSQuest(quest)
                 , TSPlayer(this)
                 , TSObject(questGiver)
@@ -15165,10 +15200,10 @@ void Player::AddQuestAndCheckCompletion(Quest const* quest, Object* questGiver)
         {
             Item* item = static_cast<Item*>(questGiver);
             // @tswow-begin
-            FIRE_MAP(item->GetTemplate()->events,ItemOnQuestAccept,TSItem(item),TSPlayer(this),TSQuest(quest));
-            FIRE_MAP(
-                quest->events
-                , QuestOnAccept
+            FIRE_ID(item->GetTemplate()->events.id,Item,OnQuestAccept,TSItem(item),TSPlayer(this),TSQuest(quest));
+            FIRE_ID(
+                quest->events.id
+                , Quest,OnAccept
                 , TSQuest(quest)
                 , TSPlayer(this)
                 , TSObject(item)
@@ -15201,10 +15236,10 @@ void Player::AddQuestAndCheckCompletion(Quest const* quest, Object* questGiver)
         case TYPEID_GAMEOBJECT:
             PlayerTalkClass->ClearMenus();
             // @tswow-begin
-            FIRE_MAP(questGiver->ToGameObject()->GetGOInfo()->events,GameObjectOnQuestAccept,TSGameObject(questGiver->ToGameObject()),TSPlayer(this),TSQuest(quest));
-            FIRE_MAP(
-                  quest->events
-                , QuestOnAccept
+            FIRE_ID(questGiver->ToGameObject()->GetGOInfo()->events.id,GameObject,OnQuestAccept,TSGameObject(questGiver->ToGameObject()),TSPlayer(this),TSQuest(quest));
+            FIRE_ID(
+                  quest->events.id
+                , Quest,OnAccept
                 , TSQuest(quest)
                 , TSPlayer(this)
                 , TSObject(questGiver)
@@ -15342,9 +15377,9 @@ void Player::AddQuest(Quest const* quest, Object* questGiver)
     }
 
     // @tswow-begin
-    FIRE_MAP(
-          quest->events
-        , QuestOnStatusChanged
+    FIRE_ID(
+          quest->events.id
+        , Quest,OnStatusChanged
         , TSQuest(quest)
         , TSPlayer(this)
     );
@@ -15465,9 +15500,9 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
     // handle SPELL_AURA_MOD_XP_QUEST_PCT auras
     XP *= GetTotalAuraMultiplier(SPELL_AURA_MOD_XP_QUEST_PCT);
     // @tswow-begin
-    FIRE_MAP(
-          quest->events
-        , QuestOnRewardXP
+    FIRE_ID(
+          quest->events.id
+        , Quest,OnRewardXP
         , TSQuest(quest)
         , TSPlayer(this)
         , TSMutable<uint32>(&XP)
@@ -15497,11 +15532,23 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
             SetTitle(titleEntry);
     }
 
+    // @tswow-begin add permanent talents and move init logic
     if (quest->GetBonusTalents())
     {
         m_questRewardTalentCount += quest->GetBonusTalents();
+    }
+
+    if (quest->GetBonusTalentsPerm())
+    {
+        m_questRewardPermTalentCount += quest->GetBonusTalentsPerm();
+    }
+
+    if (quest->GetBonusTalents() || quest->GetBonusTalentsPerm())
+    {
         InitTalentForLevel();
     }
+    // @tswow-end
+
 
     if (quest->GetRewArenaPoints())
         ModifyArenaPoints(quest->GetRewArenaPoints());
@@ -15589,9 +15636,9 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
     SetCanDelayTeleport(false);
 
     // @tswow-begin
-    FIRE_MAP(
-        quest->events
-        , QuestOnStatusChanged
+    FIRE_ID(
+        quest->events.id
+        , Quest,OnStatusChanged
         , TSQuest(quest)
         , TSPlayer(this)
     );
@@ -16252,9 +16299,9 @@ void Player::SetQuestStatus(uint32 questId, QuestStatus status, bool update /*= 
             m_QuestStatusSave[questId] = QUEST_DEFAULT_SAVE_TYPE;
 
         // @tswow-begin
-        FIRE_MAP(
-            quest->events
-            , QuestOnStatusChanged
+        FIRE_ID(
+            quest->events.id
+            , Quest,OnStatusChanged
             , TSQuest(quest)
             , TSPlayer(this)
         );
@@ -17104,7 +17151,9 @@ void Player::SendQuestReward(Quest const* quest, uint32 XP) const
 
     data << uint32(quest->GetRewOrReqMoney(this));
     data << uint32(10 * quest->CalculateHonorGain(GetQuestLevel(quest)));
-    data << uint32(quest->GetBonusTalents());              // bonus talents
+    // @tswow-begin add permanent rewards to the displayed bonus talents
+    data << uint32(quest->GetBonusTalents() + (quest->GetBonusTalentsPerm() * sWorld->getRate(RATE_TALENT)));              // bonus talents
+    // @tswow-end
     data << uint32(quest->GetRewArenaPoints());
     SendDirectMessage(&data);
 }
@@ -17238,7 +17287,7 @@ void Player::SendQuestGiverStatusMultiple()
             Creature* questgiver = ObjectAccessor::GetCreatureOrPetOrVehicle(*this, *itr);
             if (!questgiver || questgiver->IsHostileTo(this))
                 continue;
-            if (!questgiver->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER))
+            if (!questgiver->HasNpcFlag(UNIT_NPC_FLAG_QUESTGIVER))
                 continue;
 
             questStatus = GetQuestDialogStatus(questgiver);
@@ -17504,13 +17553,10 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
         return false;
     }
 
-    // overwrite possible wrong/corrupted guid
-    SetGuidValue(OBJECT_FIELD_GUID, guid);
-
-    uint8 gender = fields[5].GetUInt8();
+    Gender gender = Gender(fields[5].GetUInt8());
     if (!IsValidGender(gender))
     {
-        TC_LOG_ERROR("entities.player.loading", "Player::LoadFromDB: Player (%s) has wrong gender (%u), can't load.", guid.ToString().c_str(), gender);
+        TC_LOG_ERROR("entities.player.loading", "Player::LoadFromDB: Player (%s) has wrong gender (%u), can't load.", guid.ToString().c_str(), uint32(gender));
         return false;
     }
 
@@ -17536,7 +17582,7 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
         TC_LOG_WARN("entities.player.loading", "Player::LoadFromDB: Player (%s) has invalid knowntitles mask (%s). Forcing partial load.", guid.ToString().c_str(), fields[69].GetCString());
 
     SetObjectScale(1.0f);
-    SetFloatValue(UNIT_FIELD_HOVERHEIGHT, 1.0f);
+    SetHoverHeight(1.0f);
 
     // load achievements before anything else to prevent multiple gains for the same achievement/criteria on every loading (as loading does call UpdateAchievementCriteria)
     m_achievementMgr->LoadFromDB(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_ACHIEVEMENTS), holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_CRITERIA_PROGRESS));
@@ -17553,7 +17599,7 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     SetFacialStyle(fields[13].GetUInt8());
     SetBankBagSlotCount(fields[14].GetUInt8());
     SetRestState(fields[15].GetUInt8());
-    SetNativeGender(fields[5].GetUInt8());
+    SetNativeGender(Gender(fields[5].GetUInt8()));
     SetByteValue(PLAYER_BYTES_3, PLAYER_BYTES_3_OFFSET_INEBRIATION, fields[54].GetUInt8());
 
     if (!ValidateAppearance(
@@ -17970,7 +18016,7 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
 
     // clear channel spell data (if saved at channel spell casting)
     SetChannelObjectGuid(ObjectGuid::Empty);
-    SetUInt32Value(UNIT_CHANNEL_SPELL, 0);
+    SetChannelSpellId(0);
 
     // clear charm/summon related fields
     SetOwnerGUID(ObjectGuid::Empty);
@@ -17980,7 +18026,7 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     SetGuidValue(PLAYER_FARSIGHT, ObjectGuid::Empty);
     SetCreatorGUID(ObjectGuid::Empty);
 
-    RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FORCE_MOVEMENT);
+    RemoveUnitFlag2(UNIT_FLAG2_FORCE_MOVEMENT);
 
     // reset some aura modifiers before aura apply
     SetUInt32Value(PLAYER_TRACK_CREATURES, 0);
@@ -18167,7 +18213,7 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     // RaF stuff.
     m_grantableLevels = fields[71].GetUInt8();
     if (GetSession()->IsARecruiter() || (GetSession()->GetRecruiterId() != 0))
-        SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_REFER_A_FRIEND);
+        SetDynamicFlag(UNIT_DYNFLAG_REFER_A_FRIEND);
 
     if (m_grantableLevels > 0)
         SetByteValue(PLAYER_FIELD_BYTES, PLAYER_FIELD_BYTES_OFFSET_RAF_GRANTABLE_LEVEL, 0x01);
@@ -18178,10 +18224,15 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
 
     _LoadEquipmentSets(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_EQUIPMENT_SETS));
 
+    // @tswow-begin
+    m_db_json = TSDBJson(DBJsonEntityType::PLAYER, guid);
+    m_db_json.Load();
+    // @tswow-end
+
     return true;
 }
 
-bool Player::isAllowedToLoot(Creature const* creature)
+bool Player::isAllowedToLoot(Creature const* creature) const
 {
     if (!creature->isDead() || !creature->IsDamageEnoughForLootingAndReward())
         return false;
@@ -18198,7 +18249,7 @@ bool Player::isAllowedToLoot(Creature const* creature)
     if (loot->loot_type == LOOT_SKINNING)
         return creature->GetLootRecipientGUID() == GetGUID();
 
-    Group* thisGroup = GetGroup();
+    Group const* thisGroup = GetGroup();
     if (!thisGroup)
         return this == creature->GetLootRecipient();
     else if (thisGroup != creature->GetLootRecipientGroup())
@@ -18892,6 +18943,11 @@ void Player::_LoadQuestStatusRewarded(PreparedQueryResult result)
 
                 if (quest->GetBonusTalents())
                     m_questRewardTalentCount += quest->GetBonusTalents();
+
+                // @tswow-begin
+                if (quest->GetBonusTalentsPerm())
+                    m_questRewardPermTalentCount += quest->GetBonusTalentsPerm();
+                // @tswow-end
 
                 if (quest->CanIncreaseRewardedQuestCounters())
                     m_RewardedQuests.insert(quest_id);
@@ -19891,6 +19947,9 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
     GetSession()->SaveTutorialsData(trans);                 // changed only while character in game
     _SaveGlyphs(trans);
     _SaveInstanceTimeRestrictions(trans);
+    // @tswow-begin TODO: fix transaction
+    m_db_json.Save();
+    // @tswow-end
 
     // check if stats should only be saved on logout
     // save stats can be out of transaction
@@ -20592,34 +20651,49 @@ void Player::outDebugValues() const
 /***               FLOOD FILTER SYSTEM                 ***/
 /*********************************************************/
 
-void Player::UpdateSpeakTime()
+void Player::UpdateSpeakTime(ChatFloodThrottle::Index index)
 {
     // ignore chat spam protection for GMs in any mode
     if (GetSession()->HasPermission(rbac::RBAC_PERM_SKIP_CHECK_CHAT_SPAM))
         return;
 
-    time_t current = GameTime::GetGameTime();
-    if (m_speakTime > current)
+    uint32 limit;
+    uint32 delay;
+    switch (index)
     {
-        uint32 max_count = sWorld->getIntConfig(CONFIG_CHATFLOOD_MESSAGE_COUNT);
-        if (!max_count)
+        case ChatFloodThrottle::REGULAR:
+            limit = sWorld->getIntConfig(CONFIG_CHATFLOOD_MESSAGE_COUNT);
+            delay = sWorld->getIntConfig(CONFIG_CHATFLOOD_MESSAGE_DELAY);
+            break;
+        case ChatFloodThrottle::ADDON:
+            limit = sWorld->getIntConfig(CONFIG_CHATFLOOD_ADDON_MESSAGE_COUNT);
+            delay = sWorld->getIntConfig(CONFIG_CHATFLOOD_ADDON_MESSAGE_DELAY);
+            break;
+        default:
+            return;
+    }
+
+    time_t current = GameTime::GetGameTime();
+    if (m_chatFloodData[index].Time > current)
+    {
+        if (!limit)
             return;
 
-        ++m_speakCount;
-        if (m_speakCount >= max_count)
+        ++m_chatFloodData[index].Count;
+        if (m_chatFloodData[index].Count >= limit)
         {
             // prevent overwrite mute time, if message send just before mutes set, for example.
             time_t new_mute = current + sWorld->getIntConfig(CONFIG_CHATFLOOD_MUTE_TIME);
             if (GetSession()->m_muteTime < new_mute)
                 GetSession()->m_muteTime = new_mute;
 
-            m_speakCount = 0;
+            m_chatFloodData[index].Count = 0;
         }
     }
     else
-        m_speakCount = 1;
+        m_chatFloodData[index].Count = 1;
 
-    m_speakTime = current + sWorld->getIntConfig(CONFIG_CHATFLOOD_MESSAGE_DELAY);
+    m_chatFloodData[index].Time = current + delay;
 }
 
 /*********************************************************/
@@ -21617,7 +21691,7 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature* npc 
         return false;
     }
 
-    if (HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_REMOVE_CLIENT_CONTROL))
+    if (HasUnitFlag(UNIT_FLAG_REMOVE_CLIENT_CONTROL))
         return false;
 
     // taximaster case
@@ -21812,7 +21886,7 @@ void Player::CleanupAfterTaxiFlight()
 {
     m_taxi.ClearTaxiDestinations(); // not destinations, clear source node
     Dismount();
-    RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_REMOVE_CLIENT_CONTROL | UNIT_FLAG_ON_TAXI);
+    RemoveUnitFlag(UNIT_FLAG_REMOVE_CLIENT_CONTROL | UNIT_FLAG_ON_TAXI);
 }
 
 void Player::ContinueTaxiFlight() const
@@ -21874,7 +21948,7 @@ void Player::SendTaxiNodeStatusMultiple()
         Creature* creature = ObjectAccessor::GetCreature(*this, *itr);
         if (!creature || creature->IsHostileTo(this))
             continue;
-        if (!creature->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_FLIGHTMASTER))
+        if (!creature->HasNpcFlag(UNIT_NPC_FLAG_FLIGHTMASTER))
             continue;
         uint32 nearestNode = sObjectMgr->GetNearestTaxiNode(creature->GetPositionX(), creature->GetPositionY(), creature->GetPositionZ(), creature->GetMapId(), GetTeam());
         if (!nearestNode)
@@ -22067,9 +22141,9 @@ bool Player::BuyItemFromVendorSlot(ObjectGuid vendorguid, uint32 vendorslot, uin
     // @tswow-begin check masks
     bool shouldSend = true;
 
-    FIRE_MAP(
-          creature->GetCreatureTemplate()->events
-        , CreatureOnSendVendorItem
+    FIRE_ID(
+          creature->GetCreatureTemplate()->events.id
+        , Creature,OnSendVendorItem
         , TSCreature(creature)
         , TSItemTemplate(pProto)
         , TSPlayer(this)
@@ -22274,16 +22348,16 @@ void Player::UpdatePvPState(bool onlyFFA)
     {
         if (!IsFFAPvP())
         {
-            SetByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_FFA_PVP);
+            SetPvpFlag(UNIT_BYTE2_FLAG_FFA_PVP);
             for (ControlList::iterator itr = m_Controlled.begin(); itr != m_Controlled.end(); ++itr)
-                (*itr)->SetByteValue(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_FFA_PVP);
+                (*itr)->SetPvpFlag(UNIT_BYTE2_FLAG_FFA_PVP);
         }
     }
     else if (IsFFAPvP())
     {
-        RemoveByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_FFA_PVP);
+        RemovePvpFlag(UNIT_BYTE2_FLAG_FFA_PVP);
         for (ControlList::iterator itr = m_Controlled.begin(); itr != m_Controlled.end(); ++itr)
-            (*itr)->RemoveByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_FFA_PVP);
+            (*itr)->RemovePvpFlag(UNIT_BYTE2_FLAG_FFA_PVP);
     }
 
     if (onlyFFA)
@@ -22817,7 +22891,7 @@ void Player::UpdateTriggerVisibility()
         {
             Creature* creature = GetMap()->GetCreature(*itr);
             // Update fields of triggers, transformed units or uninteractible units (values dependent on GM state)
-            if (!creature || (!creature->IsTrigger() && !creature->HasAuraType(SPELL_AURA_TRANSFORM) && !creature->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNINTERACTIBLE)))
+            if (!creature || (!creature->IsTrigger() && !creature->HasAuraType(SPELL_AURA_TRANSFORM) && !creature->HasUnitFlag(UNIT_FLAG_UNINTERACTIBLE)))
                 continue;
 
             creature->SetFieldNotifyFlag(UF_FLAG_PUBLIC);
@@ -22892,6 +22966,10 @@ template void Player::UpdateVisibilityOf(DynamicObject* target, UpdateData& data
 
 void Player::UpdateObjectVisibility(bool forced)
 {
+    // Prevent updating visibility if player is not in world (example: LoadFromDB sets drunkstate which updates invisibility while player is not in map)
+    if (!IsInWorld())
+        return;
+
     if (!forced)
         AddToNotify(NOTIFY_VISIBILITY_CHANGED);
     else
@@ -23532,14 +23610,14 @@ void Player::LearnSkillRewardedSpells(uint32 skillId, uint32 skillValue)
 
 void Player::SendAurasForTarget(Unit* target) const
 {
-    if (!target || target->GetVisibleAuras()->empty())                  // speedup things
+    if (!target || target->GetVisibleAuras().empty())                  // speedup things
         return;
 
     WorldPacket data(SMSG_AURA_UPDATE_ALL);
     data << target->GetPackGUID();
 
-    Unit::VisibleAuraMap const* visibleAuras = target->GetVisibleAuras();
-    for (Unit::VisibleAuraMap::const_iterator itr = visibleAuras->begin(); itr != visibleAuras->end(); ++itr)
+    Unit::VisibleAuraMap const& visibleAuras = target->GetVisibleAuras();
+    for (Unit::VisibleAuraMap::const_iterator itr = visibleAuras.begin(); itr != visibleAuras.end(); ++itr)
     {
         AuraApplication * auraApp = itr->second;
         auraApp->BuildUpdatePacket(data, false);
@@ -23785,20 +23863,32 @@ bool Player::GetBGAccessByLevel(BattlegroundTypeId bgTypeId) const
 
 float Player::GetReputationPriceDiscount(Creature const* creature) const
 {
-    return GetReputationPriceDiscount(creature->GetFactionTemplateEntry());
+    return GetReputationPriceDiscount(creature->GetFactionTemplateEntry(), creature);
 }
 
-float Player::GetReputationPriceDiscount(FactionTemplateEntry const* factionTemplate) const
+// @tswow-begin rewrite flow for hook
+float Player::GetReputationPriceDiscount(FactionTemplateEntry const* factionTemplate, Creature const* creature) const
 {
+    float money;
     if (!factionTemplate || !factionTemplate->Faction)
-        return 1.0f;
+        money = 1.0f;
+    else {
+        ReputationRank rank = GetReputationRank(factionTemplate->Faction);
+        if (rank <= REP_NEUTRAL)
+            money = 1.0f;
+        else
+            money = 1.0f - 0.05f * (rank - REP_NEUTRAL);
+    }
 
-    ReputationRank rank = GetReputationRank(factionTemplate->Faction);
-    if (rank <= REP_NEUTRAL)
-        return 1.0f;
-
-    return 1.0f - 0.05f* (rank - REP_NEUTRAL);
+    FIRE(Player, OnReputationPriceDiscount
+        , TSPlayer(const_cast<Player*>(this))
+        , TSFactionTemplate(factionTemplate)
+        , TSCreature(const_cast<Creature*>(creature))
+        , TSMutable<float>(&money)
+    );
+    return money;
 }
+// @tswow-end
 
 Player* Player::GetTrader() const
 {
@@ -23892,7 +23982,7 @@ void Player::UpdateVisibleGameobjectsOrSpellClicks()
                 continue;
 
             // check if this unit requires quest specific flags
-            if (!obj->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_SPELLCLICK))
+            if (!obj->HasNpcFlag(UNIT_NPC_FLAG_SPELLCLICK))
                 continue;
 
             auto clickBounds = sObjectMgr->GetSpellClickInfoMapBounds(obj->GetEntry());
@@ -24089,7 +24179,7 @@ bool Player::CanNoReagentCast(SpellInfo const* spellInfo) const
 {
     // don't take reagents for spells with SPELL_ATTR5_NO_REAGENT_WHILE_PREP
     if (spellInfo->HasAttribute(SPELL_ATTR5_NO_REAGENT_WHILE_PREP) &&
-        HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREPARATION))
+        HasUnitFlag(UNIT_FLAG_PREPARATION))
         return true;
 
     // Check no reagent use mask
@@ -24682,7 +24772,8 @@ void Player::AtExitCombat()
     Unit::AtExitCombat();
     UpdatePotionCooldown();
 
-    if (GetClass() == CLASS_DEATH_KNIGHT)
+    //@tswow-begin
+    if (HasRunes())
         for (uint8 i = 0; i < MAX_RUNES; ++i)
         {
             SetRuneTimer(i, 0xFFFFFFFF);
@@ -24888,7 +24979,7 @@ void Player::InitGlyphsForLevel()
         value |= 0x20;
 
     // @tswow-begin
-    FIRE(PlayerOnGlyphInitForLevel
+    FIRE(Player,OnGlyphInitForLevel
         , TSPlayer(this)
         , TSMutable<uint32>(&value)
     );
@@ -25082,8 +25173,10 @@ void Player::ConvertRune(uint8 index, RuneType newType)
 
 void Player::ResyncRunes() const
 {
-    if (GetClass() != CLASS_DEATH_KNIGHT)
+    //@tswow-begin
+    if (!HasRunes())
         return;
+    //@tswow-end
 
     WorldPackets::Spells::ResyncRunes packet;
     packet.Count = MAX_RUNES;
@@ -25116,8 +25209,10 @@ static RuneType runeSlotTypes[MAX_RUNES] =
 
 void Player::InitRunes()
 {
-    if (GetClass() != CLASS_DEATH_KNIGHT)
+    //@tswow-begin
+    if (!HasRunes())
         return;
+    //@tswow-end
 
     m_runes = new Runes;
 
@@ -25174,7 +25269,6 @@ void Player::AutoStoreLoot(uint8 bag, uint8 slot, uint32 loot_id, LootStore cons
         SendNewItem(pItem, lootItem->count, false, createdByPlayer, broadcast);
     }
 }
-
 void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
 {
     NotNormalLootItem* qitem = nullptr;
@@ -25217,8 +25311,8 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
         Item* newitem = StoreNewItem(dest, item->itemid, true, item->randomPropertyId, looters);
 
         // @tswow-begin
-        FIRE_MAP( newitem->GetTemplate()->events
-                , ItemOnTakenAsLoot
+        FIRE_ID( newitem->GetTemplate()->events.id
+                , Item,OnTakenAsLoot
                 , TSItem(newitem)
                 , TSLootItem(item)
                 , TSLoot(loot)
@@ -25272,21 +25366,34 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
         SendEquipError(msg, nullptr, nullptr, item->itemid);
 }
 
+// @tswow-begin change layout to attach event
 uint32 Player::CalculateTalentsPoints() const
 {
-    uint32 base_talent = GetLevel() < 10 ? 0 : GetLevel()-9;
+    uint32 base_talent = GetLevel() < 10 ? 0 : GetLevel() - 9;
+    uint32 out_talent;
 
     if (GetClass() != CLASS_DEATH_KNIGHT || GetMapId() != 609)
-        return uint32(base_talent * sWorld->getRate(RATE_TALENT)) + m_questRewardTalentCount;
+    {
+        out_talent = uint32((base_talent + m_questRewardPermTalentCount) * sWorld->getRate(RATE_TALENT));
+    }
+    else
+    {
+        uint32 talentPointsForLevel = GetLevel() < 56 ? 0 : GetLevel() - 55;
+        talentPointsForLevel += m_questRewardTalentCount;
 
-    uint32 talentPointsForLevel = GetLevel() < 56 ? 0 : GetLevel() - 55;
-    talentPointsForLevel += m_questRewardTalentCount;
+        if (talentPointsForLevel > base_talent)
+            talentPointsForLevel = base_talent;
 
-    if (talentPointsForLevel > base_talent)
-        talentPointsForLevel = base_talent;
-
-    return uint32(talentPointsForLevel * sWorld->getRate(RATE_TALENT));
+        out_talent = uint32((talentPointsForLevel + m_questRewardPermTalentCount) * sWorld->getRate(RATE_TALENT));
+    }
+    FIRE(
+          Player,OnCalcTalentPoints
+        , TSPlayer(const_cast<Player*>(this))
+        , TSMutable<uint32>(&out_talent)
+    )
+        return out_talent;
 }
+// @tswow-end
 
 bool Player::CanFlyInZone(uint32 mapid, uint32 zone, SpellInfo const* bySpell) const
 {
@@ -25585,6 +25692,21 @@ void Player::CompletedAchievement(AchievementEntry const* entry)
     m_achievementMgr->CompletedAchievement(entry);
 }
 
+// @tswow-begin
+uint32 Player::GetTalentPointsInTree(uint32 tabId)
+{
+    uint32 spentPoints = 0;
+    for (uint32 i = 0; i < sTalentStore.GetNumRows(); i++)          // Loop through all talents.
+        if (TalentEntry const* tmpTalent = sTalentStore.LookupEntry(i))                                  // the way talents are tracked
+            if (tmpTalent->TabID == tabId)
+                for (uint8 rank = 0; rank < MAX_TALENT_RANK; rank++)
+                    if (tmpTalent->SpellRank[rank] != 0)
+                        if (HasSpell(tmpTalent->SpellRank[rank]))
+                            spentPoints += (rank + 1);
+    return spentPoints;
+}
+// @tswow-end
+
 void Player::LearnTalent(uint32 talentId, uint32 talentRank)
 {
     uint32 CurTalentPoints = GetFreeTalentPoints();
@@ -25646,20 +25768,10 @@ void Player::LearnTalent(uint32 talentId, uint32 talentRank)
     }
 
     // Find out how many points we have in this field
-    uint32 spentPoints = 0;
-
-    uint32 tTab = talentInfo->TabID;
-    if (talentInfo->TierID > 0)
-        for (uint32 i = 0; i < sTalentStore.GetNumRows(); i++)          // Loop through all talents.
-            if (TalentEntry const* tmpTalent = sTalentStore.LookupEntry(i))                                  // the way talents are tracked
-                if (tmpTalent->TabID == tTab)
-                    for (uint8 rank = 0; rank < MAX_TALENT_RANK; rank++)
-                        if (tmpTalent->SpellRank[rank] != 0)
-                            if (HasSpell(tmpTalent->SpellRank[rank]))
-                                spentPoints += (rank + 1);
-
+    // @tswow-begin move to function
     // not have required min points spent in talent tree
-    if (spentPoints < (talentInfo->TierID * MAX_TALENT_RANK))
+    if (talentInfo->TierID > 0 && GetTalentPointsInTree(talentInfo->TabID) < (talentInfo->TierID * MAX_TALENT_RANK))
+    // @tswow-end
         return;
 
     // spell not set in talent.dbc
@@ -25676,7 +25788,7 @@ void Player::LearnTalent(uint32 talentId, uint32 talentRank)
 
     // @tswow-begin
     bool cancel = false;
-    FIRE(PlayerOnLearnTalent, TSPlayer(this), tTab, talentId, talentRank, spellid, TSMutable<bool>(&cancel));
+    FIRE(Player,OnLearnTalent, TSPlayer(this), talentInfo->TabID, talentId, talentRank, spellid, TSMutable<bool>(&cancel));
     if (cancel)
     {
         return;
@@ -25881,7 +25993,7 @@ bool Player::IsPetNeedBeTemporaryUnsummoned() const
 
 bool Player::CanSeeSpellClickOn(Creature const* c) const
 {
-    if (!c->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_SPELLCLICK))
+    if (!c->HasNpcFlag(UNIT_NPC_FLAG_SPELLCLICK))
         return false;
 
     auto clickBounds = sObjectMgr->GetSpellClickInfoMapBounds(c->GetEntry());
@@ -26964,9 +27076,9 @@ bool Player::IsInWhisperWhiteList(ObjectGuid guid)
     return false;
 }
 
-bool Player::SetDisableGravity(bool disable, bool packetOnly /*= false*/, bool updateAnimationTier /*= true*/)
+bool Player::SetDisableGravity(bool disable, bool packetOnly /*= false*/, bool updateAnimTier /*= true*/)
 {
-    if (!packetOnly && !Unit::SetDisableGravity(disable, packetOnly, updateAnimationTier))
+    if (!packetOnly && !Unit::SetDisableGravity(disable, packetOnly, updateAnimTier))
         return false;
 
     WorldPacket data(disable ? SMSG_MOVE_GRAVITY_DISABLE : SMSG_MOVE_GRAVITY_ENABLE, 12);
@@ -27003,9 +27115,9 @@ bool Player::SetCanFly(bool apply, bool packetOnly /*= false*/)
         return false;
 }
 
-bool Player::SetHover(bool apply, bool packetOnly /*= false*/, bool updateAnimationTier /*= true*/)
+bool Player::SetHover(bool apply, bool packetOnly /*= false*/, bool updateAnimTier /*= true*/)
 {
-    if (!packetOnly && !Unit::SetHover(apply, packetOnly, updateAnimationTier))
+    if (!packetOnly && !Unit::SetHover(apply, packetOnly, updateAnimTier))
         return false;
 
     WorldPacket data(apply ? SMSG_MOVE_SET_HOVER : SMSG_MOVE_UNSET_HOVER, 12);
@@ -27156,8 +27268,7 @@ Pet* Player::SummonPet(uint32 entry, float x, float y, float z, float ang, PetTy
     pet->SetCreatorGUID(GetGUID());
     pet->SetFaction(GetFaction());
 
-    pet->SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE);
-    pet->SetUInt32Value(UNIT_FIELD_BYTES_1, 0);
+    pet->ReplaceAllNpcFlags(UNIT_NPC_FLAG_NONE);
     pet->InitStatsForLevel(GetLevel());
 
     SetMinion(pet, true);
@@ -27168,11 +27279,11 @@ Pet* Player::SummonPet(uint32 entry, float x, float y, float z, float ang, PetTy
             // this enables pet details window (Shift+P)
             pet->GetCharmInfo()->SetPetNumber(pet_number, true);
             pet->SetClass(CLASS_MAGE);
-            pet->SetUInt32Value(UNIT_FIELD_PETEXPERIENCE, 0);
-            pet->SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, 1000);
+            pet->SetPetExperience(0);
+            pet->SetPetNextLevelExperience(1000);
             pet->SetFullHealth();
             pet->SetPower(POWER_MANA, pet->GetMaxPower(POWER_MANA));
-            pet->SetUInt32Value(UNIT_FIELD_PET_NAME_TIMESTAMP, uint32(GameTime::GetGameTime())); // cast can't be helped in this case
+            pet->SetPetNameTimestamp(uint32(GameTime::GetGameTime())); // cast can't be helped in this case
             break;
         default:
             break;
@@ -27366,7 +27477,7 @@ void Player::ApplyAutolearnSpells(uint32 fromLevel)
 void Player::SetSelection(ObjectGuid guid) {
     uint64_t old = GetGuidValue(UNIT_FIELD_TARGET).GetRawValue();
     SetGuidValue(UNIT_FIELD_TARGET, guid);
-    FIRE(UnitOnSetTarget, TSUnit(this), guid.GetRawValue(), old);
+    FIRE(Unit,OnSetTarget, TSUnit(this), guid.GetRawValue(), old);
 }
 
 

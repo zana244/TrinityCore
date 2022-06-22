@@ -365,12 +365,12 @@ void ObjectMgr::LoadGossipMenuItemsLocales()
         if (locale == LOCALE_enUS)
             continue;
 
-        GossipMenuItemsLocale& data = _gossipMenuItemsLocaleStore[MAKE_PAIR32(menuId, optionId)];
+        GossipMenuItemsLocale& data = _gossipMenuItemsLocaleStore[std::make_pair(menuId, optionId)];
         AddLocaleString(fields[3].GetString(), locale, data.OptionText);
         AddLocaleString(fields[4].GetString(), locale, data.BoxText);
     } while (result->NextRow());
 
-    TC_LOG_INFO("server.loading", ">> Loaded %u gossip_menu_option locale strings in %u ms", uint32(_gossipMenuItemsLocaleStore.size()), GetMSTimeDiffToNow(oldMSTime));
+    TC_LOG_INFO("server.loading", ">> Loaded " SZFMTD " gossip_menu_option locale strings in %u ms", _gossipMenuItemsLocaleStore.size(), GetMSTimeDiffToNow(oldMSTime));
 }
 
 void ObjectMgr::LoadPointOfInterestLocales()
@@ -5356,8 +5356,11 @@ void ObjectMgr::LoadQuests()
         "ItemDrop1, ItemDrop2, ItemDrop3, ItemDrop4, ItemDropQuantity1, ItemDropQuantity2, ItemDropQuantity3, ItemDropQuantity4, "
         //      87               88               89               90               91               92                93                  94                  95                  96                  97                  98
         "RequiredItemId1, RequiredItemId2, RequiredItemId3, RequiredItemId4, RequiredItemId5, RequiredItemId6, RequiredItemCount1, RequiredItemCount2, RequiredItemCount3, RequiredItemCount4, RequiredItemCount5, RequiredItemCount6, "
-        //  99          100             101             102             103
-        "Unknown0, ObjectiveText1, ObjectiveText2, ObjectiveText3, ObjectiveText4"
+        // tswow-begin permanent talent reward
+        //  99          100             101             102             103                 104
+        "Unknown0, ObjectiveText1, ObjectiveText2, ObjectiveText3, ObjectiveText4, RewardTalentsPermanent"
+        // @tswow-end
+        //  104
         " FROM quest_template");
     if (!result)
     {
@@ -10207,6 +10210,41 @@ void ObjectMgr::LoadCreatureDefaultTrainers()
     TC_LOG_INFO("server.loading", ">> Loaded " SZFMTD " default trainers in %u ms", _creatureDefaultTrainers.size(), GetMSTimeDiffToNow(oldMSTime));
 }
 
+// @tswow-begin
+void ObjectMgr::LoadRaceClassRuneCombos()
+{
+    if (QueryResult result = WorldDatabase.Query("SELECT classID, raceID FROM class_has_runes"))
+    {
+        do
+        {
+            Field* fields = result->Fetch();
+            uint32 classID = fields[0].GetUInt32();
+            uint32 raceID = fields[1].GetUInt32();
+
+            bool classError = classID > MAX_CLASSES;
+            bool raceError = raceID > MAX_RACES;
+
+            if (classError)
+            {
+                TC_LOG_ERROR("sql.sql", "Table `class_has_runes` references non-existing class id %u, ignoring", classID);
+            }
+
+            if (raceError)
+            {
+                TC_LOG_ERROR("sql.sql", "Table `class_has_runes` references non-existing race id %u, ignoring", raceID);
+            }
+
+            if (classError || raceError)
+            {
+                continue;
+            }
+
+            _classHasRunes[classID - 1] |= (1 << (raceID - 1));
+        } while (result->NextRow());
+    }
+}
+// @tswow-end
+
 uint32 ObjectMgr::LoadReferenceVendor(int32 vendor, int32 item, std::set<uint32>* skip_vendors)
 {
     // find all items from the reference vendor
@@ -10372,7 +10410,7 @@ void ObjectMgr::LoadGossipMenuItems()
 
         gMenuItem.MenuID                = fields[0].GetUInt16();
         gMenuItem.OptionID              = fields[1].GetUInt16();
-        gMenuItem.OptionIcon            = fields[2].GetUInt32();
+        gMenuItem.OptionIcon            = GossipOptionIcon(fields[2].GetUInt32());
         gMenuItem.OptionText            = fields[3].GetString();
         gMenuItem.OptionBroadcastTextID = fields[4].GetUInt32();
         gMenuItem.OptionType            = fields[5].GetUInt8();

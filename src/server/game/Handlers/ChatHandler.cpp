@@ -46,7 +46,6 @@
 // @tswow-begin
 #include "TSUnit.h"
 #include "TSCreature.h"
-#include "TSEventLoader.h"
 // @tswow-end
 
 inline bool isNasty(uint8 c)
@@ -140,7 +139,6 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 return;
         }
     }
-    // LANG_ADDON should not be changed nor be affected by flood control
     else
     {
         // send in universal language if player in .gm on mode (ignore spell effects)
@@ -175,18 +173,18 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 }
             }
         }
-
-        if (!CanSpeak())
-        {
-            std::string timeStr = secsToTimeString(m_muteTime - GameTime::GetGameTime());
-            SendNotification(GetTrinityString(LANG_WAIT_BEFORE_SPEAKING), timeStr.c_str());
-            recvData.rfinish(); // Prevent warnings
-            return;
-        }
-
-        if (type != CHAT_MSG_AFK && type != CHAT_MSG_DND)
-            sender->UpdateSpeakTime();
     }
+
+    if (!CanSpeak())
+    {
+        std::string timeStr = secsToTimeString(m_muteTime - GameTime::GetGameTime());
+        SendNotification(GetTrinityString(LANG_WAIT_BEFORE_SPEAKING), timeStr.c_str());
+        recvData.rfinish(); // Prevent warnings
+        return;
+    }
+
+    if (type != CHAT_MSG_AFK && type != CHAT_MSG_DND)
+        sender->UpdateSpeakTime(lang == LANG_ADDON ? Player::ChatFloodThrottle::ADDON : Player::ChatFloodThrottle::REGULAR);
 
     if (sender->HasAura(1852) && type != CHAT_MSG_WHISPER)
     {
@@ -677,9 +675,16 @@ void WorldSession::HandleTextEmoteOpcode(WorldPacket& recvData)
     GetPlayer()->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_DO_EMOTE, text_emote, 0, unit);
 
     // @tswow-begin
-    if(Creature* c = unit->ToCreature())
+    if(unit && unit->IsCreature())
     {
-        FIRE_MAP(c->GetCreatureTemplate()->events,CreatureOnReceiveEmote,TSCreature(c),TSPlayer(GetPlayer()),text_emote);
+        FIRE_ID(
+            unit->ToCreature()->GetCreatureTemplate()->events.id,
+            Creature,
+            OnReceiveEmote,
+            TSCreature(unit->ToCreature()),
+            TSPlayer(GetPlayer()),
+            text_emote
+        );
     }
     // @tswow-end
 

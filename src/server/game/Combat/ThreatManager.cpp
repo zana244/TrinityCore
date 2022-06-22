@@ -92,14 +92,14 @@ void ThreatReference::UpdateOffline()
 {
     if (a->GetTypeId() == TYPEID_UNIT && a->ToCreature()->IsTrigger())
         return false;
-    if (a->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED))
+    if (a->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED))
     {
-        if (b->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC))
+        if (b->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC))
             return false;
     }
     else
     {
-        if (b->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_NPC))
+        if (b->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC))
             return false;
     }
     return true;
@@ -361,7 +361,7 @@ void ThreatManager::AddThreat(Unit* target, float amount, SpellInfo const* spell
     }
 
     // @tswow-begin
-    FIRE(UnitOnCalcThreatEarly
+    FIRE(Unit,OnCalcThreatEarly
         , TSUnit(const_cast<Unit*>(_owner))
         , TSUnit(target)
         , TSMutable<float>(&amount)
@@ -374,7 +374,7 @@ void ThreatManager::AddThreat(Unit* target, float amount, SpellInfo const* spell
         amount = CalculateModifiedThreat(amount, target, spell);
 
     // @tswow-begin
-    FIRE(UnitOnCalcThreatLate
+    FIRE(Unit,OnCalcThreatLate
         , TSUnit(const_cast<Unit*>(_owner))
         , TSUnit(target)
         , TSMutable<float>(&amount)
@@ -454,7 +454,7 @@ void ThreatManager::ScaleThreat(Unit* target, float factor, bool isRaw)
 {
     auto it = _myThreatListEntries.find(target->GetGUID());
     // @tswow-begin
-    FIRE(UnitOnCalcScaleThreat
+    FIRE(Unit,OnCalcScaleThreat
         , TSUnit(const_cast<Unit*>(_owner))
         , TSUnit(target)
         , TSMutable<float>(&factor)
