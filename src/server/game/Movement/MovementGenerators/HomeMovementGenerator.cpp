@@ -25,7 +25,6 @@
 #include "MoveSplineInit.h"
 #include "Vehicle.h"
 // @tswow-begin
-#include "TSEventLoader.h"
 #include "TSCreature.h"
 // @tswow-end
 
@@ -149,7 +148,7 @@ void HomeMovementGenerator<Creature>::DoFinalize(Creature* owner, bool active, b
     if (movementInform && HasFlag(MOVEMENTGENERATOR_FLAG_INFORM_ENABLED))
     {
         if (!owner->HasCanSwimFlagOutOfCombat())
-            owner->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CAN_SWIM);
+            owner->RemoveUnitFlag(UNIT_FLAG_CAN_SWIM);
 
         owner->SetSpawnHealth();
         owner->LoadCreaturesAddon();
@@ -158,7 +157,7 @@ void HomeMovementGenerator<Creature>::DoFinalize(Creature* owner, bool active, b
         // @tswow-begin
         if(Creature* c = owner->ToCreature())
         {
-            FIRE_MAP(c->GetCreatureTemplate()->events,CreatureOnReachedHome,TSCreature(c));
+            FIRE_ID(c->GetCreatureTemplate()->events.id,Creature,OnReachedHome,TSCreature(c));
         }
         // @tswow-end
         owner->AI()->JustReachedHome();

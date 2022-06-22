@@ -360,7 +360,7 @@ struct TC_GAME_API CreatureTemplate
     uint32  GetFirstInvisibleModel() const;
     uint32  GetFirstVisibleModel() const;
     // @tswow-begin
-    TSCreatureEvents* events = nullptr;
+    TSRegistryRef events;
     TSEntity m_tsEntity;
     // @tswow-end
 

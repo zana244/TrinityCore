@@ -21,7 +21,6 @@
 #include "CreatureAI.h"
 #include "Player.h"
 // @tswow-begin
-#include "TSEventLoader.h"
 #include "TSCreature.h"
 #include "TSEvents.h"
 // @tswow-end
@@ -87,8 +86,8 @@ void CombatReference::EndCombat()
             secondAI->JustExitedCombat();
 
     // @tswow-begin
-    FIRE(UnitOnExitCombatWith, TSUnit(first), TSUnit(second));
-    FIRE(UnitOnExitCombatWith, TSUnit(second), TSUnit(first));
+    FIRE(Unit,OnExitCombatWith, TSUnit(first), TSUnit(second));
+    FIRE(Unit,OnExitCombatWith, TSUnit(second), TSUnit(first));
     // @tswow-end
 
     // ...and finally clean up the reference object
@@ -239,8 +238,8 @@ void CombatManager::InheritCombatStatesFrom(Unit const* who)
         if (!IsInCombatWith(ref.first))
         {
             Unit* target = ref.second->GetOther(who);
-            if ((_owner->IsImmuneToPC() && target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED)) ||
-                (_owner->IsImmuneToNPC() && !target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED)))
+            if ((_owner->IsImmuneToPC() && target->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED)) ||
+                (_owner->IsImmuneToNPC() && !target->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED)))
                 continue;
             SetInCombatWith(target);
         }
@@ -248,8 +247,8 @@ void CombatManager::InheritCombatStatesFrom(Unit const* who)
     for (auto& ref : mgr._pvpRefs)
     {
         Unit* target = ref.second->GetOther(who);
-        if ((_owner->IsImmuneToPC() && target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED)) ||
-            (_owner->IsImmuneToNPC() && !target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED)))
+        if ((_owner->IsImmuneToPC() && target->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED)) ||
+            (_owner->IsImmuneToNPC() && !target->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED)))
             continue;
         SetInCombatWith(target);
     }
@@ -345,9 +344,9 @@ void CombatManager::EndAllPvPCombat()
     // @tswow-begin
     if(Creature *c = me->ToCreature())
     {
-        FIRE_MAP(c->GetCreatureTemplate()->events,CreatureOnJustEnteredCombat,TSCreature(c->ToCreature()),TSUnit(other));
+        FIRE_ID(c->GetCreatureTemplate()->events.id,Creature,OnJustEnteredCombat,TSCreature(c->ToCreature()),TSUnit(other));
     }
-    FIRE(UnitOnEnterCombatWith, TSUnit(me), TSUnit(other));
+    FIRE(Unit,OnEnterCombatWith, TSUnit(me), TSUnit(other));
     // @tswow-end
     if (UnitAI* ai = me->GetAI())
         ai->JustEnteredCombat(other);
@@ -385,22 +384,22 @@ bool CombatManager::UpdateOwnerCombatState() const
 
     if (combatState)
     {
-        _owner->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IN_COMBAT);
+        _owner->SetUnitFlag(UNIT_FLAG_IN_COMBAT);
         _owner->AtEnterCombat();
         if (_owner->GetTypeId() != TYPEID_UNIT)
             _owner->AtEngage(GetAnyTarget());
         // @tswow-begin
-        FIRE(UnitOnEnterCombat, TSUnit(_owner));
+        FIRE(Unit,OnEnterCombat, TSUnit(_owner));
         // @tswow-end
     }
     else
     {
-        _owner->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IN_COMBAT);
+        _owner->RemoveUnitFlag(UNIT_FLAG_IN_COMBAT);
         _owner->AtExitCombat();
         if (_owner->GetTypeId() != TYPEID_UNIT)
             _owner->AtDisengage();
         // @tswow-begin
-        FIRE(UnitOnExitCombat, TSUnit(_owner));
+        FIRE(Unit,OnExitCombat, TSUnit(_owner));
         // @tswow-end
     }
 

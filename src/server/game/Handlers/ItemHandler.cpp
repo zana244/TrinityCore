@@ -454,6 +454,14 @@ void WorldSession::HandleSellItemOpcode(WorldPacket& recvData)
         {
             if (pProto->SellPrice > 0)
             {
+                uint32 money = pProto->SellPrice * count;
+                if (_player->GetMoney() >= MAX_MONEY_AMOUNT - money)               // prevent exceeding gold limit
+                {
+                    _player->SendEquipError(EQUIP_ERR_TOO_MUCH_GOLD, nullptr, nullptr);
+                    _player->SendSellError(SELL_ERR_UNK, creature, itemguid, 0);
+                    return;
+                }
+
                 if (count < pItem->GetCount())               // need split items
                 {
                     Item* pNewItem = pItem->CloneItem(count, _player);
@@ -482,7 +490,6 @@ void WorldSession::HandleSellItemOpcode(WorldPacket& recvData)
                     _player->AddItemToBuyBackSlot(pItem);
                 }
 
-                uint32 money = pProto->SellPrice * count;
                 _player->ModifyMoney(money);
                 _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_MONEY_FROM_VENDORS, money);
             }
@@ -679,9 +686,9 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid, uint32 vendorEntry)
                     continue;
                 }
                 bool shouldSend = true;
-                FIRE_MAP(
-                      vendor->GetCreatureTemplate()->events
-                    , CreatureOnSendVendorItem
+                FIRE_ID(
+                      vendor->GetCreatureTemplate()->events.id
+                    , Creature,OnSendVendorItem
                     , TSCreature(vendor)
                     , TSItemTemplate(itemTemplate)
                     , TSPlayer(_player)

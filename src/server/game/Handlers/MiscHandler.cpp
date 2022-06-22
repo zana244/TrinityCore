@@ -58,7 +58,6 @@
 #include <cstdarg>
 #include <zlib.h>
 // @tswow-begin
-#include "TSEventLoader.h"
 #include "TSUnit.h"
 #include "TSCreature.h"
 #include "TSSpellInfo.h"
@@ -188,9 +187,9 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
         if (unit)
         {
             bool b = false;
-            FIRE_MAP(
-                  unit->GetCreatureTemplate()->events
-                , CreatureOnGossipSelectCode
+            FIRE_ID(
+                  unit->GetCreatureTemplate()->events.id
+                , Creature,OnGossipSelectCode
                 , TSCreature(unit)
                 , TSPlayer(_player)
                 , menuId
@@ -204,9 +203,9 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
         else if(go)
         {
             bool b = false;
-            FIRE_MAP(
-                  go->GetGOInfo()->events
-                , GameObjectOnGossipSelectCode
+            FIRE_ID(
+                  go->GetGOInfo()->events.id
+                , GameObject,OnGossipSelectCode
                 , TSGameObject(go)
                 , TSPlayer(_player)
                 , menuId
@@ -220,9 +219,9 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
         else if(item)
         {
             bool b = false;
-            FIRE_MAP(
-                  item->GetTemplate()->events
-                , ItemOnGossipSelectCode
+            FIRE_ID(
+                  item->GetTemplate()->events.id
+                , Item,OnGossipSelectCode
                 , TSItem(item)
                 , TSPlayer(_player)
                 , menuId
@@ -247,9 +246,9 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
         {
             // @tswow-begin
             bool b = false;
-            FIRE_MAP(
-                  unit->GetCreatureTemplate()->events
-                , CreatureOnGossipSelect
+            FIRE_ID(
+                  unit->GetCreatureTemplate()->events.id
+                , Creature,OnGossipSelect
                 , TSCreature(unit)
                 , TSPlayer(_player)
                 , _player->PlayerTalkClass->GetGossipOptionSender(gossipListId)
@@ -264,9 +263,9 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
         {
             bool b = false;
             // @tswow-begin
-            FIRE_MAP(
-                  go->GetGOInfo()->events
-                , GameObjectOnGossipSelect
+            FIRE_ID(
+                  go->GetGOInfo()->events.id
+                , GameObject,OnGossipSelect
                 , TSGameObject(go)
                 , TSPlayer(_player)
                 , _player->PlayerTalkClass->GetGossipOptionSender(gossipListId)
@@ -281,9 +280,9 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
         {
             // @tswow-begin
             bool b = false;
-            FIRE_MAP(
-                  item->GetTemplate()->events
-                , ItemOnGossipSelect
+            FIRE_ID(
+                  item->GetTemplate()->events.id
+                , Item,OnGossipSelect
                 , TSItem(item)
                 , TSPlayer(_player)
                 , _player->PlayerTalkClass->GetGossipOptionSender(gossipListId)
@@ -524,7 +523,7 @@ void WorldSession::HandleLogoutRequestOpcode(WorldPackets::Character::LogoutRequ
         if (GetPlayer()->GetStandState() == UNIT_STAND_STATE_STAND)
             GetPlayer()->SetStandState(UNIT_STAND_STATE_SIT);
         GetPlayer()->SetRooted(true);
-        GetPlayer()->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
+        GetPlayer()->SetUnitFlag(UNIT_FLAG_STUNNED);
     }
 
     SetLogoutStartTime(GameTime::GetGameTime());
@@ -554,7 +553,7 @@ void WorldSession::HandleLogoutCancelOpcode(WorldPackets::Character::LogoutCance
         GetPlayer()->SetStandState(UNIT_STAND_STATE_STAND);
 
         //! DISABLE_ROTATE
-        GetPlayer()->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
+        GetPlayer()->RemoveUnitFlag(UNIT_FLAG_STUNNED);
     }
 }
 
@@ -626,7 +625,7 @@ void WorldSession::HandleStandStateChangeOpcode(WorldPacket& recvData)
             return;
     }
 
-    _player->SetStandState(animstate);
+    _player->SetStandState(UnitStandStateType(animstate));
 }
 
 void WorldSession::HandleBugOpcode(WorldPacket& recvData)
@@ -758,10 +757,9 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket& recvData)
 
     // @tswow-begin
     bool canceled = false;
-    auto events = GetAreaTriggerEvents(triggerId);
-    FIRE_MAP(
-          events
-        , AreaTriggerOnTrigger
+    FIRE_ID(
+          triggerId
+        , AreaTrigger,OnTrigger
         , TSAreaTriggerEntry(const_cast<AreaTriggerEntry*>(atEntry))
         , TSPlayer(player)
         , TSMutable<bool>(&canceled)
@@ -785,7 +783,7 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket& recvData)
         player->SetRestFlag(REST_FLAG_IN_TAVERN, atEntry->ID);
 
         if (sWorld->IsFFAPvPRealm())
-            player->RemoveByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_FFA_PVP);
+            player->RemovePvpFlag(UNIT_BYTE2_FLAG_FFA_PVP);
 
         return;
     }

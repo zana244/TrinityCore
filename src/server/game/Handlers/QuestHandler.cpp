@@ -36,7 +36,6 @@
 #include "World.h"
 #include "WorldPacket.h"
 // @tswow-begin
-#include "TSEventLoader.h"
 #include "TSUnit.h"
 #include "TSCreature.h"
 #include "TSSpellInfo.h"
@@ -114,9 +113,9 @@ void WorldSession::HandleQuestgiverHelloOpcode(WorldPacket& recvData)
     _player->PlayerTalkClass->ClearMenus();
     // @tswow-begin
     bool b = false;
-    FIRE_MAP(
-          creature->GetCreatureTemplate()->events
-        , CreatureOnGossipHello
+    FIRE_ID(
+          creature->GetCreatureTemplate()->events.id
+        , Creature,OnGossipHello
         , TSCreature(creature)
         , TSPlayer(_player)
         , TSMutable<bool>(&b)
@@ -344,10 +343,10 @@ void WorldSession::HandleQuestgiverChooseRewardOpcode(WorldPacket& recvData)
 
                         _player->PlayerTalkClass->ClearMenus();
                         // @tswow-begin
-                        FIRE_MAP(questgiver->GetCreatureTemplate()->events,CreatureOnQuestReward,TSCreature(questgiver),TSPlayer(_player),TSQuest(quest),reward);
-                        FIRE_MAP(
-                              quest->events
-                            , QuestOnReward
+                        FIRE_ID(questgiver->GetCreatureTemplate()->events.id,Creature,OnQuestReward,TSCreature(questgiver),TSPlayer(_player),TSQuest(quest),reward);
+                        FIRE_ID(
+                              quest->events.id
+                            , Quest,OnReward
                             , TSQuest(quest)
                             , TSPlayer(_player)
                             , TSObject(questgiver)
@@ -375,10 +374,10 @@ void WorldSession::HandleQuestgiverChooseRewardOpcode(WorldPacket& recvData)
 
                         _player->PlayerTalkClass->ClearMenus();
                         // @tswow-begin
-                        FIRE_MAP(questGiver->GetGOInfo()->events,GameObjectOnQuestReward,TSGameObject(questGiver),TSPlayer(_player),TSQuest(quest),reward);
-                        FIRE_MAP(
-                            quest->events
-                            , QuestOnReward
+                        FIRE_ID(questGiver->GetGOInfo()->events.id,GameObject,OnQuestReward,TSGameObject(questGiver),TSPlayer(_player),TSQuest(quest),reward);
+                        FIRE_ID(
+                            quest->events.id
+                            , Quest,OnReward
                             , TSQuest(quest)
                             , TSPlayer(_player)
                             , TSObject(questGiver)
@@ -470,9 +469,9 @@ void WorldSession::HandleQuestLogRemoveQuest(WorldPacket& recvData)
                 }
 
                 // @tswow-begin
-                FIRE_MAP(
-                      quest->events
-                    , QuestOnStatusChanged
+                FIRE_ID(
+                      quest->events.id
+                    , Quest,OnStatusChanged
                     , TSQuest(quest)
                     , TSPlayer(_player)
                 );
@@ -625,15 +624,32 @@ void WorldSession::HandlePushQuestToParty(WorldPacket& recvPacket)
         if (!receiver || receiver == sender)
             continue;
 
-        if (!receiver->SatisfyQuestStatus(quest, false))
+        if (!receiver->GetPlayerSharingQuest().IsEmpty())
         {
-            sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_HAVE_QUEST);
+            sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_BUSY);
             continue;
         }
 
-        if (receiver->GetQuestStatus(questId) == QUEST_STATUS_COMPLETE)
+        switch (receiver->GetQuestStatus(questId))
         {
-            sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_FINISH_QUEST);
+            case QUEST_STATUS_REWARDED:
+            {
+                sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_FINISH_QUEST);
+                continue;
+            }
+            case QUEST_STATUS_INCOMPLETE:
+            case QUEST_STATUS_COMPLETE:
+            {
+                sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_HAVE_QUEST);
+                continue;
+            }
+            default:
+                break;
+        }
+
+        if (!receiver->SatisfyQuestLog(false))
+        {
+            sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_LOG_FULL);
             continue;
         }
 
@@ -646,18 +662,6 @@ void WorldSession::HandlePushQuestToParty(WorldPacket& recvPacket)
         if (!receiver->CanTakeQuest(quest, false))
         {
             sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_CANT_TAKE_QUEST);
-            continue;
-        }
-
-        if (!receiver->SatisfyQuestLog(false))
-        {
-            sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_LOG_FULL);
-            continue;
-        }
-
-        if (receiver->GetPlayerSharingQuest())
-        {
-            sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_BUSY);
             continue;
         }
 
