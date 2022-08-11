@@ -216,8 +216,8 @@ void GameObject::AddToWorld()
     {
         // @tswow-begin
         bool b = false;
-        FIRE_ID(GetGOInfo()->events.id,GameObject,OnCreate,TSGameObject(this),TSMutable<bool>(&b));
-        FIRE_ID(GetMap()->GetId(),Map,OnGameObjectCreate,TSMap(GetMap()),TSGameObject(this),TSMutable<bool>(&b));
+        FIRE_ID(GetGOInfo()->events.id,GameObject,OnCreate,TSGameObject(this),TSMutable<bool,bool>(&b));
+        FIRE_ID(GetMap()->GetId(),Map,OnGameObjectCreate,TSMap(GetMap()),TSGameObject(this),TSMutable<bool,bool>(&b));
         if(b)
         {
             // TODO: Is this enough?
@@ -450,7 +450,6 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
 void GameObject::Update(uint32 diff)
 {
     // @tswow-begin
-    TC_ZONE_SCOPED(ENTITY_PROFILE)
     m_tsWorldEntity.tick(TSWorldObject(this));
     m_tsCollisions.Tick(TSWorldObject(this));
     FIRE_ID(GetGOInfo()->events.id,GameObject,OnUpdate,TSGameObject(this),diff);
@@ -1612,7 +1611,7 @@ void GameObject::Use(Unit* user)
     // @tswow-begin
     WorldObject* target = user;
     bool shouldCancel = false;
-    FIRE_ID(GetGOInfo()->events.id,GameObject,OnUse,TSGameObject(this),TSUnit(user),TSMutable<bool>(&shouldCancel));
+    FIRE_ID(GetGOInfo()->events.id,GameObject,OnUse,TSGameObject(this),TSUnit(user),TSMutable<bool,bool>(&shouldCancel));
     if(shouldCancel)
     {
         return;
@@ -1639,7 +1638,7 @@ void GameObject::Use(Unit* user)
             , GameObject,OnGossipHello
             , TSGameObject(this)
             , TSPlayer(playerUser)
-            , TSMutable<bool>(&b)
+            , TSMutable<bool,bool>(&b)
         );
         if (AI()->OnGossipHello(playerUser))
         // @tswow-end

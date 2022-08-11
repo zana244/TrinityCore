@@ -47,6 +47,7 @@ set_target_properties(worldserver PROPERTIES LINK_FLAGS "${worldserver_LINK_FLAG
 target_link_libraries(worldserver
   PRIVATE
     trinity-core-interface
+    sol2
   PUBLIC
     scripts
     game
@@ -69,17 +70,12 @@ target_include_directories(worldserver
     # tswow-begin
     ${TSWOW_INCLUDES}
     ${LUA_ROOT}
-    ${sol2_SOURCE_DIR}/include
     ${sourcemap_SOURCE_DIR}/src
     ${sourcemap_SOURCE_DIR}/deps/json
     ${sourcemap_SOURCE_DIR}/deps/cencode
     # tswow-end
   PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR})
-
-# tswow-begin tracy
-add_tracy_categories(worldserver)
-# tswow-end
 
 set_target_properties(worldserver
     PROPERTIES

@@ -439,7 +439,6 @@ Unit::~Unit()
 void Unit::Update(uint32 p_time)
 {
     // @tswow-begin
-    TC_ZONE_SCOPED(ENTITY_PROFILE)
     m_tsWorldEntity.tick(TSWorldObject(this));
     m_tsCollisions.Tick(TSWorldObject(this));
     // @tswow-end
@@ -1024,7 +1023,7 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
           spellInfo->events.id
         , Spell,OnDamageEarly
         , TSSpell(spell)
-        , TSMutable<int32>(&damage)
+        , TSMutableNumber<int32>(&damage)
         , TSSpellDamageInfo(damageInfo)
         , attackType
         , crit
@@ -1149,7 +1148,7 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
           spellInfo->events.id
         , Spell,OnDamageLate
         , TSSpell(spell)
-        , TSMutable<uint32>(&damageInfo->damage)
+        , TSMutableNumber<uint32>(&damageInfo->damage)
         , TSSpellDamageInfo(damageInfo)
         , attackType
         , crit
@@ -1266,7 +1265,7 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         // @tswow-begin
         FIRE(Unit,OnMeleeDamageEarly
             , TSMeleeDamageInfo(damageInfo)
-            , TSMutable<uint32>(&damage)
+            , TSMutableNumber<uint32>(&damage)
             , attackType
             , i
         );
@@ -1474,7 +1473,7 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         // @tswow-begin
         FIRE(Unit,OnMeleeDamageLate
             , TSMeleeDamageInfo(damageInfo)
-            , TSMutable<uint32>(&damageInfo->Damages[i].Damage)
+            , TSMutableNumber<uint32>(&damageInfo->Damages[i].Damage)
             , attackType
             , i
         );
@@ -2240,11 +2239,11 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     FIRE(Unit,OnCalcMeleeOutcome
         , TSUnit(const_cast<Unit*>(this))
         , TSUnit(const_cast<Unit*>(victim))
-        , TSMutable<float>(&miss_chance_f)
-        , TSMutable<float>(&crit_chance_f)
-        , TSMutable<float>(&dodge_chance_f)
-        , TSMutable<float>(&block_chance_f)
-        , TSMutable<float>(&parry_chance_f)
+        , TSMutableNumber<float>(&miss_chance_f)
+        , TSMutableNumber<float>(&crit_chance_f)
+        , TSMutableNumber<float>(&dodge_chance_f)
+        , TSMutableNumber<float>(&block_chance_f)
+        , TSMutableNumber<float>(&parry_chance_f)
         , attType
         );
 
@@ -2426,7 +2425,7 @@ float Unit::CalculateSpellpowerCoefficientLevelPenalty(SpellInfo const* spellInf
           spellInfo->events.id
         , Spell,OnCalcSpellPowerLevelPenalty
         , TSSpellInfo(spellInfo)
-        , TSMutable<float>(&result)
+        , TSMutableNumber<float>(&result)
         , TSUnit(const_cast<Unit*>(this))
     );
     return result;
@@ -2791,7 +2790,7 @@ float Unit::GetUnitMissChance() const
     FIRE(
           Unit,OnCalcMissChance
         , TSUnit(const_cast<Unit*>(this))
-        , TSMutable<float>(&miss_chance)
+        , TSMutableNumber<float>(&miss_chance)
     );
     // @tswow-end
     return miss_chance;
@@ -2907,7 +2906,7 @@ float Unit::GetUnitCriticalChanceTaken(Unit const* attacker, WeaponAttackType at
     FIRE(Unit,OnCalcMeleeCrit
         , TSUnit(const_cast<Unit*>(attacker))
         , TSUnit(const_cast<Unit*>(this))
-        , TSMutable<float>(&chance)
+        , TSMutableNumber<float>(&chance)
         , attackType
     );
     // @tswow-end
@@ -12400,7 +12399,7 @@ float Unit::MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, i
               spellInfo->events.id
             , Spell,OnCalcMeleeMiss
             , TSSpellInfo(spellInfo)
-            , TSMutable<float>(&missChance)
+            , TSMutableNumber<float>(&missChance)
             , TSUnit(const_cast<Unit*>(this))
             , TSUnit(const_cast<Unit*>(victim))
             , attType
