@@ -21,7 +21,12 @@ project(TrinityCore)
 
 include(FetchContent)
 
-SET(LUA_ROOT ${CMAKE_SOURCE_DIR}/../../misc/client-extensions/lua-5.1/src)
+FetchContent_Declare(lua
+  URL https://www.lua.org/ftp/lua-5.4.4.tar.gz
+  URL_HASH MD5=bd8ce7069ff99a400efd14cf339a727b
+)
+FetchContent_MakeAvailable(lua)
+SET(LUA_ROOT ${lua_SOURCE_DIR}/src)
 file(GLOB SRC_LUA ${LUA_ROOT}/*.h ${LUA_ROOT}/*.c)
 LIST(REMOVE_ITEM SRC_LUA ${CMAKE_SOURCE_DIR}/../../misc/client-extensions/lua-5.1/src/lua.c)
 add_library ( liblua STATIC ${SRC_LUA} )
@@ -33,14 +38,11 @@ endif()
 # sol2
 #
 FetchContent_Declare (sol2
-  GIT_REPOSITORY https://github.com/tswow/sol2
-  GIT_TAG b9c83d5ecf6bc9503dc66779f2395dc32dffb1e5
+  GIT_REPOSITORY https://github.com/ThePhD/sol2
+  GIT_TAG 4de99c5b41b64b7e654bf8e48b177e8414a756b7
 )
 FetchContent_MakeAvailable (sol2)
-add_library (sane-sol2 INTERFACE)
-add_library (sol2::sane ALIAS sane-sol2)
-target_link_libraries (sane-sol2 INTERFACE liblua)
-target_include_directories (sane-sol2 SYSTEM INTERFACE "${sol2_SOURCE_DIR}/include")
+target_compile_definitions(sol2 INTERFACE SOL_NO_CHECK_NUMBER_PRECISION)
 
 #
 # sourcemap
@@ -89,18 +91,6 @@ target_compile_definitions(TracyClient
 if(TRACY_TIMER_FALLBACK)
   target_compile_definitions(TracyClient PRIVATE TRACY_TIMER_FALLBACK=1)
 endif()
-
-function(add_tracy_categories tgt)
-  if(TRACY_CATEGORIES)
-    foreach(category ${TRACY_CATEGORIES})
-      target_compile_definitions(${tgt}
-        PRIVATE
-        "PROFILE_${category}=1"
-      )
-    endforeach()
-  endif()
-endfunction()
-add_tracy_categories(TracyClient)
 
 #
 # tswow
