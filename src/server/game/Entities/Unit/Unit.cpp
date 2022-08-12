@@ -7737,6 +7737,17 @@ uint32 Unit::SpellHealingBonusTaken(Unit* caster, SpellInfo const* spellProto, u
         });
     }
 
+    /** @epoch-start */
+    // Healing Way dummy affects healing taken from Healing Wave
+    if (spellProto->SpellFamilyName == SPELLFAMILY_SHAMAN && spellProto->SpellFamilyFlags[0] & 0x0000000000000040)
+    {
+        AuraEffectList const& auraDummy = GetAuraEffectsByType(SPELL_AURA_DUMMY);
+        for (auto itr : auraDummy)
+            if (itr->GetId() == 29203)
+                TakenTotalMod *= (itr->GetAmount() + 100.0f) / 100.0f;
+    }
+    /** @epoch-end */
+
     float heal = healamount * TakenTotalMod;
     return uint32(std::max(heal, 0.0f));
 }
