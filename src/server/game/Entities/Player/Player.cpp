@@ -3599,6 +3599,16 @@ void Player::LearnSpell(uint32 spell_id, bool dependent, uint32 fromSkill /*= 0*
                 LearnSpell(itr2->second, false, fromSkill);
         }
     }
+
+    // @tswow-start
+    SpellInfo const* info = sSpellMgr->GetSpellInfo(spell_id);
+    FIRE_ID(
+          info->events.id
+        , Spell,OnLearn
+        , TSSpellInfo(info)
+        , TSPlayer(const_cast<Player*>(this))
+    );
+    // @tswow-end
 }
 
 void Player::RemoveSpell(uint32 spell_id, bool disabled, bool learn_low_rank)
