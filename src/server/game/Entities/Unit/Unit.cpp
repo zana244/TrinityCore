@@ -6577,6 +6577,19 @@ int32 Unit::HealBySpell(HealInfo& healInfo, bool critical /*= false*/)
     Unit::CalcHealAbsorb(healInfo);
     Unit::DealHeal(healInfo);
     SendHealSpellLog(healInfo, critical);
+
+    // @tswow-start
+    FIRE_ID(
+          healInfo.GetSpellInfo()->events.id
+        , Spell,OnHealLate
+        , TSSpellInfo(healInfo.GetSpellInfo())
+        , TSUnit(const_cast<Unit*>(healInfo.GetHealer()))
+        , TSUnit(const_cast<Unit*>(healInfo.GetTarget()))
+        , healInfo.GetEffectiveHeal()
+        , critical
+    );
+    // @tswow-end
+
     return healInfo.GetEffectiveHeal();
 }
 
