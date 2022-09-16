@@ -18235,10 +18235,12 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
 
     _LoadEquipmentSets(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_EQUIPMENT_SETS));
 
+    /** @epoch-begin */
     // @tswow-begin
-    m_db_json = TSDBJson(DBJsonEntityType::PLAYER, guid);
-    m_db_json.Load();
+    // m_db_json = TSDBJson(DBJsonEntityType::PLAYER, guid);
+    // m_db_json.Load();
     // @tswow-end
+    /** @epoch-end */
 
     return true;
 }
