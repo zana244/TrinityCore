@@ -476,19 +476,21 @@ class spell_warl_drain_soul : public AuraScript
 
     void HandleTick(AuraEffect const* aurEff)
     {
-        Unit* caster = GetCaster();
-        Unit* target = GetTarget();
-        if (caster && caster->GetTypeId() == TYPEID_PLAYER && caster->ToPlayer()->isHonorOrXPTarget(target))
-        {
-            if (roll_chance_i(20))
-            {
-                caster->CastSpell(caster, SPELL_WARLOCK_CREATE_SOULSHARD, aurEff);
-                // Glyph of Drain Soul - chance to create an additional Soul Shard
-                if (AuraEffect* aur = caster->GetAuraEffect(SPELL_WARLOCK_GLYPH_OF_DRAIN_SOUL_AURA, EFFECT_0))
-                    if (roll_chance_i(aur->GetMiscValue()))
-                        caster->CastSpell(caster, SPELL_WARLOCK_GLYPH_OF_DRAIN_SOUL_PROC, aur);
-            }
-        }
+        /** epoch-start */
+        // Unit* caster = GetCaster();
+        // Unit* target = GetTarget();
+        // if (caster && caster->GetTypeId() == TYPEID_PLAYER && caster->ToPlayer()->isHonorOrXPTarget(target))
+        // {
+        //     if (roll_chance_i(20))
+        //     {
+        //         caster->CastSpell(caster, SPELL_WARLOCK_CREATE_SOULSHARD, aurEff);
+        //         // Glyph of Drain Soul - chance to create an additional Soul Shard
+        //         if (AuraEffect* aur = caster->GetAuraEffect(SPELL_WARLOCK_GLYPH_OF_DRAIN_SOUL_AURA, EFFECT_0))
+        //             if (roll_chance_i(aur->GetMiscValue()))
+        //                 caster->CastSpell(caster, SPELL_WARLOCK_GLYPH_OF_DRAIN_SOUL_PROC, aur);
+        //     }
+        // }
+        /** @epoch-end */
     }
 
     void Register() override
