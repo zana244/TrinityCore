@@ -84,6 +84,8 @@ void MapUpdater::wait()
 
 void MapUpdater::schedule_update(Map& map, uint32 diff)
 {
+    ZoneScopedNC("MapUpdater::schedule_update", WORLD_UPDATE_COLOR)
+
     std::lock_guard<std::mutex> lock(_lock);
 
     ++pending_requests;

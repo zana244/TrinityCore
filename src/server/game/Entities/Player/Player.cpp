@@ -17510,6 +17510,8 @@ bool Player::IsLoading() const
 
 bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& holder)
 {
+    ZoneScopedNC("Player::LoadFromDB", WORLD_UPDATE_COLOR)
+
     //                                                       0     1        2     3     4      5       6      7   8      9     10    11         12         13           14         15         16
     //QueryResult* result = CharacterDatabase.PQuery("SELECT guid, account, name, race, class, gender, level, xp, money, skin, face, hairStyle, hairColor, facialStyle, bankSlots, restState, playerFlags, "
     // 17          18          19          20   21           22        23         24         25         26          27           28                 29
@@ -20785,6 +20787,8 @@ void Player::SendExplorationExperience(uint32 Area, uint32 Experience) const
 
 void Player::SendDungeonDifficulty(bool IsInGroup) const
 {
+    ZoneScopedNC("Player::SendDungeonDifficulty", WORLD_UPDATE_COLOR)
+
     uint8 val = 0x00000001;
     WorldPacket data(MSG_SET_DUNGEON_DIFFICULTY, 12);
     data << (uint32)GetDungeonDifficulty();
@@ -25697,6 +25701,8 @@ void Player::ResetAchievementCriteria(AchievementCriteriaCondition condition, ui
 
 void Player::UpdateAchievementCriteria(AchievementCriteriaTypes type, uint32 miscValue1 /*= 0*/, uint32 miscValue2 /*= 0*/, WorldObject* ref /*= nullptr*/)
 {
+    ZoneScopedNC("Player::UpdateAchievementCriteria", WORLD_UPDATE_COLOR)
+
     m_achievementMgr->UpdateAchievementCriteria(type, miscValue1, miscValue2, ref);
 }
 

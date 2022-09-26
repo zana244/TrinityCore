@@ -23,6 +23,7 @@
 #include "TSPlayer.h"
 #include "TSEvents.h"
 #include "TSCustomPacket.h"
+#include "TSProfile.h"
 // @tswow-end
 #include "WorldSession.h"
 #include "AccountMgr.h"
@@ -282,6 +283,8 @@ void WorldSession::LogUnprocessedTail(WorldPacket* packet)
 /// Update the WorldSession (triggered by World update)
 bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 {
+    ZoneScopedNC("WorldSession::Update", WORLD_UPDATE_COLOR)
+
     ///- Before we process anything:
     /// If necessary, kick the player because the client didn't send anything for too long
     /// (or they've been idling in character select)
@@ -489,6 +492,8 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 /// %Log the player out
 void WorldSession::LogoutPlayer(bool save)
 {
+    ZoneScopedNC("WorldSession::LogoutPlayer", WORLD_UPDATE_COLOR)
+
     // finish pending transfers before starting the logout
     while (_player && _player->IsBeingTeleportedFar())
         HandleMoveWorldportAck();
@@ -1234,6 +1239,8 @@ void WorldSession::SetPlayer(Player* player)
 
 void WorldSession::ProcessQueryCallbacks()
 {
+    ZoneScopedNC("WorldSession::ProcessQueryCallbacks", WORLD_UPDATE_COLOR)
+
     _queryProcessor.ProcessReadyCallbacks();
     _transactionCallbacks.ProcessReadyCallbacks();
     _queryHolderProcessor.ProcessReadyCallbacks();

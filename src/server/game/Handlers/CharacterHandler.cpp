@@ -59,6 +59,7 @@
 // @tswow-begin
 #include "TSPlayer.h"
 #include "TSEvents.h"
+#include "TSProfile.h"
 // @tswow-end
 
 class LoginQueryHolder : public CharacterDatabaseQueryHolder
@@ -746,6 +747,8 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
 
 void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
 {
+    ZoneScopedNC("WorldSession::HandlePlayerLogin", WORLD_UPDATE_COLOR)
+
     ObjectGuid playerGuid = holder.GetGuid();
 
     Player* pCurrChar = new Player(this);
@@ -755,6 +758,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
     // "GetAccountId() == db stored account id" checked in LoadFromDB (prevent login not own character using cheating tools)
     if (!pCurrChar->LoadFromDB(playerGuid, holder))
     {
+        ZoneScopedNC("pCurrChar->LoadFromDB", WORLD_UPDATE_COLOR);
         SetPlayer(nullptr);
         KickPlayer("WorldSession::HandlePlayerLogin Player::LoadFromDB failed"); // disconnect client, player no set to session and it will not deleted or saved at kick
         delete pCurrChar;                                   // delete it manually
@@ -788,6 +792,8 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
     //QueryResult* result = CharacterDatabase.PQuery("SELECT guildid, rank FROM guild_member WHERE guid = '%u'", pCurrChar->GetGUID().GetCounter());
     if (PreparedQueryResult resultGuild = holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_GUILD))
     {
+        ZoneScopedNC("PLAYER_LOGIN_QUERY_LOAD_GUILD", WORLD_UPDATE_COLOR)
+
         Field* fields = resultGuild->Fetch();
         pCurrChar->SetInGuild(fields[0].GetUInt32());
         pCurrChar->SetRank(fields[1].GetUInt8());
@@ -801,7 +807,10 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
     if (pCurrChar->GetGuildId() != 0)
     {
         if (Guild* guild = sGuildMgr->GetGuildById(pCurrChar->GetGuildId()))
+        {
+            ZoneScopedNC("guild->SendLoginInfo", WORLD_UPDATE_COLOR)
             guild->SendLoginInfo(this);
+        }
         else
         {
             // remove wrong guild data
@@ -837,6 +846,8 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
 
     if (!pCurrChar->GetMap()->AddPlayerToMap(pCurrChar))
     {
+        ZoneScopedNC("pCurrChar->GetMap()->AddPlayerToMap", WORLD_UPDATE_COLOR)
+
         AreaTrigger const* at = sObjectMgr->GetGoBackTrigger(pCurrChar->GetMapId());
         if (at)
             pCurrChar->TeleportTo(at->target_mapId, at->target_X, at->target_Y, at->target_Z, pCurrChar->GetOrientation());

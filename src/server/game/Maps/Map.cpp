@@ -3568,6 +3568,8 @@ void Map::AddFarSpellCallback(FarSpellCallback&& callback)
 
 void DoDelayedUpdate(TSWorldObject obj)
 {
+    ZoneScopedNC("DoDelayedUpdate", WORLD_UPDATE_COLOR)
+
     if (!obj.IsNull())
     {
         for (auto callback : obj->obj->m_delayedCallbacks)
@@ -3586,6 +3588,8 @@ void DoDelayedUpdate(TSWorldObject obj)
 
 void Map::DelayedUpdate(uint32 t_diff)
 {
+    ZoneScopedNC("Map::DelayedUpdate", WORLD_UPDATE_COLOR)
+
     // @tswow-begin
     FIRE_ID(
           GetId()
@@ -3680,6 +3684,8 @@ void Map::AddObjectToSwitchList(WorldObject* obj, bool on)
 
 void Map::RemoveAllObjectsInRemoveList()
 {
+    ZoneScopedNC("Map::RemoveAllObjectsInRemoveList", WORLD_UPDATE_COLOR)
+
     while (!i_objectsToSwitch.empty())
     {
         std::map<WorldObject*, bool>::iterator itr = i_objectsToSwitch.begin();

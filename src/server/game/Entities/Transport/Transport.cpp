@@ -30,6 +30,7 @@
 #include "Totem.h"
 #include "UpdateData.h"
 #include "Vehicle.h"
+#include "TSProfile.h"
 #include <G3D/Vector3.h>
 
 Transport::Transport() : GameObject(),
@@ -240,6 +241,8 @@ void Transport::Update(uint32 diff)
 
 void Transport::DelayedUpdate(uint32 /*diff*/)
 {
+    ZoneScopedNC("Transport::DelayedUpdate", WORLD_UPDATE_COLOR)
+
     if (GetKeyFrames().size() <= 1)
         return;
 
