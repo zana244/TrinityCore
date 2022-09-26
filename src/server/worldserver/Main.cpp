@@ -550,6 +550,7 @@ void FreezeDetector::Handler(std::weak_ptr<FreezeDetector> freezeDetectorRef, bo
             else if (getMSTimeDiff(freezeDetector->_lastChangeMsTime, curtime) > freezeDetector->_maxCoreStuckTimeInMs)
             {
                 TC_LOG_ERROR("server.worldserver", "World Thread hangs, kicking out server!");
+                exit(1);
                 ABORT();
             }
 
