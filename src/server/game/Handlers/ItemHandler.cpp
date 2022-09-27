@@ -21,6 +21,7 @@
 #include "TSPlayer.h"
 #include "TSItemTemplate.h"
 #include "TSMutable.h"
+#include "TSProfile.h"
 // @tswow-end
 #include "WorldSession.h"
 #include "Bag.h"
@@ -319,6 +320,8 @@ void WorldSession::HandleDestroyItemOpcode(WorldPacket& recvData)
 // Only _static_ data send in this packet !!!
 void WorldSession::HandleItemQuerySingleOpcode(WorldPackets::Query::QueryItemSingle& query)
 {
+    ZoneScopedNC("WorldSession::HandleItemQuerySingleOpcode", WORLD_UPDATE_COLOR)
+
     TC_LOG_INFO("network", "STORAGE: Item Query = %u", query.ItemID);
 
     // @tswow-begin mutable version
@@ -593,6 +596,8 @@ void WorldSession::HandleBuyItemInSlotOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleBuyItemOpcode(WorldPacket& recvData)
 {
+    ZoneScopedNC("WorldSession::HandleBuyItemOpcode", WORLD_UPDATE_COLOR)
+
     TC_LOG_DEBUG("network", "WORLD: Received CMSG_BUY_ITEM");
     ObjectGuid vendorguid;
     uint32 item, slot, count;

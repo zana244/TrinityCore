@@ -64,6 +64,7 @@
 #include "TSPlayer.h"
 #include "TSGameObject.h"
 #include "TSAreaTrigger.h"
+#include "TSProfile.h"
 // @tswow-end
 
 void WorldSession::HandleRepopRequest(WorldPackets::Misc::RepopRequest& /*packet*/)
@@ -598,6 +599,8 @@ void WorldSession::HandleZoneUpdateOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleSetSelectionOpcode(WorldPacket& recvData)
 {
+    ZoneScopedNC("WorldSession::HandleChannelVoiceOnOpcode", WORLD_UPDATE_COLOR)
+
     ObjectGuid guid;
     recvData >> guid;
 

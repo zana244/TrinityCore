@@ -19,6 +19,7 @@
 #include "Log.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "TSProfile.h"
 
 void WorldSession::HandleVoiceSessionEnableOpcode(WorldPacket& recvData)
 {
@@ -30,6 +31,8 @@ void WorldSession::HandleVoiceSessionEnableOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleChannelVoiceOnOpcode(WorldPacket& /*recvData*/)
 {
+    ZoneScopedNC("WorldSession::HandleChannelVoiceOnOpcode", WORLD_UPDATE_COLOR)
+
     TC_LOG_DEBUG("network", "WORLD: CMSG_CHANNEL_VOICE_ON");
     // Enable Voice button in channel context menu
 }

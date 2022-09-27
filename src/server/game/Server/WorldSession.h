@@ -488,7 +488,7 @@ class TC_GAME_API WorldSession
         bool DisallowHyperlinksAndMaybeKick(std::string const& str);
 
         void QueuePacket(WorldPacket* new_packet);
-        bool Update(uint32 diff, PacketFilter& updater);
+        bool Update(uint32 diff, PacketFilter& updater, std::map<uint32,uint32>& log);
 
         /// Handle the authentication waiting queue (to be completed)
         void SendAuthWaitQueue(uint32 position);

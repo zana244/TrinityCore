@@ -23,7 +23,7 @@
 #include "TSPlayer.h"
 #include "TSEvents.h"
 #include "TSCustomPacket.h"
-#include "TSProfile.h"
+#include "Tracy.hpp"
 // @tswow-end
 #include "WorldSession.h"
 #include "AccountMgr.h"
@@ -281,10 +281,8 @@ void WorldSession::LogUnprocessedTail(WorldPacket* packet)
 }
 
 /// Update the WorldSession (triggered by World update)
-bool WorldSession::Update(uint32 diff, PacketFilter& updater)
+bool WorldSession::Update(uint32 diff, PacketFilter& updater, std::map<uint32, uint32>& log)
 {
-    ZoneScopedNC("WorldSession::Update", WORLD_UPDATE_COLOR)
-
     ///- Before we process anything:
     /// If necessary, kick the player because the client didn't send anything for too long
     /// (or they've been idling in character select)
@@ -331,6 +329,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                         if(AntiDOS.EvaluateOpcode(*packet, currentTime))
                         {
                             sScriptMgr->OnPacketReceive(this, *packet);
+                            auto itr = log.find(packet->GetOpcode()); if (itr != log.end()) itr->second++; else log.insert({packet->GetOpcode(), 1});
                             opHandle->Call(this, *packet);
                             LogUnprocessedTail(packet);
                         }
@@ -347,6 +346,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                     {
                         // not expected _player or must checked in packet hanlder
                         sScriptMgr->OnPacketReceive(this, *packet);
+                        auto itr = log.find(packet->GetOpcode()); if (itr != log.end()) itr->second++; else log.insert({packet->GetOpcode(), 1});
                         opHandle->Call(this, *packet);
                         LogUnprocessedTail(packet);
                     }
@@ -361,6 +361,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                     else if (AntiDOS.EvaluateOpcode(*packet, currentTime))
                     {
                         sScriptMgr->OnPacketReceive(this, *packet);
+                        auto itr = log.find(packet->GetOpcode()); if (itr != log.end()) itr->second++; else log.insert({ packet->GetOpcode(), 1 });
                         opHandle->Call(this, *packet);
                         LogUnprocessedTail(packet);
                     }
@@ -383,6 +384,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                     if (AntiDOS.EvaluateOpcode(*packet, currentTime))
                     {
                         sScriptMgr->OnPacketReceive(this, *packet);
+                        auto itr = log.find(packet->GetOpcode()); if (itr != log.end()) itr->second++; else log.insert({ packet->GetOpcode(), 1 });
                         opHandle->Call(this, *packet);
                         LogUnprocessedTail(packet);
                     }
@@ -492,8 +494,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 /// %Log the player out
 void WorldSession::LogoutPlayer(bool save)
 {
-    ZoneScopedNC("WorldSession::LogoutPlayer", WORLD_UPDATE_COLOR)
-
     // finish pending transfers before starting the logout
     while (_player && _player->IsBeingTeleportedFar())
         HandleMoveWorldportAck();
@@ -1239,8 +1239,7 @@ void WorldSession::SetPlayer(Player* player)
 
 void WorldSession::ProcessQueryCallbacks()
 {
-    ZoneScopedNC("WorldSession::ProcessQueryCallbacks", WORLD_UPDATE_COLOR)
-
+    ZoneScopedN("ProcessQueryCallbacks");
     _queryProcessor.ProcessReadyCallbacks();
     _transactionCallbacks.ProcessReadyCallbacks();
     _queryHolderProcessor.ProcessReadyCallbacks();

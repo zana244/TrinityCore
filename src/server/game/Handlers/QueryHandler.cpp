@@ -30,6 +30,7 @@
 #include "QueryPackets.h"
 #include "UpdateMask.h"
 #include "World.h"
+#include "TSProfile.h"
 
 void WorldSession::SendNameQueryOpcode(ObjectGuid guid)
 {
@@ -91,6 +92,8 @@ void WorldSession::SendQueryTimeResponse()
 /// Only _static_ data is sent in this packet !!!
 void WorldSession::HandleCreatureQueryOpcode(WorldPackets::Query::QueryCreature& query)
 {
+    ZoneScopedNC("WorldSession::HandleCreatureQueryOpcode", WORLD_UPDATE_COLOR)
+
     if (CreatureTemplate const* ci = sObjectMgr->GetCreatureTemplate(query.CreatureID))
     {
         TC_LOG_DEBUG("network", "WORLD: CMSG_CREATURE_QUERY '%s' - Entry: %u.", ci->Name.c_str(), query.CreatureID);

@@ -26,6 +26,7 @@
 #include "ObjectMgr.h"
 #include "Player.h"
 #include "WorldPacket.h"
+#include "TSProfile.h"
 
 void WorldSession::HandleGuildQueryOpcode(WorldPackets::Guild::QueryGuildInfo& query)
 {
@@ -86,6 +87,8 @@ void WorldSession::HandleGuildInfoOpcode(WorldPackets::Guild::GuildGetInfo& /*pa
 
 void WorldSession::HandleGuildRosterOpcode(WorldPackets::Guild::GuildGetRoster& /*packet*/)
 {
+    ZoneScopedNC("WorldSession::HandleGuildRosterOpcode", WORLD_UPDATE_COLOR)
+
     TC_LOG_DEBUG("guild", "CMSG_GUILD_ROSTER [%s]", GetPlayerInfo().c_str());
 
     if (Guild* guild = GetPlayer()->GetGuild())

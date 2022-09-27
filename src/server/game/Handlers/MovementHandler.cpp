@@ -36,12 +36,15 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "TSProfile.h"
 #include <boost/accumulators/statistics/variance.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
 
 void WorldSession::HandleMoveWorldportAckOpcode(WorldPacket & /*recvData*/)
 {
+    ZoneScopedNC("WorldSession::HandleMoveWorldportAckOpcode", WORLD_UPDATE_COLOR)
+
     TC_LOG_DEBUG("network", "WORLD: got MSG_MOVE_WORLDPORT_ACK.");
     HandleMoveWorldportAck();
 }
@@ -900,6 +903,8 @@ void WorldSession::HandleSummonResponseOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleMoveTimeSkippedOpcode(WorldPacket& recvData)
 {
+    ZoneScopedNC("WorldSession::HandleMoveTimeSkippedOpcode", WORLD_UPDATE_COLOR)
+
     TC_LOG_DEBUG("network", "WORLD: Received CMSG_MOVE_TIME_SKIPPED");
 
     ObjectGuid guid;

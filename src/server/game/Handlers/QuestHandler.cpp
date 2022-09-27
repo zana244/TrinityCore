@@ -42,6 +42,7 @@
 #include "TSPlayer.h"
 #include "TSQuest.h"
 #include "TSGameObject.h"
+#include "TSProfile.h"
 // @tswow-end
 
 void WorldSession::HandleQuestgiverStatusQueryOpcode(WorldPacket& recvData)
@@ -707,6 +708,8 @@ void WorldSession::HandleQuestPushResult(WorldPacket& recvPacket)
 
 void WorldSession::HandleQuestgiverStatusMultipleQuery(WorldPacket& /*recvPacket*/)
 {
+    ZoneScopedNC("WorldSession::HandleQuestgiverStatusMultipleQuery", WORLD_UPDATE_COLOR)
+
     TC_LOG_DEBUG("network", "WORLD: Received CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY");
 
     _player->SendQuestGiverStatusMultiple();

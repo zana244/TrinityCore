@@ -3199,6 +3199,7 @@ void World::SendServerMessage(ServerMessageType messageID, std::string stringPar
 void World::UpdateSessions(uint32 diff)
 {
     {
+        ZoneScopedN("AddSessions");
         TC_METRIC_DETAILED_NO_THRESHOLD_TIMER("world_update_time",
             TC_METRIC_TAG("type", "Add sessions"),
             TC_METRIC_TAG("parent_type", "Update sessions"));
@@ -3209,26 +3210,51 @@ void World::UpdateSessions(uint32 diff)
     }
 
     ///- Then send an update signal to remaining ones
-    for (SessionMap::iterator itr = m_sessions.begin(), next; itr != m_sessions.end(); itr = next)
     {
-        next = itr;
-        ++next;
-
-        ///- and remove not active sessions from the list
-        WorldSession* pSession = itr->second;
-        WorldSessionFilter updater(pSession);
-
-        [[maybe_unused]] uint32 currentSessionId = itr->first;
-        TC_METRIC_DETAILED_TIMER("world_update_sessions_time", TC_METRIC_TAG("account_id", std::to_string(currentSessionId)));
-
-        if (!pSession->Update(diff, updater))    // As interval = 0
+        ZoneScopedN("PacketUpdates");
+        uint64_t start = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        std::map<uint32, uint32> opcode_map;
+        for (SessionMap::iterator itr = m_sessions.begin(), next; itr != m_sessions.end(); itr = next)
         {
-            if (!RemoveQueuedPlayer(itr->second) && itr->second && getIntConfig(CONFIG_INTERVAL_DISCONNECT_TOLERANCE))
-                m_disconnects[itr->second->GetAccountId()] = GameTime::GetGameTime();
-            RemoveQueuedPlayer(pSession);
-            m_sessions.erase(itr);
-            delete pSession;
+            next = itr;
+            ++next;
 
+            ///- and remove not active sessions from the list
+            WorldSession* pSession = itr->second;
+            WorldSessionFilter updater(pSession);
+
+            [[maybe_unused]] uint32 currentSessionId = itr->first;
+            TC_METRIC_DETAILED_TIMER("world_update_sessions_time", TC_METRIC_TAG("account_id", std::to_string(currentSessionId)));
+
+
+            if (!pSession->Update(diff, updater, opcode_map))    // As interval = 0
+            {
+                if (!RemoveQueuedPlayer(itr->second) && itr->second && getIntConfig(CONFIG_INTERVAL_DISCONNECT_TOLERANCE))
+                    m_disconnects[itr->second->GetAccountId()] = GameTime::GetGameTime();
+                RemoveQueuedPlayer(pSession);
+                m_sessions.erase(itr);
+                delete pSession;
+
+            }
+        }
+        uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        if (end - start > 250)
+        {
+            using opcode_pair = std::pair<uint32, uint32>;
+            std::vector<opcode_pair> pairs;
+            for (auto const& pair : opcode_map)
+            {
+                pairs.push_back(pair);
+            }
+            std::sort(pairs.begin(), pairs.end(), [](opcode_pair const& p1, opcode_pair const& p2) { return p1.second > p2.second; });
+            std::stringstream ss;
+            ss << "UpdateWorldSessions took very long:  ";
+            for (auto const& [opcode, count] : pairs)
+            {
+                ss << opcode << ": " << count << ",    ";
+            }
+            std::string str = ss.str();
+            TracyMessage(str.c_str(), str.size());
         }
     }
 }

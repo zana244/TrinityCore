@@ -31,6 +31,7 @@
 #include "Opcodes.h"
 // @tswow-begin (Using Rochet2/Transmog)
 #include "Transmogrification.h"
+#include "TSProfile.h"
 // @tswow-end
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -68,6 +69,8 @@ void WorldSession::HandleClientCastFlags(WorldPacket& recvPacket, uint8 castFlag
 
 void WorldSession::HandleUseItemOpcode(WorldPacket& recvPacket)
 {
+    ZoneScopedNC("WorldSession::HandleMoveTimeSkippedOpcode", WORLD_UPDATE_COLOR)
+
     /// @todo add targets.read() check
     Player* pUser = _player;
 
