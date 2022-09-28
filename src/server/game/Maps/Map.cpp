@@ -1032,7 +1032,9 @@ void Map::ProcessRelocationNotifies(const uint32 diff)
                 Cell cell(pair);
                 cell.SetNoCreate();
 
-                Trinity::DelayedUnitRelocation cell_relocation(cell, pair, *this, MAX_VISIBILITY_DISTANCE);
+                /** @epoch-start */
+                Trinity::DelayedUnitRelocation cell_relocation(cell, pair, *this, 100);
+                /** @epoch-end */
                 TypeContainerVisitor<Trinity::DelayedUnitRelocation, GridTypeMapContainer  > grid_object_relocation(cell_relocation);
                 TypeContainerVisitor<Trinity::DelayedUnitRelocation, WorldTypeMapContainer > world_object_relocation(cell_relocation);
                 Visit(cell, grid_object_relocation);
