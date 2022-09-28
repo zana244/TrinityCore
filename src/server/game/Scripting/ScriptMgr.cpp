@@ -49,6 +49,7 @@
 #include "TSSpellInfo.h"
 #include "TSWorldPacket.h"
 #include "TSPlayer.h"
+#include "TSProfile.h"
 // @tswow-end
 
 // Trait which indicates whether this script type
@@ -1559,6 +1560,8 @@ public:
 
 InstanceScript* ScriptMgr::CreateInstanceData(InstanceMap* map)
 {
+    ZoneScopedN("InstanceScript* ScriptMgr::CreateInstanceData");
+
     ASSERT(map);
 
     // @tswow-begin

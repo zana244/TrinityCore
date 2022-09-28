@@ -23094,6 +23094,8 @@ void Player::SetGroup(Group* group, int8 subgroup)
 
 void Player::SendInitialPacketsBeforeAddToMap()
 {
+    ZoneScopedNC("Player::SendInitialPacketsBeforeAddToMap", WORLD_UPDATE_COLOR)
+
     /// Pass 'this' as argument because we're not stored in ObjectAccessor yet
     /// SMSG_CONTACT_LIST
     GetSocial()->SendSocialList(this, SOCIAL_FLAG_ALL);
@@ -23158,6 +23160,8 @@ void Player::SendInitialPacketsBeforeAddToMap()
 
 void Player::SendInitialPacketsAfterAddToMap()
 {
+    ZoneScopedNC("Player::SendInitialPacketsAfterAddToMap", WORLD_UPDATE_COLOR)
+
     UpdateVisibilityForPlayer();
 
     // update zone
@@ -26100,6 +26104,8 @@ void Player::BuildPlayerTalentsInfoData(WorldPacket* data)
 
 void Player::BuildPetTalentsInfoData(WorldPacket* data)
 {
+    ZoneScopedNC("Player::BuildPetTalentsInfoData", WORLD_UPDATE_COLOR)
+
     uint32 unspentTalentPoints = 0;
     size_t pointsPos = data->wpos();
     *data << uint32(unspentTalentPoints);                   // [PH], unspentTalentPoints
@@ -26172,6 +26178,8 @@ void Player::BuildPetTalentsInfoData(WorldPacket* data)
 
 void Player::SendTalentsInfoData(bool pet)
 {
+    ZoneScopedNC("Player::SendTalentsInfoData", WORLD_UPDATE_COLOR)
+
     WorldPacket data(SMSG_TALENTS_INFO, 50);
     data << uint8(pet ? 1 : 0);
     if (pet)
@@ -26226,6 +26234,8 @@ void Player::BuildEnchantmentsInfoData(WorldPacket* data)
 
 void Player::SendEquipmentSetList()
 {
+    ZoneScopedNC("Player::SendEquipmentSetList", WORLD_UPDATE_COLOR)
+
     uint32 count = 0;
     WorldPacket data(SMSG_EQUIPMENT_SET_LIST, 1000); // guess size
     size_t count_pos = data.wpos();

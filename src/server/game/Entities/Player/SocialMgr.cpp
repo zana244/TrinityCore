@@ -23,6 +23,7 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "TSProfile.h"
 
 PlayerSocial::PlayerSocial(): _playerGUID()
 { }
@@ -123,6 +124,8 @@ void PlayerSocial::SetFriendNote(ObjectGuid const& friendGuid, std::string const
 
 void PlayerSocial::SendSocialList(Player* player, uint32 flags)
 {
+    ZoneScopedNC("PlayerSocial::SendSocialList", WORLD_UPDATE_COLOR)
+
     ASSERT(player);
 
     uint32 friendsCount = 0;
