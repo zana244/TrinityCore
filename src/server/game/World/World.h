@@ -181,6 +181,9 @@ enum WorldBoolConfigs
     // @tswow-begin
     CONFIG_TSWOW_LUA_ENABLED,
     // @tswow-end
+    /** @epoch-begin */
+    CONFIG_ALLOW_TWO_SIDE_INTERACTION_MAIL,
+    /** @epoch-end */
     BOOL_CONFIG_VALUE_COUNT
 };
 
