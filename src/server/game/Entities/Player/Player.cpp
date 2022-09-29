@@ -23995,8 +23995,7 @@ void Player::UpdateVisibleGameobjectsOrSpellClicks()
         if (itr->IsGameObject())
         {
             if (GameObject* obj = ObjectAccessor::GetGameObject(*this, *itr))
-                if (sObjectMgr->IsGameObjectForQuests(obj->GetEntry()))
-                    obj->BuildValuesUpdateBlockForPlayer(&udata, this);
+                obj->BuildValuesUpdateBlockForPlayer(&udata, this);
         }
         else if (itr->IsCreatureOrVehicle())
         {
