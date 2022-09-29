@@ -17,6 +17,7 @@
 
 // @tswow-begin
 #include "AreaBoundary.h"
+#include "TSProfile.h"
 // @tswow-end
 #include "ObjectMgr.h"
 #include "AchievementMgr.h"
@@ -6791,6 +6792,8 @@ void ObjectMgr::LoadInstanceTemplate()
 
 InstanceTemplate const* ObjectMgr::GetInstanceTemplate(uint32 mapID) const
 {
+    ZoneScopedNC("InstanceTemplate const* ObjectMgr::GetInstanceTemplate", WORLD_UPDATE_COLOR)
+
     InstanceTemplateContainer::const_iterator itr = _instanceTemplateStore.find(uint16(mapID));
     if (itr != _instanceTemplateStore.end())
         return &(itr->second);

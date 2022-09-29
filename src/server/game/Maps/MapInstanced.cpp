@@ -27,6 +27,7 @@
 #include "Player.h"
 #include "VMapFactory.h"
 #include "VMapManager2.h"
+#include "TSProfile.h"
 #include "World.h"
 
 MapInstanced::MapInstanced(uint32 id, time_t expiry) : Map(id, expiry, 0, DUNGEON_DIFFICULTY_NORMAL)
@@ -114,6 +115,8 @@ void MapInstanced::UnloadAll()
 */
 Map* MapInstanced::CreateInstanceForPlayer(uint32 mapId, Player* player, uint32 loginInstanceId /*= 0*/)
 {
+    ZoneScopedNC("Map* MapInstanced::CreateInstanceForPlayer", WORLD_UPDATE_COLOR)
+
     if (GetId() != mapId || !player)
         return nullptr;
 
@@ -203,6 +206,8 @@ Map* MapInstanced::CreateInstanceForPlayer(uint32 mapId, Player* player, uint32 
 
 InstanceMap* MapInstanced::CreateInstance(uint32 InstanceId, InstanceSave* save, Difficulty difficulty, TeamId InstanceTeam)
 {
+    ZoneScopedNC("InstanceMap* MapInstanced::CreateInstance", WORLD_UPDATE_COLOR)
+
     // load/create a map
     std::lock_guard<std::mutex> lock(_mapLock);
 

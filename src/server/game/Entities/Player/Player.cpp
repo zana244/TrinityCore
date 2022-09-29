@@ -19216,6 +19216,8 @@ void Player::_LoadBoundInstances(PreparedQueryResult result)
 
 InstancePlayerBind* Player::GetBoundInstance(uint32 mapid, Difficulty difficulty, bool withExpired)
 {
+    ZoneScopedNC("InstancePlayerBind* Player::GetBoundInstance", WORLD_UPDATE_COLOR)
+
     // some instances only have one difficulty
     MapDifficulty const* mapDiff = GetDownscaledMapDifficultyData(mapid, difficulty);
     if (!mapDiff)

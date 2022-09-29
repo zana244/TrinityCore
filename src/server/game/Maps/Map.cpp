@@ -312,6 +312,8 @@ i_scriptLock(false), _respawnCheckTimer(0)
 
 void Map::InitVisibilityDistance()
 {
+    ZoneScopedNC("Map::InitVisibilityDistance", WORLD_UPDATE_COLOR)
+
     //init visibility for continents
     m_VisibleDistance = World::GetMaxVisibleDistanceOnContinents();
     m_VisibilityNotifyPeriod = World::GetVisibilityNotifyPeriodOnContinents();
@@ -4631,6 +4633,8 @@ void Map::SaveRespawnInfoDB(RespawnInfo const& info, CharacterDatabaseTransactio
 
 void Map::LoadRespawnTimes()
 {
+    ZoneScopedNC("Map::LoadRespawnTimes", WORLD_UPDATE_COLOR)
+
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_RESPAWNS);
     stmt->setUInt16(0, GetId());
     stmt->setUInt32(1, GetInstanceId());
@@ -4685,6 +4689,8 @@ time_t Map::GetLinkedRespawnTime(ObjectGuid guid) const
 
 void Map::LoadCorpseData()
 {
+    ZoneScopedNC("Map::LoadCorpseData", WORLD_UPDATE_COLOR)
+
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CORPSES);
     stmt->setUInt32(0, GetId());
     stmt->setUInt32(1, GetInstanceId());

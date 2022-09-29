@@ -33,6 +33,7 @@
 #include "Player.h"
 #include "WorldSession.h"
 #include "Opcodes.h"
+#include "TSProfile.h"
 
 MapManager::MapManager()
     : _nextInstanceId(0), _scheduledScripts(0)
@@ -67,6 +68,8 @@ MapManager* MapManager::instance()
 
 Map* MapManager::CreateBaseMap(uint32 id)
 {
+    ZoneScopedNC("Map* MapManager::CreateBaseMap", WORLD_UPDATE_COLOR)
+
     Map* map = FindBaseMap(id);
 
     if (map == nullptr)
@@ -102,6 +105,8 @@ Map* MapManager::FindBaseNonInstanceMap(uint32 mapId) const
 
 Map* MapManager::CreateMap(uint32 id, Player* player, uint32 loginInstanceId)
 {
+    ZoneScopedNC("Map* MapManager::CreateMap", WORLD_UPDATE_COLOR)
+
     Map* m = CreateBaseMap(id);
 
     if (m && m->Instanceable())
