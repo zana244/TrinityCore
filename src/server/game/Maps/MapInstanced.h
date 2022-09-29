@@ -54,6 +54,8 @@ class TC_GAME_API MapInstanced : public Map
 
         void RemoveGridMapReference(GridCoord const& p)
         {
+            ZoneScopedNC("RemoveGridMapReference", WORLD_UPDATE_COLOR)
+
             --GridMapReference[p.x_coord][p.y_coord];
             if (!GridMapReference[p.x_coord][p.y_coord])
                 SetUnloadReferenceLock(GridCoord((MAX_NUMBER_OF_GRIDS - 1) - p.x_coord, (MAX_NUMBER_OF_GRIDS - 1) - p.y_coord), false);

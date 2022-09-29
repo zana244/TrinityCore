@@ -1742,12 +1742,16 @@ bool Map::GameObjectRespawnRelocation(GameObject* go, bool diffGridOnly)
 
 bool Map::UnloadGrid(NGridType& ngrid, bool unloadAll)
 {
+    ZoneScopedNC("Map::UnloadGrid", WORLD_UPDATE_COLOR)
+
     const uint32 x = ngrid.getX();
     const uint32 y = ngrid.getY();
 
     {
         if (!unloadAll)
         {
+            ZoneScopedNC("Map::UnloadGrid ngrid.GetWorldObjectCountInNGrid", WORLD_UPDATE_COLOR)
+
             //pets, possessed creatures (must be active), transport passengers
             if (ngrid.GetWorldObjectCountInNGrid<Creature>())
                 return false;
@@ -1760,6 +1764,8 @@ bool Map::UnloadGrid(NGridType& ngrid, bool unloadAll)
 
         if (!unloadAll)
         {
+            ZoneScopedNC("Map::UnloadGrid MoveAllCreaturesInMoveList", WORLD_UPDATE_COLOR)
+
             // Finish creature moves, remove and delete all creatures with delayed remove before moving to respawn grids
             // Must know real mob position before move
             MoveAllCreaturesInMoveList();
@@ -1776,6 +1782,8 @@ bool Map::UnloadGrid(NGridType& ngrid, bool unloadAll)
         }
 
         {
+            ZoneScopedNC("Map::UnloadGrid ngrid.VisitAllGrids", WORLD_UPDATE_COLOR)
+
             ObjectGridCleaner worker;
             TypeContainerVisitor<ObjectGridCleaner, GridTypeMapContainer> visitor(worker);
             ngrid.VisitAllGrids(visitor);
@@ -1802,6 +1810,8 @@ bool Map::UnloadGrid(NGridType& ngrid, bool unloadAll)
     {
         if (i_InstanceId == 0)
         {
+            ZoneScopedNC("Map::UnloadGrid i_InstanceId == 0", WORLD_UPDATE_COLOR)
+
             if (GridMaps[gx][gy])
             {
                 GridMaps[gx][gy]->unloadData();

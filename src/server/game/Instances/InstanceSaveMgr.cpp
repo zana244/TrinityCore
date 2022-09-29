@@ -33,6 +33,7 @@
 #include "Player.h"
 #include "Timer.h"
 #include "World.h"
+#include "TSProfile.h"
 
 uint16 InstanceSaveManager::ResetTimeDelay[] = {3600, 900, 300, 60};
 
@@ -48,6 +49,8 @@ InstanceSaveManager* InstanceSaveManager::instance()
 
 void InstanceSaveManager::Unload()
 {
+    ZoneScopedNC("InstanceSaveManager::Unload", WORLD_UPDATE_COLOR)
+
     lock_instLists = true;
     for (InstanceSaveHashMap::iterator itr = m_instanceSaveById.begin(); itr != m_instanceSaveById.end(); ++itr)
     {
@@ -75,6 +78,8 @@ void InstanceSaveManager::Unload()
 */
 InstanceSave* InstanceSaveManager::AddInstanceSave(uint32 mapId, uint32 instanceId, Difficulty difficulty, time_t resetTime, bool canReset, bool load)
 {
+    ZoneScopedNC("InstanceSave* InstanceSaveManager::AddInstanceSave", WORLD_UPDATE_COLOR)
+
     if (InstanceSave* old_save = GetInstanceSave(instanceId))
         return old_save;
 
@@ -123,12 +128,16 @@ InstanceSave* InstanceSaveManager::AddInstanceSave(uint32 mapId, uint32 instance
 
 InstanceSave* InstanceSaveManager::GetInstanceSave(uint32 InstanceId)
 {
+    ZoneScopedNC("InstanceSave* InstanceSaveManager::GetInstanceSave", WORLD_UPDATE_COLOR)
+
     InstanceSaveHashMap::iterator itr = m_instanceSaveById.find(InstanceId);
     return itr != m_instanceSaveById.end() ? itr->second : nullptr;
 }
 
 void InstanceSaveManager::DeleteInstanceFromDB(uint32 instanceid)
 {
+    ZoneScopedNC("InstanceSaveManager::DeleteInstanceFromDB", WORLD_UPDATE_COLOR)
+
     CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_INSTANCE_BY_INSTANCE);
@@ -149,6 +158,8 @@ void InstanceSaveManager::DeleteInstanceFromDB(uint32 instanceid)
 
 void InstanceSaveManager::RemoveInstanceSave(uint32 InstanceId)
 {
+    ZoneScopedNC("InstanceSaveManager::RemoveInstanceSave", WORLD_UPDATE_COLOR)
+
     InstanceSaveHashMap::iterator itr = m_instanceSaveById.find(InstanceId);
     if (itr != m_instanceSaveById.end())
     {
@@ -170,6 +181,8 @@ void InstanceSaveManager::RemoveInstanceSave(uint32 InstanceId)
 
 void InstanceSaveManager::UnloadInstanceSave(uint32 InstanceId)
 {
+    ZoneScopedNC("InstanceSaveManager::UnloadInstanceSave", WORLD_UPDATE_COLOR)
+
     if (InstanceSave* save = GetInstanceSave(InstanceId))
     {
         save->UnloadIfEmpty();
@@ -193,6 +206,8 @@ InstanceSave::~InstanceSave()
 */
 void InstanceSave::SaveToDB()
 {
+    ZoneScopedNC("InstanceSave::SaveToDB", WORLD_UPDATE_COLOR)
+
     // save instance data too
     std::string data;
     uint32 completedEncounters = 0;
@@ -220,6 +235,8 @@ void InstanceSave::SaveToDB()
 
 time_t InstanceSave::GetResetTimeForDB()
 {
+    ZoneScopedNC("InstanceSave::GetResetTimeForDB", WORLD_UPDATE_COLOR)
+
     // only save the reset time for normal instances
     MapEntry const* entry = sMapStore.LookupEntry(GetMapId());
     if (!entry || entry->InstanceType == MAP_RAID || GetDifficulty() == DUNGEON_DIFFICULTY_HEROIC)
@@ -241,6 +258,8 @@ MapEntry const* InstanceSave::GetMapEntry()
 
 void InstanceSave::DeleteFromDB()
 {
+    ZoneScopedNC("InstanceSave::DeleteFromDB", WORLD_UPDATE_COLOR)
+
     InstanceSaveManager::DeleteInstanceFromDB(GetInstanceId());
 }
 
@@ -596,6 +615,8 @@ void InstanceSaveManager::_ResetSave(InstanceSaveHashMap::iterator &itr)
 
 void InstanceSaveManager::_ResetInstance(uint32 mapid, uint32 instanceId)
 {
+    ZoneScopedNC("InstanceSaveManager::_ResetInstance", WORLD_UPDATE_COLOR)
+
     TC_LOG_DEBUG("maps", "InstanceSaveMgr::_ResetInstance %u, %u", mapid, instanceId);
     Map const* map = sMapMgr->CreateBaseMap(mapid);
     if (!map->Instanceable())
@@ -626,6 +647,8 @@ void InstanceSaveManager::_ResetInstance(uint32 mapid, uint32 instanceId)
 
 void InstanceSaveManager::_ResetOrWarnAll(uint32 mapid, Difficulty difficulty, bool warn, time_t resetTime)
 {
+    ZoneScopedNC("InstanceSaveManager::_ResetOrWarnAll", WORLD_UPDATE_COLOR)
+
     // global reset for all instances of the given map
     MapEntry const* mapEntry = sMapStore.LookupEntry(mapid);
     if (!mapEntry->Instanceable())

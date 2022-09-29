@@ -20,6 +20,7 @@
 #include "Log.h"
 #include "Config.h"
 #include "MapDefines.h"
+#include "TSProfile.h"
 
 namespace MMAP
 {
@@ -199,6 +200,8 @@ namespace MMAP
 
     bool MMapManager::unloadMap(uint32 mapId, int32 x, int32 y)
     {
+        ZoneScopedNC("MMapManager::unloadMap", WORLD_UPDATE_COLOR)
+
         // check if we have this map loaded
         MMapDataSet::const_iterator itr = GetMMapData(mapId);
         if (itr == loadedMMaps.end())

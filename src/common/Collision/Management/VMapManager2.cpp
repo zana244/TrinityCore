@@ -27,6 +27,7 @@
 #include "Log.h"
 #include "VMapDefinitions.h"
 #include "Errors.h"
+#include "TSProfile.h"
 
 using G3D::Vector3;
 
@@ -149,6 +150,8 @@ namespace VMAP
 
     void VMapManager2::unloadMap(unsigned int mapId, int x, int y)
     {
+        ZoneScopedNC("VMapManager2::unloadMap", WORLD_UPDATE_COLOR)
+
         InstanceTreeMap::iterator instanceTree = iInstanceMapTrees.find(mapId);
         if (instanceTree != iInstanceMapTrees.end() && instanceTree->second)
         {
