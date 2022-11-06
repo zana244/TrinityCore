@@ -1237,6 +1237,8 @@ void Guild::HandleRoster(WorldSession* session)
     ZoneScoped;
     WorldPackets::Guild::GuildRoster roster;
 
+    roster.RankData.reserve(m_ranks.size());
+    for (RankInfo const& rank : m_ranks)
     {
         ZoneScopedN("Guild::HandleRoster::RankInfo");
         roster.RankData.reserve(m_ranks.size());
@@ -1254,6 +1256,9 @@ void Guild::HandleRoster(WorldSession* session)
         }
     }
 
+    bool sendOfficerNote = _HasRankRight(session->GetPlayer(), GR_RIGHT_VIEWOFFNOTE);
+    roster.MemberData.reserve(m_members.size());
+    for (auto const& [guid, member] : m_members)
     {
         ZoneScopedN("Guild::HandleRoster::Member");
         bool sendOfficerNote = _HasRankRight(session->GetPlayer(), GR_RIGHT_VIEWOFFNOTE);
