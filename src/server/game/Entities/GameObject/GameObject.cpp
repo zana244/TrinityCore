@@ -1289,7 +1289,7 @@ bool GameObject::IsNeverVisible() const
     if (WorldObject::IsNeverVisible())
         return true;
 
-    if (GetGoType() == GAMEOBJECT_TYPE_SPELL_FOCUS && GetGOInfo()->spellFocus.serverOnly == 1)
+    if (GetGOInfo()->GetServerOnly())
         return true;
 
     return false;

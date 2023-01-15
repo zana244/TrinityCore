@@ -3851,6 +3851,7 @@ void Unit::RemoveAppliedAuras(uint32 spellId, std::function<bool(AuraApplication
         if (check(iter->second))
         {
             RemoveAura(iter, removeMode);
+            iter = m_appliedAuras.lower_bound(spellId);
             continue;
         }
         ++iter;
@@ -3864,6 +3865,7 @@ void Unit::RemoveOwnedAuras(uint32 spellId, std::function<bool(Aura const*)> con
         if (check(iter->second))
         {
             RemoveOwnedAura(iter, removeMode);
+            iter = m_ownedAuras.lower_bound(spellId);
             continue;
         }
         ++iter;
@@ -11323,6 +11325,10 @@ bool Unit::InitTamedPet(Pet* pet, uint8 level, uint32 spell_id)
         // @tswow-end
         if (attacker && attacker->GetTypeId() == TYPEID_UNIT && attacker->IsAIEnabled())
             attacker->ToCreature()->AI()->KilledUnit(victim);
+
+        // @tswow-begin
+        FIRE(Unit,OnDeath, TSUnit(victim), TSUnit(attacker));
+        // @tswow-end
 
         // last damage from non duel opponent or opponent controlled creature
         if (plrVictim->duel)
