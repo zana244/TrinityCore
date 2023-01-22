@@ -226,12 +226,6 @@ namespace MMAP
             std::vector<TileBuilder*> m_tileBuilders;
             ProducerConsumerQueue<TileInfo> _queue;
             std::atomic<bool> _cancelationToken;
-
-            /** @epoch-start */
-            float agentHeight = 1.5f;
-            float const agentMaxClimbModelTerrainTransition = 1.2f;
-            float const agentMaxClimbTerrain = 1.8f;
-            /** @epoch-end */
     };
 }
 
