@@ -2887,6 +2887,15 @@ void Spell::EffectEnchantItemTmp()
     else
         duration = 3600;                                    // 1 hour
 
+    /** @tswow-start */
+    FIRE_ID(
+          m_spellInfo->events.id
+        , Spell,OnCalcEnchantDuration
+        , TSSpell(this)
+        , TSMutable<uint32,uint32>(&duration)
+    );
+    /** @tswow-end */
+
     // item can be in trade slot and have owner diff. from caster
     Player* item_owner = itemTarget->GetOwner();
     if (!item_owner)
