@@ -3690,12 +3690,14 @@ void SpellMgr::LoadSpellInfoCorrections()
     });
 
     // Vampiric Touch (dispel effect)
-    ApplySpellFix({ 64085 }, [](SpellInfo* spellInfo)
-    {
-        // copy from similar effect of Unstable Affliction (31117)
-        spellInfo->AttributesEx4 |= SPELL_ATTR4_FIXED_DAMAGE;
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_LIMIT_PCT_DAMAGE_MODS;
-    });
+    /** @epoch-start */
+    // ApplySpellFix({ 64085 }, [](SpellInfo* spellInfo)
+    // {
+    //     // copy from similar effect of Unstable Affliction (31117)
+    //     spellInfo->AttributesEx4 |= SPELL_ATTR4_FIXED_DAMAGE;
+    //     spellInfo->AttributesEx6 |= SPELL_ATTR6_LIMIT_PCT_DAMAGE_MODS;
+    // });
+    /** @epoch-end */
 
     // Improved Devouring Plague
     ApplySpellFix({ 63675 }, [](SpellInfo* spellInfo)

@@ -1590,14 +1590,16 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                 // Shadow word: Pain // Vampiric Touch
                 if (removeMode == AURA_REMOVE_BY_ENEMY_SPELL && (GetSpellInfo()->SpellFamilyFlags[0] & 0x00008000 || GetSpellInfo()->SpellFamilyFlags[1] & 0x00000400))
                 {
-                    // Shadow Affinity
-                    if (AuraEffect const* aurEff = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST, 178, 1))
-                    {
-                        int32 basepoints0 = aurEff->GetAmount() * caster->GetCreateMana() / 100;
-                        CastSpellExtraArgs args(GetEffect(0));
-                        args.AddSpellMod(SPELLVALUE_BASE_POINT0, basepoints0);
-                        caster->CastSpell(caster, 64103, args);
-                    }
+                    /** @epoch-start */
+                    // // Shadow Affinity
+                    // if (AuraEffect const* aurEff = caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST, 178, 1))
+                    // {
+                    //     int32 basepoints0 = aurEff->GetAmount() * caster->GetCreateMana() / 100;
+                    //     CastSpellExtraArgs args(GetEffect(0));
+                    //     args.AddSpellMod(SPELLVALUE_BASE_POINT0, basepoints0);
+                    //     caster->CastSpell(caster, 64103, args);
+                    // }
+                    /** @epoch-end */
                 }
                 // Power word: shield
                 else if (removeMode == AURA_REMOVE_BY_ENEMY_SPELL && GetSpellInfo()->SpellFamilyFlags[0] & 0x00000001)
