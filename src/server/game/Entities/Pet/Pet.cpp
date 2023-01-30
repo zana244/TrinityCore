@@ -905,7 +905,22 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
     SetModCastingSpeed(1.0f);
 
     //scale
+    /** @epoch-start */
     SetObjectScale(GetNativeObjectScale());
+    CreatureFamilyEntry const* cFamily = sCreatureFamilyStore.LookupEntry(cinfo->family);
+    if (cFamily && cFamily->MinScale > 0.0f && IsHunterPet())
+    {
+        float scale;
+        if (GetLevel() >= cFamily->MaxScaleLevel)
+            scale = cFamily->MaxScale;
+        else if (GetLevel() <= cFamily->MinScaleLevel)
+            scale = cFamily->MinScale;
+        else
+            scale = cFamily->MinScale + float(GetLevel() - cFamily->MinScaleLevel) / cFamily->MaxScaleLevel * (cFamily->MaxScale - cFamily->MinScale);
+
+        SetObjectScale(scale);
+    }
+    /** @epoch-end */
 
     // Resistance
     // Hunters pet should not inherit resistances from creature_template, they have separate auras for that
