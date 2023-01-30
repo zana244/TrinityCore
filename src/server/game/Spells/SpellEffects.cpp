@@ -402,54 +402,56 @@ void Spell::EffectSchoolDMG()
                 // Conflagrate - consumes Immolate or Shadowflame
                 else if (m_spellInfo->TargetAuraState == AURA_STATE_CONFLAGRATE)
                 {
-                    AuraEffect const* aura = nullptr;                // found req. aura for damage calculation
+                    /** @epoch-start */
+                    // AuraEffect const* aura = nullptr;                // found req. aura for damage calculation
 
-                    Unit::AuraEffectList const& mPeriodic = unitTarget->GetAuraEffectsByType(SPELL_AURA_PERIODIC_DAMAGE);
-                    for (Unit::AuraEffectList::const_iterator i = mPeriodic.begin(); i != mPeriodic.end(); ++i)
-                    {
-                        // for caster applied auras only
-                        if ((*i)->GetSpellInfo()->SpellFamilyName != SPELLFAMILY_WARLOCK ||
-                            (*i)->GetCasterGUID() != unitCaster->GetGUID())
-                            continue;
+                    // Unit::AuraEffectList const& mPeriodic = unitTarget->GetAuraEffectsByType(SPELL_AURA_PERIODIC_DAMAGE);
+                    // for (Unit::AuraEffectList::const_iterator i = mPeriodic.begin(); i != mPeriodic.end(); ++i)
+                    // {
+                    //     // for caster applied auras only
+                    //     if ((*i)->GetSpellInfo()->SpellFamilyName != SPELLFAMILY_WARLOCK ||
+                    //         (*i)->GetCasterGUID() != unitCaster->GetGUID())
+                    //         continue;
 
-                        // Immolate
-                        if ((*i)->GetSpellInfo()->SpellFamilyFlags[0] & 0x4)
-                        {
-                            aura = *i;                      // it selected always if exist
-                            break;
-                        }
+                    //     // Immolate
+                    //     if ((*i)->GetSpellInfo()->SpellFamilyFlags[0] & 0x4)
+                    //     {
+                    //         aura = *i;                      // it selected always if exist
+                    //         break;
+                    //     }
 
-                        // Shadowflame
-                        if ((*i)->GetSpellInfo()->SpellFamilyFlags[2] & 0x00000002)
-                            aura = *i;                      // remember but wait possible Immolate as primary priority
-                    }
+                    //     // Shadowflame
+                    //     if ((*i)->GetSpellInfo()->SpellFamilyFlags[2] & 0x00000002)
+                    //         aura = *i;                      // remember but wait possible Immolate as primary priority
+                    // }
 
-                    // found Immolate or Shadowflame
-                    if (aura)
-                    {
-                        // Calculate damage of Immolate/Shadowflame tick
-                        int32 pdamage = aura->GetAmount();
-                        pdamage = unitTarget->SpellDamageBonusTaken(unitCaster, aura->GetSpellInfo(), pdamage, DOT);
+                    // // found Immolate or Shadowflame
+                    // if (aura)
+                    // {
+                    //     // Calculate damage of Immolate/Shadowflame tick
+                    //     int32 pdamage = aura->GetAmount();
+                    //     pdamage = unitTarget->SpellDamageBonusTaken(unitCaster, aura->GetSpellInfo(), pdamage, DOT);
 
-                        // And multiply by amount of ticks to get damage potential
-                        pdamage *= aura->GetSpellInfo()->GetMaxTicks();
+                    //     // And multiply by amount of ticks to get damage potential
+                    //     pdamage *= aura->GetSpellInfo()->GetMaxTicks();
 
-                        int32 pct_dir = unitCaster->CalculateSpellDamage(m_spellInfo->GetEffect(EFFECT_1));
-                        damage += CalculatePct(pdamage, pct_dir);
+                    //     int32 pct_dir = unitCaster->CalculateSpellDamage(m_spellInfo->GetEffect(EFFECT_1));
+                    //     damage += CalculatePct(pdamage, pct_dir);
 
-                        int32 pct_dot = unitCaster->CalculateSpellDamage(m_spellInfo->GetEffect(EFFECT_2));
-                        int32 const dotBasePoints = CalculatePct(pdamage, pct_dot);
+                    //     int32 pct_dot = unitCaster->CalculateSpellDamage(m_spellInfo->GetEffect(EFFECT_2));
+                    //     int32 const dotBasePoints = CalculatePct(pdamage, pct_dot);
 
-                        ASSERT(m_spellInfo->GetMaxTicks() > 0);
-                        m_spellValue->EffectBasePoints[EFFECT_1] = dotBasePoints / m_spellInfo->GetMaxTicks();
+                    //     ASSERT(m_spellInfo->GetMaxTicks() > 0);
+                    //     m_spellValue->EffectBasePoints[EFFECT_1] = dotBasePoints / m_spellInfo->GetMaxTicks();
 
-                        apply_direct_bonus = false;
-                        // Glyph of Conflagrate
-                        if (!unitCaster->HasAura(56235))
-                            unitTarget->RemoveAurasDueToSpell(aura->GetId(), unitCaster->GetGUID());
+                    //     apply_direct_bonus = false;
+                    //     // Glyph of Conflagrate
+                    //     if (!unitCaster->HasAura(56235))
+                    //         unitTarget->RemoveAurasDueToSpell(aura->GetId(), unitCaster->GetGUID());
 
-                        break;
-                    }
+                    //     break;
+                    // }
+                    /** @epoch-end */
                 }
                 // Shadow Bite
                 else if (m_spellInfo->SpellFamilyFlags[1] & 0x400000)
