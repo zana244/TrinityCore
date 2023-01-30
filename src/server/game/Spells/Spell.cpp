@@ -7210,8 +7210,10 @@ void Spell::Delayed() // only called in DealDamage()
     if (!(m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_PUSH_BACK))
         return;
 
-    if (IsDelayableNoMore())                                 // Spells may only be delayed twice
-        return;
+    /** @epoch-start */
+    // if (IsDelayableNoMore())                                 // Spells may only be delayed twice
+    //     return;
+    /** @epoch-end */
 
     //check pushback reduce
     int32 delaytime = 500;                                  // spellcasting delay is normally 500ms
@@ -7252,8 +7254,10 @@ void Spell::DelayedChannel()
     if (!(m_spellInfo->ChannelInterruptFlags & CHANNEL_FLAG_DELAY))
         return;
 
-    if (IsDelayableNoMore())                                    // Spells may only be delayed twice
-        return;
+    /** @epoch-start */
+    // if (IsDelayableNoMore())                                 // Spells may only be delayed twice
+    //     return;
+    /** @epoch-end */
 
     //check pushback reduce
     // should be affected by modifiers, not take the dbc duration.
