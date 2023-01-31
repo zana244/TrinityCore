@@ -26,6 +26,11 @@
 #include "QuestPools.h"
 #include "World.h"
 
+/** @tswow-start */
+#include "TSQuest.h"
+#include "TSPlayer.h"
+/** @tswow-end */
+
 Quest::Quest(Field* questRecord)
 {
     _id = questRecord[0].GetUInt32();
@@ -223,6 +228,16 @@ uint32 Quest::GetXPReward(Player const* player) const
             uint32 minScaledXP = RoundXPValue(xpentry->Difficulty[_rewardXPDifficulty]) * sWorld->getIntConfig(CONFIG_MIN_QUEST_SCALED_XP_RATIO) / 100;
             xp = std::max(minScaledXP, xp);
         }
+
+        // @tswow-begin
+        FIRE_ID(
+            this->events.id
+            , Quest,OnCalcXP
+            , TSQuest(this)
+            , TSPlayer(const_cast<Player*>(player))
+            , TSMutableNumber<uint32>(&xp)
+        );
+        // @tswow-end
 
         return xp;
     }

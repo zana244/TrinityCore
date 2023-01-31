@@ -150,6 +150,14 @@ inline void KillRewarder::_RewardXP(Player* player, float rate)
         else
             xp = 0;
     }
+
+    /** @tswow-start */
+    FIRE(Player, OnCalcKillXP
+        , TSPlayer(const_cast<Player*>(player))
+        , TSMutableNumber<uint32>(&xp)
+    );
+    /** @tswow-end */
+
     if (xp)
     {
         // 4.2.2. Apply auras modifying rewarded XP (SPELL_AURA_MOD_XP_PCT).
