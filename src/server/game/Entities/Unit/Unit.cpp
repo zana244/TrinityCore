@@ -3166,6 +3166,16 @@ void Unit::FinishSpell(CurrentSpellTypes spellType, bool ok /*= true*/)
     spell->finish(ok);
 }
 
+/** @epoch-start */
+bool Unit::IsNextSwingSpellCasted() const
+{
+    if (m_currentSpells[CURRENT_MELEE_SPELL] && m_currentSpells[CURRENT_MELEE_SPELL]->m_spellInfo->IsNextMeleeSwingSpell())
+        return (true);
+
+    return (false);
+}
+/** @epoch-end */
+
 bool Unit::IsNonMeleeSpellCast(bool withDelayed, bool skipChanneled, bool skipAutorepeat, bool isAutoshoot, bool skipInstant) const
 {
     // We don't do loop here to explicitly show that melee spell is excluded.
