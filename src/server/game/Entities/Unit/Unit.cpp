@@ -7220,19 +7220,21 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
                     float modChance = 0.f;
                     switch (aurEff->GetMiscValue())
                     {
-                        case 911: // Shatter (Rank 3)
-                            modChance += 16.f;
-                            [[fallthrough]];
-                        case 910: // Shatter (Rank 2)
-                            modChance += 17.f;
-                            [[fallthrough]];
-                        case 849: // Shatter (Rank 1)
-                            modChance += 17.f;
-                            if (!HasAuraState(AURA_STATE_FROZEN, spellInfo, caster))
-                                break;
+                        /** @epoch-start */
+                        // case 911: // Shatter (Rank 3)
+                        //     modChance += 30.f;
+                        //     [[fallthrough]];
+                        // case 910: // Shatter (Rank 2)
+                        //     modChance += 20.f;
+                        //     [[fallthrough]];
+                        // case 849: // Shatter (Rank 1)
+                        //     modChance += 10.f;
+                        //     if (!HasAuraState(AURA_STATE_FROZEN, spellInfo, caster))
+                        //         break;
 
-                            crit_chance += modChance;
-                            break;
+                        //     crit_chance += modChance;
+                        //     break;
+                        /** @epoch-end */
                         case 7917: // Glyph of Shadowburn
                             if (HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT, spellInfo, caster))
                                 crit_chance += aurEff->GetAmount();
