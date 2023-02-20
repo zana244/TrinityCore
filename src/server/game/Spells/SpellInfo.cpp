@@ -1381,7 +1381,6 @@ bool SpellInfo::IsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo) const
         case SPELL_SPECIFIC_MAGE_POLYMORPH:
         case SPELL_SPECIFIC_PRESENCE:
         case SPELL_SPECIFIC_CHARM:
-        case SPELL_SPECIFIC_SCROLL:
         case SPELL_SPECIFIC_WARRIOR_ENRAGE:
         case SPELL_SPECIFIC_MAGE_ARCANE_BRILLANCE:
         case SPELL_SPECIFIC_PRIEST_DIVINE_SPIRIT:
@@ -1396,6 +1395,7 @@ bool SpellInfo::IsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo) const
             return spellSpec2 == SPELL_SPECIFIC_FOOD
                 || spellSpec2 == SPELL_SPECIFIC_DRINK
                 || spellSpec2 == SPELL_SPECIFIC_FOOD_AND_DRINK;
+        case SPELL_SPECIFIC_SCROLL:
         default:
             return false;
     }
@@ -2053,19 +2053,19 @@ void SpellInfo::_LoadSpellSpecific()
                 // scrolls effects
                 else
                 {
-                    SpellInfo const* firstRankSpellInfo = GetFirstRankSpell();
-                    switch (firstRankSpellInfo->Id)
-                    {
-                        case 8118: // Strength
-                        case 8099: // Stamina
-                        case 8112: // Spirit
-                        case 8096: // Intellect
-                        case 8115: // Agility
-                        case 8091: // Armor
-                            return SPELL_SPECIFIC_SCROLL;
-                        default:
-                            break;
-                    }
+                    // SpellInfo const* firstRankSpellInfo = GetFirstRankSpell();
+                    // switch (firstRankSpellInfo->Id)
+                    // {
+                    //     case 8118: // Strength
+                    //     case 8099: // Stamina
+                    //     case 8112: // Spirit
+                    //     case 8096: // Intellect
+                    //     case 8115: // Agility
+                    //     case 8091: // Armor
+                    //         return SPELL_SPECIFIC_SCROLL;
+                    //     default:
+                    //         break;
+                    // }
 
                     switch (Id)
                     {
