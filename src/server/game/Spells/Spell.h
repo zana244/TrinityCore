@@ -504,6 +504,9 @@ class TC_GAME_API Spell
         uint8 m_runesState;
 
         uint8 m_delayAtDamageCount;
+        /** @epoch-start */
+        int32 GetNextDelayAtDamageMsTime() { return m_delayAtDamageCount < 5 ? 1000 - (m_delayAtDamageCount++) * 200 : 200; }
+        /** @epoch-end */
         bool IsDelayableNoMore()
         {
             if (m_delayAtDamageCount >= 2)

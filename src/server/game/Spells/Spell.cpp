@@ -7215,16 +7215,15 @@ void Spell::Delayed() // only called in DealDamage()
     //     return;
     /** @epoch-end */
 
-    //check pushback reduce
-    int32 delaytime = 500;                                  // spellcasting delay is normally 500ms
-
-    int32 delayReduce = 100;                                // must be initialized to 100 for percent modifiers
-    playerCaster->ApplySpellMod(m_spellInfo->Id, SPELLMOD_NOT_LOSE_CASTING_TIME, delayReduce, this);
-    delayReduce += playerCaster->GetTotalAuraModifier(SPELL_AURA_REDUCE_PUSHBACK) - 100;
-    if (delayReduce >= 100)
+    /** @epoch-start */
+    int32 resistChance = 100;                                // must be initialized to 100 for percent modifiers
+    playerCaster->ApplySpellMod(m_spellInfo->Id, SPELLMOD_NOT_LOSE_CASTING_TIME, resistChance, this);
+    resistChance += playerCaster->GetTotalAuraModifier(SPELL_AURA_REDUCE_PUSHBACK) - 100;    
+    if (roll_chance_i(resistChance))
         return;
 
-    AddPct(delaytime, -delayReduce);
+    int32 delaytime = GetNextDelayAtDamageMsTime();
+    /** @epoch-end */
 
     if (m_timer + delaytime > m_casttime)
     {
@@ -7259,19 +7258,16 @@ void Spell::DelayedChannel()
     //     return;
     /** @epoch-end */
 
-    //check pushback reduce
-    // should be affected by modifiers, not take the dbc duration.
-    int32 duration = ((m_channeledDuration > 0) ? m_channeledDuration : m_spellInfo->GetDuration());
-
-    int32 delaytime = CalculatePct(duration, 25); // channeling delay is normally 25% of its time per hit
-
-    int32 delayReduce = 100;                                    // must be initialized to 100 for percent modifiers
-    playerCaster->ApplySpellMod(m_spellInfo->Id, SPELLMOD_NOT_LOSE_CASTING_TIME, delayReduce, this);
-    delayReduce += playerCaster->GetTotalAuraModifier(SPELL_AURA_REDUCE_PUSHBACK) - 100;
-    if (delayReduce >= 100)
+    /** @epoch-start */
+    int32 resistChance = 100;                                // must be initialized to 100 for percent modifiers
+    playerCaster->ApplySpellMod(m_spellInfo->Id, SPELLMOD_NOT_LOSE_CASTING_TIME, resistChance, this);
+    resistChance += playerCaster->GetTotalAuraModifier(SPELL_AURA_REDUCE_PUSHBACK) - 100;
+    
+    if (roll_chance_i(resistChance))
         return;
 
-    AddPct(delaytime, -delayReduce);
+    int32 delaytime = GetNextDelayAtDamageMsTime();
+    /** @epoch-end */
 
     if (m_timer <= delaytime)
     {
