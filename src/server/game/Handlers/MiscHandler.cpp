@@ -610,6 +610,25 @@ void WorldSession::HandleSetSelectionOpcode(WorldPacket& recvData)
             creature->SendMirrorSound(_player, 0);
 #endif
     _player->SetSelection(guid);
+
+    /** @epoch-start - Fix wand targetting. */
+    if (guid)
+    {
+        if (Spell* autoReapeatSpell = _player->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
+        {
+            if (autoReapeatSpell->m_targets.GetUnitTargetGUID() != guid)
+            {
+                if (Unit* unit = ObjectAccessor::GetUnit(*_player, guid))
+                {
+                    if (unit->IsAlive() && !_player->IsFriendlyTo(unit) && unit->isTargetableForAttack(true))
+                    {
+                        autoReapeatSpell->m_targets.SetUnitTarget(unit);
+                    }
+                }
+            }
+        }
+    }
+    /** @epoch-end */
 }
 
 void WorldSession::HandleStandStateChangeOpcode(WorldPacket& recvData)
