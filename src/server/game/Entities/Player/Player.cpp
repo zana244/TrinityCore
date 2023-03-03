@@ -5455,7 +5455,6 @@ float dodge_base[MAX_CLASSES] =
 // Crit/agility to dodge/agility coefficient multipliers; 3.2.0 increased required agility by 15%
 float crit_to_dodge[MAX_CLASSES] =
 {
-     0.0f, // [0]  <Unused>
      1.1f, // [1]  Warrior
      1.0f, // [2]  Paladin
      1.6f, // [3]  Hunter
