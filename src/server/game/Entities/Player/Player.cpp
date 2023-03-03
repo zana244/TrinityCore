@@ -5455,17 +5455,18 @@ float dodge_base[MAX_CLASSES] =
 // Crit/agility to dodge/agility coefficient multipliers; 3.2.0 increased required agility by 15%
 float crit_to_dodge[MAX_CLASSES] =
 {
-     0.85f/1.15f,    // Warrior
-     1.00f/1.15f,    // Paladin
-     1.11f/1.15f,    // Hunter
-     2.00f/1.15f,    // Rogue
-     1.00f/1.15f,    // Priest
-     0.85f/1.15f,    // DK
-     1.60f/1.15f,    // Shaman
-     1.00f/1.15f,    // Mage
-     0.97f/1.15f,    // Warlock (?)
-     0.0f,           // ??
-     2.00f/1.15f,     // Druid
+     0.0f, // [0]  <Unused>
+     1.1f, // [1]  Warrior
+     1.0f, // [2]  Paladin
+     1.6f, // [3]  Hunter
+     2.0f, // [4]  Rogue
+     1.0f, // [5]  Priest
+     1.0f, // [6]  DK
+     1.0f, // [7]  Shaman
+     1.0f, // [8]  Mage
+     1.0f, // [9]  Warlock
+     0.0f, // [10] <Unused>
+     1.7f, // [11] Druid
 
      // default values for custom classes
      .87f,.87f,.87f,.87f,.87f,.87f,.87f,
