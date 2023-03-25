@@ -1209,14 +1209,16 @@ void Spell::EffectPowerBurn()
 
     Unit* unitCaster = GetUnitCasterForEffectHandlers();
 
-    // burn x% of target's mana, up to maximum of 2x% of caster's mana (Mana Burn)
-    ///@todo: move this to scripts
-    if (unitCaster && m_spellInfo->Id == 8129)
-    {
-        int32 maxDamage = int32(CalculatePct(unitCaster->GetMaxPower(powerType), damage * 2));
-        damage = int32(CalculatePct(unitTarget->GetMaxPower(powerType), damage));
-        damage = std::min(damage, maxDamage);
-    }
+    /** @epoch-start */
+    // // burn x% of target's mana, up to maximum of 2x% of caster's mana (Mana Burn)
+    // ///@todo: move this to scripts
+    // if (unitCaster && m_spellInfo->Id == 8129)
+    // {
+    //     int32 maxDamage = int32(CalculatePct(unitCaster->GetMaxPower(powerType), damage * 2));
+    //     damage = int32(CalculatePct(unitTarget->GetMaxPower(powerType), damage));
+    //     damage = std::min(damage, maxDamage);
+    // }
+    /** @epoch-end */
 
     int32 power = damage;
     // resilience reduce mana draining effect at spell crit damage reduction (added in 2.4)
