@@ -666,6 +666,14 @@ void WorldSession::HandlePushQuestToParty(WorldPacket& recvPacket)
             continue;
         }
 
+        /** @epoch-start */
+        if (receiver->GetTeamId() != sender->GetTeamId())
+        {
+            sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_CANT_TAKE_QUEST);
+            continue;
+        }
+        /** @epoch-end */
+
         sender->SendPushToPartyResponse(receiver, QUEST_PARTY_MSG_SHARING_QUEST);
 
         if ((quest->IsAutoComplete() && quest->IsRepeatable() && !quest->IsDailyOrWeekly()) || quest->HasFlag(QUEST_FLAGS_AUTOCOMPLETE))
