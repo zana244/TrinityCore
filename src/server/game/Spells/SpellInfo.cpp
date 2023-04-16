@@ -1406,7 +1406,7 @@ bool SpellInfo::IsAuraExclusiveBySpecificPerCasterWith(SpellInfo const* spellInf
     SpellSpecificType spellSpec = GetSpellSpecific();
     switch (spellSpec)
     {
-        case SPELL_SPECIFIC_SEAL:
+        // case SPELL_SPECIFIC_SEAL:
         case SPELL_SPECIFIC_HAND:
         case SPELL_SPECIFIC_AURA:
         case SPELL_SPECIFIC_STING:
