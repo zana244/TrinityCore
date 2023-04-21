@@ -1128,7 +1128,9 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
             break;
         case FORM_MOONKIN:
             spellId = 24905;
-            spellId2 = 69366;
+            /** @epoch-start */
+            // spellId2 = 69366;
+            /** @epoch-end */
             break;
         case FORM_FLIGHT:
             spellId = 33948;
