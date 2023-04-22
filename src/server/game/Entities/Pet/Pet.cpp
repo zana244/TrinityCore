@@ -398,6 +398,9 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
             InitTalentForLevel();                               // re-init to check talent count
             GetSpellHistory()->LoadFromDB<Pet>(holder.GetPreparedResult(PetLoadQueryHolder::COOLDOWNS));
             LearnPetPassives();
+            /** @epoch-start */
+            CastOwnerTalentAuras();
+            /** @epoch-end */
             InitLevelupSpellsForLevel();
             if (GetMap()->IsBattleArena())
                 RemoveArenaAuras();
@@ -603,6 +606,10 @@ void Pet::setDeathState(DeathState s)                       // overwrite virtual
         //RemoveUnitFlag(UNIT_FLAG_STUNNED);
         CastPetAuras(true);
     }
+
+    /** @epoch-start */
+    CastOwnerTalentAuras();
+    /** @epoch-end */
 }
 
 void Pet::Update(uint32 diff)
@@ -1655,7 +1662,9 @@ void Pet::InitPetCreateSpells()
 
     LearnPetPassives();
     InitLevelupSpellsForLevel();
-
+    /** @epoch-start */
+    CastOwnerTalentAuras();
+    /** @epoch-end */
     CastPetAuras(false);
 }
 
@@ -1952,6 +1961,21 @@ void Pet::CastPetAuras(bool current)
             CastPetAura(pa);
     }
 }
+
+/** @epoch-start */
+void Pet::CastOwnerTalentAuras()
+{
+    if (!GetOwner() || GetOwner()->GetTypeId() != TYPEID_PLAYER)
+        return;
+
+    Player* pOwner = static_cast<Player*>(GetOwner());
+
+    FIRE(Player, OnCastPetTalentAuras
+        , TSPlayer(pOwner)
+        , TSCreature(const_cast<Creature*>(ToCreature()))
+    );
+}
+/** @epoch-end */
 
 void Pet::CastPetAura(PetAura const* aura)
 {
