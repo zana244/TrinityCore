@@ -1234,25 +1234,19 @@ bool Guild::SetName(std::string_view name)
 
 void Guild::HandleRoster(WorldSession* session)
 {
-    ZoneScoped;
     WorldPackets::Guild::GuildRoster roster;
 
     roster.RankData.reserve(m_ranks.size());
     for (RankInfo const& rank : m_ranks)
     {
-        ZoneScopedN("Guild::HandleRoster::RankInfo");
-        roster.RankData.reserve(m_ranks.size());
-        for (RankInfo const& rank : m_ranks)
-        {
-            WorldPackets::Guild::GuildRankData& rankData = roster.RankData.emplace_back();
+        WorldPackets::Guild::GuildRankData& rankData =  roster.RankData.emplace_back();
 
-            rankData.Flags = rank.GetRights();
-            rankData.WithdrawGoldLimit = rank.GetBankMoneyPerDay();
-            for (uint8 i = 0; i < GUILD_BANK_MAX_TABS; ++i)
-            {
-                rankData.TabFlags[i] = rank.GetBankTabRights(i);
-                rankData.TabWithdrawItemLimit[i] = rank.GetBankTabSlotsPerDay(i);
-            }
+        rankData.Flags = rank.GetRights();
+        rankData.WithdrawGoldLimit = rank.GetBankMoneyPerDay();
+        for (uint8 i = 0; i < GUILD_BANK_MAX_TABS; ++i)
+        {
+            rankData.TabFlags[i] = rank.GetBankTabRights(i);
+            rankData.TabWithdrawItemLimit[i] = rank.GetBankTabSlotsPerDay(i);
         }
     }
 
@@ -1260,39 +1254,29 @@ void Guild::HandleRoster(WorldSession* session)
     roster.MemberData.reserve(m_members.size());
     for (auto const& [guid, member] : m_members)
     {
-        ZoneScopedN("Guild::HandleRoster::Member");
-        bool sendOfficerNote = _HasRankRight(session->GetPlayer(), GR_RIGHT_VIEWOFFNOTE);
-        roster.MemberData.reserve(m_members.size());
-        for (auto const& [guid, member] : m_members)
-        {
-            WorldPackets::Guild::GuildRosterMemberData& memberData = roster.MemberData.emplace_back();
+        WorldPackets::Guild::GuildRosterMemberData& memberData = roster.MemberData.emplace_back();
 
-            memberData.Guid = member.GetGUID();
-            memberData.RankID = int32(member.GetRankId());
-            memberData.AreaID = int32(member.GetZoneId());
-            memberData.LastSave = float(float(GameTime::GetGameTime() - member.GetLogoutTime()) / DAY);
+        memberData.Guid = member.GetGUID();
+        memberData.RankID = int32(member.GetRankId());
+        memberData.AreaID = int32(member.GetZoneId());
+        memberData.LastSave = float(float(GameTime::GetGameTime() - member.GetLogoutTime()) / DAY);
 
-            memberData.Status = member.GetFlags();
-            memberData.Level = member.GetLevel();
-            memberData.ClassID = member.GetClass();
-            memberData.Gender = member.GetGender();
+        memberData.Status = member.GetFlags();
+        memberData.Level = member.GetLevel();
+        memberData.ClassID = member.GetClass();
+        memberData.Gender = member.GetGender();
 
-            memberData.Name = member.GetName();
-            memberData.Note = member.GetPublicNote();
-            if (sendOfficerNote)
-                memberData.OfficerNote = member.GetOfficerNote();
-        }
+        memberData.Name = member.GetName();
+        memberData.Note = member.GetPublicNote();
+        if (sendOfficerNote)
+            memberData.OfficerNote = member.GetOfficerNote();
     }
 
-    {
-        ZoneScopedN("Guild::HandleRoster::SendPacket");
+    roster.WelcomeText = m_motd;
+    roster.InfoText = m_info;
 
-        roster.WelcomeText = m_motd;
-        roster.InfoText = m_info;
-
-        TC_LOG_DEBUG("guild", "SMSG_GUILD_ROSTER [%s]", session->GetPlayerInfo().c_str());
-        session->SendPacket(roster.Write());
-    }
+    TC_LOG_DEBUG("guild", "SMSG_GUILD_ROSTER [%s]", session->GetPlayerInfo().c_str());
+    session->SendPacket(roster.Write());
 }
 
 void Guild::HandleQuery(WorldSession* session)
