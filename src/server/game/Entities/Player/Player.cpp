@@ -24813,7 +24813,9 @@ void Player::ProcessTerrainStatusUpdate(ZLiquidStatus oldLiquidStatus, Optional<
 void Player::AtExitCombat()
 {
     Unit::AtExitCombat();
-    UpdatePotionCooldown();
+    /** @epoch-start */
+    // UpdatePotionCooldown();
+    /** @epoch-end */
 
     //@tswow-begin
     if (HasRunes())
