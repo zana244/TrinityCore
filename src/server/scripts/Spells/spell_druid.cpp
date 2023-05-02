@@ -806,12 +806,14 @@ class spell_dru_leader_of_the_pack : public AuraScript
         if (aurEff->GetCasterGUID() != caster->GetGUID())
             return;
 
-        AuraEffect const* impLotpMana = caster->GetAuraEffectOfRankedSpell(SPELL_DRUID_IMP_LEADER_OF_THE_PACK_R1, EFFECT_0, aurEff->GetCasterGUID());
-        ASSERT(impLotpMana);
+        /** @epoch-start */
+        // AuraEffect const* impLotpMana = caster->GetAuraEffectOfRankedSpell(SPELL_DRUID_IMP_LEADER_OF_THE_PACK_R1, EFFECT_0, aurEff->GetCasterGUID());
+        // ASSERT(impLotpMana);
 
-        CastSpellExtraArgs args2(aurEff);
-        args2.AddSpellBP0(CalculatePct(caster->GetMaxPower(POWER_MANA), impLotpMana->GetSpellInfo()->GetEffect(EFFECT_1).CalcValue()));
-        caster->CastSpell(nullptr, SPELL_DRUID_IMP_LEADER_OF_THE_PACK_MANA, args2);
+        // CastSpellExtraArgs args2(aurEff);
+        // args2.AddSpellBP0(CalculatePct(caster->GetMaxPower(POWER_MANA), impLotpMana->GetSpellInfo()->GetEffect(EFFECT_1).CalcValue()));
+        // caster->CastSpell(nullptr, SPELL_DRUID_IMP_LEADER_OF_THE_PACK_MANA, args2);
+        /** @epoch-start */
     }
 
     void Register() override
