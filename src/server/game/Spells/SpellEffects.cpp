@@ -1776,7 +1776,9 @@ void Spell::EffectEnergize()
             level_diff = unitCaster->GetLevel() - 60;
             level_multiplier = 4;
             break;
-        case 31930:                                         // Judgements of the Wise
+        /** @epoch-start */
+        // case 31930:                                         // Judgements of the Wise
+        /** @epoch-end */
         case 63375:                                         // Improved Stormstrike
         case 68082:                                         // Glyph of Seal of Command
             damage = int32(CalculatePct(unitTarget->GetCreateMana(), damage));
