@@ -990,9 +990,16 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
         }
     }
 
-    // make player victims stand up automatically
-    if (victim->GetStandState() && victim->IsPlayer())
-        victim->SetStandState(UNIT_STAND_STATE_STAND);
+    /** @epoch-start */
+    // // make player victims stand up automatically
+    // if (victim->GetStandState() && victim->IsPlayer())
+    //     victim->SetStandState(UNIT_STAND_STATE_STAND);
+    if (damagetype != DOT)
+    {
+        if (victim->GetStandState() && victim->IsPlayer())
+            victim->SetStandState(UNIT_STAND_STATE_STAND);
+    }
+    /** @epoch-end */
 
     return damage;
 }
