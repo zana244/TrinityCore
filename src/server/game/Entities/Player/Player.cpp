@@ -3523,6 +3523,10 @@ bool Player::AddSpell(uint32 spellId, bool active, bool learning, bool dependent
         UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LEARN_SPELL, spellId);
     }
 
+    // @tswow-begin
+    FIRE_ID(spellInfo->events.id, Spell, OnLearn, TSSpellInfo(spellInfo), TSPlayer(this), active, disabled, superceded_old, fromSkill);
+    // @tswow-end
+
     // return true (for send learn packet) only if spell active (in case ranked spells) and not replace old spell
     return active && !disabled && !superceded_old;
 }
@@ -3615,16 +3619,6 @@ void Player::LearnSpell(uint32 spell_id, bool dependent, uint32 fromSkill /*= 0*
                 LearnSpell(itr2->second, false, fromSkill);
         }
     }
-
-    // @tswow-start
-    SpellInfo const* info = sSpellMgr->GetSpellInfo(spell_id);
-    FIRE_ID(
-          info->events.id
-        , Spell,OnLearn
-        , TSSpellInfo(info)
-        , TSPlayer(const_cast<Player*>(this))
-    );
-    // @tswow-end
 }
 
 void Player::RemoveSpell(uint32 spell_id, bool disabled, bool learn_low_rank)
@@ -3834,6 +3828,10 @@ void Player::RemoveSpell(uint32 spell_id, bool disabled, bool learn_low_rank)
         data << uint32(spell_id);
         SendDirectMessage(&data);
     }
+
+    // @tswow-begin
+    FIRE_ID(spellInfo->events.id, Spell, OnUnlearn, TSSpellInfo(spellInfo), TSPlayer(this), disabled, learn_low_rank);
+    // @tswow-end
 }
 
 bool Player::Has310Flyer(bool checkAllSpells, uint32 excludeSpellId)
@@ -3984,11 +3982,21 @@ bool Player::ResetTalents(bool no_cost)
             SpellInfo const* _spellEntry = sSpellMgr->GetSpellInfo(talentInfo->SpellRank[rank]);
             if (!_spellEntry)
                 continue;
+
+            // @tswow-begin
+            FIRE_ID(_spellEntry->events.id, Spell, OnUnlearnTalent, TSSpellInfo(_spellEntry), TSPlayer(this), talentTabInfo->OrderIndex, talentInfo->TierID, talentInfo->ColumnIndex, rank, true);
+            // @tswow-end
             RemoveSpell(talentInfo->SpellRank[rank], true);
+
             // search for spells that the talent teaches and unlearn them
             for (SpellEffectInfo const& spellEffectInfo : _spellEntry->GetEffects())
                 if (spellEffectInfo.IsEffect(SPELL_EFFECT_LEARN_SPELL) && spellEffectInfo.TriggerSpell > 0)
+                // @tswow-begin
+                {
+                    FIRE_ID(_spellEntry->events.id, Spell, OnUnlearnTalent, TSSpellInfo(_spellEntry), TSPlayer(this), talentTabInfo->OrderIndex, talentInfo->TierID, talentInfo->ColumnIndex, rank, false);
                     RemoveSpell(spellEffectInfo.TriggerSpell, true);
+                }
+                // @tswow-end
             // if this talent rank can be found in the PlayerTalentMap, mark the talent as removed so it gets deleted
             PlayerTalentMap::iterator plrTalent = m_talents[m_activeSpec]->find(talentInfo->SpellRank[rank]);
             if (plrTalent != m_talents[m_activeSpec]->end())
@@ -25847,6 +25855,11 @@ void Player::LearnTalent(uint32 talentId, uint32 talentRank)
     // @tswow-begin
     bool cancel = false;
     FIRE(Player,OnLearnTalent, TSPlayer(this), talentInfo->TabID, talentId, talentRank, spellid, TSMutable<bool,bool>(&cancel));
+    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellid);
+    if (spellInfo)
+    {
+        FIRE_ID(spellInfo->events.id,Spell,OnLearnTalent, TSSpellInfo(spellInfo), TSPlayer(this), talentInfo->TabID, talentId, talentRank, spellid, TSMutable<bool, bool>(&cancel));
+    }
     if (cancel)
     {
         return;
