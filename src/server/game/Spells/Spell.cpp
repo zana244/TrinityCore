@@ -3926,27 +3926,38 @@ void Spell::finish(bool ok)
         }
     }
 
-    if (IsAutoActionResetSpell())
-    {
-        bool found = false;
-        Unit::AuraEffectList const& vIgnoreReset = unitCaster->GetAuraEffectsByType(SPELL_AURA_IGNORE_MELEE_RESET);
-        for (Unit::AuraEffectList::const_iterator i = vIgnoreReset.begin(); i != vIgnoreReset.end(); ++i)
-        {
-            if ((*i)->IsAffectedOnSpell(m_spellInfo))
-            {
-                found = true;
-                break;
-            }
-        }
+    /** @epoch-start */
+    // if (IsAutoActionResetSpell())
+    // {
+    //     bool found = false;
+    //     Unit::AuraEffectList const& vIgnoreReset = unitCaster->GetAuraEffectsByType(SPELL_AURA_IGNORE_MELEE_RESET);
+    //     for (Unit::AuraEffectList::const_iterator i = vIgnoreReset.begin(); i != vIgnoreReset.end(); ++i)
+    //     {
+    //         if ((*i)->IsAffectedOnSpell(m_spellInfo))
+    //         {
+    //             found = true;
+    //             break;
+    //         }
+    //     }
 
-        if (!found && !m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS))
-        {
-            unitCaster->resetAttackTimer(BASE_ATTACK);
-            if (unitCaster->haveOffhandWeapon())
-                unitCaster->resetAttackTimer(OFF_ATTACK);
-            unitCaster->resetAttackTimer(RANGED_ATTACK);
-        }
+    //     if (!found && !m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS))
+    //     {
+    //         unitCaster->resetAttackTimer(BASE_ATTACK);
+    //         if (unitCaster->haveOffhandWeapon())
+    //             unitCaster->resetAttackTimer(OFF_ATTACK);
+    //         unitCaster->resetAttackTimer(RANGED_ATTACK);
+    //     }
+    // }
+    /** @epoch-end */
+
+    /** @epoch-start */
+    if (unitCaster && IsMeleeAttackResetSpell() && ! m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS))
+    {
+        unitCaster->resetAttackTimer(BASE_ATTACK);
+        if (unitCaster->haveOffhandWeapon())
+            unitCaster->resetAttackTimer(OFF_ATTACK);
     }
+    /** @epoch-end */
 
     // potions disabled by client, send event "not in combat" if need
     /** @epoch-start */
@@ -7499,6 +7510,13 @@ bool Spell::IsAutoActionResetSpell() const
 
     return true;
 }
+
+/** @epoch-start */
+bool Spell::IsMeleeAttackResetSpell() const
+{
+    return ! IsTriggered() && (GetSpellInfo()->InterruptFlags & SPELL_INTERRUPT_FLAG_INTERRUPT);
+}
+/** @epoch-end */
 
 bool Spell::IsPositive() const
 {

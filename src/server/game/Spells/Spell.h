@@ -476,6 +476,10 @@ class TC_GAME_API Spell
         std::string GetDebugInfo() const;
         void CallScriptOnResistAbsorbCalculateHandlers(DamageInfo const& damageInfo, uint32& resistAmount, int32& absorbAmount);
 
+        /** @epoch-start */
+        bool IsMeleeAttackResetSpell() const;
+        /** @epoch-end */
+
     protected:
         bool HasGlobalCooldown() const;
         void TriggerGlobalCooldown();
