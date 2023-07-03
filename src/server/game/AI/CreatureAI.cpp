@@ -514,5 +514,6 @@ void CreatureAI::Backpedal()
     if (! me->IsInDist(target, MaxRange))
         return;
     
+    me->SetFacingToObject(target);
     me->GetMotionMaster()->MoveBackpedal(target, me->GetMeleeRange(target) / 1.5);
 }
