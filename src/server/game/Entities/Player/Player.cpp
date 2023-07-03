@@ -23930,14 +23930,15 @@ float Player::GetReputationPriceDiscount(FactionTemplateEntry const* factionTemp
             money = 1.0f;
         else
             money = 1.0f - 0.05f * (rank - REP_NEUTRAL);
+
+        FIRE(Player, OnReputationPriceDiscount
+            , TSPlayer(const_cast<Player*>(this))
+            , TSFactionTemplate(factionTemplate)
+            , TSCreature(const_cast<Creature*>(creature))
+            , TSMutableNumber<float>(&money)
+        );
     }
 
-    FIRE(Player, OnReputationPriceDiscount
-        , TSPlayer(const_cast<Player*>(this))
-        , TSFactionTemplate(factionTemplate)
-        , TSCreature(const_cast<Creature*>(creature))
-        , TSMutableNumber<float>(&money)
-    );
     return money;
 }
 // @tswow-end
