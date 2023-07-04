@@ -4852,7 +4852,7 @@ void Spell::TakePower()
     unitCaster->ModifyPower(powerType, -m_powerCost);
 
     // Set the five second timer
-    if (powerType == POWER_MANA && m_powerCost > 0)
+    if (powerType == POWER_MANA && m_powerCost > 0 && ! GetSpellInfo()->HasAttribute(SPELL_ATTR2_DONT_BLOCK_MANA_REGEN))
         unitCaster->SetLastManaUse(GameTime::GetGameTimeMS());
 }
 

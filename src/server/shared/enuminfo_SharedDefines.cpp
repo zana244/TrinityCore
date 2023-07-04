@@ -551,7 +551,7 @@ TC_API_EXPORT EnumText EnumUtils<SpellAttr2>::ToString(SpellAttr2 value)
         case SPELL_ATTR2_UNK22: return { "SPELL_ATTR2_UNK22", "Unknown attribute 22@Attr2", "" };
         case SPELL_ATTR2_IS_ARCANE_CONCENTRATION: return { "SPELL_ATTR2_IS_ARCANE_CONCENTRATION", "Arcane Concentration", "" };
         case SPELL_ATTR2_UNK24: return { "SPELL_ATTR2_UNK24", "Unknown attribute 24@Attr2", "" };
-        case SPELL_ATTR2_UNK25: return { "SPELL_ATTR2_UNK25", "Unknown attribute 25@Attr2", "" };
+        case SPELL_ATTR2_DONT_BLOCK_MANA_REGEN: return { "SPELL_ATTR2_DONT_BLOCK_MANA_REGEN", "Unknown attribute 25@Attr2", "" };
         case SPELL_ATTR2_UNAFFECTED_BY_AURA_SCHOOL_IMMUNE: return { "SPELL_ATTR2_UNAFFECTED_BY_AURA_SCHOOL_IMMUNE", "Pierce aura application immunities", "Allow aura to be applied despite target being immune to new aura applications" };
         case SPELL_ATTR2_UNK27: return { "SPELL_ATTR2_UNK27", "Unknown attribute 27@Attr2", "" };
         case SPELL_ATTR2_UNK28: return { "SPELL_ATTR2_UNK28", "Unknown attribute 28@Attr2", "" };
@@ -595,7 +595,7 @@ TC_API_EXPORT SpellAttr2 EnumUtils<SpellAttr2>::FromIndex(size_t index)
         case 22: return SPELL_ATTR2_UNK22;
         case 23: return SPELL_ATTR2_IS_ARCANE_CONCENTRATION;
         case 24: return SPELL_ATTR2_UNK24;
-        case 25: return SPELL_ATTR2_UNK25;
+        case 25: return SPELL_ATTR2_DONT_BLOCK_MANA_REGEN;
         case 26: return SPELL_ATTR2_UNAFFECTED_BY_AURA_SCHOOL_IMMUNE;
         case 27: return SPELL_ATTR2_UNK27;
         case 28: return SPELL_ATTR2_UNK28;
@@ -636,7 +636,7 @@ TC_API_EXPORT size_t EnumUtils<SpellAttr2>::ToIndex(SpellAttr2 value)
         case SPELL_ATTR2_UNK22: return 22;
         case SPELL_ATTR2_IS_ARCANE_CONCENTRATION: return 23;
         case SPELL_ATTR2_UNK24: return 24;
-        case SPELL_ATTR2_UNK25: return 25;
+        case SPELL_ATTR2_DONT_BLOCK_MANA_REGEN: return 25;
         case SPELL_ATTR2_UNAFFECTED_BY_AURA_SCHOOL_IMMUNE: return 26;
         case SPELL_ATTR2_UNK27: return 27;
         case SPELL_ATTR2_UNK28: return 28;

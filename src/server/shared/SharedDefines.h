@@ -496,7 +496,7 @@ enum SpellAttr2 : uint32
     SPELL_ATTR2_UNK22                            = 0x00400000, // TITLE Unknown attribute 22@Attr2
     SPELL_ATTR2_IS_ARCANE_CONCENTRATION          = 0x00800000, // TITLE Arcane Concentration
     SPELL_ATTR2_UNK24                            = 0x01000000, // TITLE Unknown attribute 24@Attr2
-    SPELL_ATTR2_UNK25                            = 0x02000000, // TITLE Unknown attribute 25@Attr2
+    SPELL_ATTR2_DONT_BLOCK_MANA_REGEN            = 0x02000000, // maybe different meaning - doesnt hurt anything however
     SPELL_ATTR2_UNAFFECTED_BY_AURA_SCHOOL_IMMUNE = 0x04000000, // TITLE Pierce aura application immunities DESCRIPTION Allow aura to be applied despite target being immune to new aura applications
     SPELL_ATTR2_UNK27                            = 0x08000000, // TITLE Unknown attribute 27@Attr2
     SPELL_ATTR2_UNK28                            = 0x10000000, // TITLE Unknown attribute 28@Attr2
