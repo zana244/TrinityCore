@@ -4603,7 +4603,10 @@ void Player::BuildPlayerRepop()
     WorldLocation corpseLocation = GetCorpseLocation();
     if (corpseLocation.GetMapId() == GetMapId())
     {
-        TC_LOG_ERROR("entities.player", "Player::BuildPlayerRepop: Player '%s' (%s) already has a corpse", GetName().c_str(), GetGUID().ToString().c_str());
+        /** @epoch-start */
+        TC_LOG_ERROR("entities.player", "Player::BuildPlayerRepop: Player '%s' (%s) already has a corpse. Forcing respawn!", GetName().c_str(), GetGUID().ToString().c_str());
+        ResurrectPlayer(100, false);
+        /** @epoch-end */
         return;
     }
 
