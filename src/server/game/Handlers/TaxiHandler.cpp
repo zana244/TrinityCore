@@ -126,11 +126,16 @@ void WorldSession::SendDoFlight(uint32 mountDisplayId, uint32 path, uint32 pathN
 
     /** @epoch-start */
     uint32 display = mountDisplayId;
+    bool cancel = false;
 
     FIRE(Player,OnFlightPathMount
         ,TSPlayer(GetPlayer())
         ,TSMutableNumber<uint32>(&display)
+        ,TSMutable<bool, bool>(&cancel)
     );
+
+    if (cancel)
+        return;
 
     if (display) {
         GetPlayer()->Mount(display);
