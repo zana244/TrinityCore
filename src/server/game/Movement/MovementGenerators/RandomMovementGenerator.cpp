@@ -87,7 +87,7 @@ void RandomMovementGenerator<Creature>::DoInitialize(Creature* owner)
         _wanderDistance = owner->GetWanderDistance();
 
     // Retail seems to let a creature walk 2 up to 10 splines before triggering a pause
-    _wanderSteps = urand(2, 10);
+    _wanderSteps = urand(0, ((_wanderDistance <= 1.0f) ? 2 : 8));
 
     _timer.Reset(0);
     _path = nullptr;
@@ -178,8 +178,8 @@ void RandomMovementGenerator<Creature>::SetRandomLocation(Creature* owner)
     else
     {
         // Creature has made all its steps, time for a little break
-        _timer.Reset(splineDuration + urand(4, 10) * IN_MILLISECONDS); // Retails seems to use rounded numbers so we do as well
-        _wanderSteps = urand(2, 10);
+        _timer.Reset(splineDuration + urand(6, 12) * IN_MILLISECONDS); // Retails seems to use rounded numbers so we do as well
+        _wanderSteps = urand(0, ((_wanderDistance <= 1.0f) ? 2 : 8));
     }
 
     // Call for creature group update
