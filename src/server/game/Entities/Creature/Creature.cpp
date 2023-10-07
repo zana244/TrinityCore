@@ -3096,6 +3096,11 @@ float Creature::GetPetChaseDistance() const
         }
     }
 
+    /** @epoch-start */
+    if (GetEntry() == 416 || GetEntry() == 510 || GetEntry() == 37994) // Imp / Water Ele
+        range = 20.0f;
+    /** @epoch-end */
+
     return range;
 }
 

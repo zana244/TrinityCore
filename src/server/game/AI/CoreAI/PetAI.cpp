@@ -82,13 +82,22 @@ void PetAI::UpdateAI(uint32 diff)
         }
 
         // Check before attacking to prevent pets from leaving stay position
+        /** @epoch-start */
+        bool canMelee = ! (me->GetEntry() == 416 || me->GetEntry() == 510 || me->GetEntry() == 37994); // Imp / Water Ele
         if (me->GetCharmInfo()->HasCommandState(COMMAND_STAY))
         {
             if (me->GetCharmInfo()->IsCommandAttack() || (me->GetCharmInfo()->IsAtStay() && me->IsWithinMeleeRange(me->GetVictim())))
-                DoMeleeAttackIfReady();
+            {
+                if (canMelee)
+                    DoMeleeAttackIfReady();
+            }
         }
         else
-            DoMeleeAttackIfReady();
+        {
+            if (canMelee)
+                DoMeleeAttackIfReady();
+        }
+        /** @epoch-end */
     }
     else
     {
