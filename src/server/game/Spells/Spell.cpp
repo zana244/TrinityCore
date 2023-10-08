@@ -2712,9 +2712,11 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
         if (creatureTarget->IsEvadingAttacks())
             return SPELL_MISS_EVADE;
 
-    // For delayed spells immunity may be applied between missile launch and hit - check immunity for that case
-    if (m_spellInfo->Speed && unit->IsImmunedToSpell(m_spellInfo, m_caster))
+    /** @epoch-start */
+    // properly catch wands spell school.
+    if (m_spellInfo->Speed && ((m_damage > 0 && unit->IsImmunedToDamage(m_spellInfo) || unit->IsImmunedToDamage(m_spellSchoolMask) || unit->IsImmunedToSpell(m_spellInfo, m_caster))))
         return SPELL_MISS_IMMUNE;
+    /** @epoch-end */
 
     if (Player* player = unit->ToPlayer())
     {

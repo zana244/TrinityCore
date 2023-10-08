@@ -8068,6 +8068,17 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
 
     SpellSchoolMask schoolMask = spellProto ? spellProto->GetSchoolMask() : damageSchoolMask;
 
+    /** @epoch-start */
+    // for wands, use the weapon damage type instead of the shooting spell school
+    if (spellProto)
+    {
+        if (spellProto->EquippedItemSubClassMask == (1 << ITEM_SUBCLASS_WEAPON_WAND))
+        {
+            schoolMask = damageSchoolMask;
+        }
+    }
+    /** @epoch-end */
+
     // mods for SPELL_SCHOOL_MASK_NORMAL are already factored in base melee damage calculation
     if (!(schoolMask & SPELL_SCHOOL_MASK_NORMAL))
     {
@@ -8191,7 +8202,9 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
     uint32 meleeDamageSchoolMask = spellProto ? spellProto->SchoolMask : attacker->GetMeleeDamageSchoolMask();
 
     // ..taken
-    TakenFlatBenefit += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_DAMAGE_TAKEN, meleeDamageSchoolMask);
+    /** @epoch-start */
+    TakenFlatBenefit += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_DAMAGE_TAKEN, damageSchoolMask);
+    /** @epoch-end */
 
     if (attType != RANGED_ATTACK)
         TakenFlatBenefit += GetTotalAuraModifier(SPELL_AURA_MOD_MELEE_DAMAGE_TAKEN);
@@ -8205,7 +8218,9 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
     float TakenTotalMod = 1.0f;
 
     // ..taken
-    TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, meleeDamageSchoolMask);
+    /** @epoch-start */
+    TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, damageSchoolMask);
+    /** @epoch-end */
 
     // .. taken pct (special attacks)
     if (spellProto)
