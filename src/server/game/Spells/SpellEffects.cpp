@@ -3209,11 +3209,13 @@ void Spell::EffectWeaponDmg()
                 if (m_spellInfo->SpellFamilyFlags[0] & 0x2000000)
                     AddComboPointGain(unitTarget, 1);
 
-                // 50% more damage with daggers
-                if (unitCaster->GetTypeId() == TYPEID_PLAYER)
-                    if (Item* item = unitCaster->ToPlayer()->GetWeaponForAttack(m_attackType, true))
-                        if (item->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_DAGGER)
-                            totalDamagePercentMod *= 1.5f;
+                /** @epoch-start */
+                // // 50% more damage with daggers
+                // if (unitCaster->GetTypeId() == TYPEID_PLAYER)
+                //     if (Item* item = unitCaster->ToPlayer()->GetWeaponForAttack(m_attackType, true))
+                //         if (item->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_DAGGER)
+                //             totalDamagePercentMod *= 1.5f;
+                /** @epoch-end */
             }
             // Mutilate (for each hand)
             else if (m_spellInfo->SpellFamilyFlags[1] & 0x6)
