@@ -341,20 +341,7 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
 
     // ignore for remote control state (for player case)
     Unit* mover = GetGameClient()->GetActivelyMovedUnit();
-    /** @epoch-start */
-    if(!mover)
-    {
-        //there is no ActivelyMovedUnit if player is under fear, confuse or possession
-        if(_player->IsFeared() || _player->IsConfused() || _player->isPossessed())
-            mover = _player;
-        else
-        {
-            recvPacket.rfinish(); // prevent spam at ignore packet
-            return;
-        }
-    }
-    else if (mover != _player && mover->GetTypeId() == TYPEID_PLAYER)
-    /** @epoch-end */
+    if (!mover || (mover != _player && mover->GetTypeId() == TYPEID_PLAYER))
     {
         recvPacket.rfinish(); // prevent spam at ignore packet
         return;
