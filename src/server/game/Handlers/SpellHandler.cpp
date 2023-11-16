@@ -337,20 +337,12 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     recvPacket >> castCount >> spellId >> castFlags;
     TriggerCastFlags triggerFlag = TRIGGERED_NONE;
 
-    TC_LOG_DEBUG("network", "WORLD: got cast spell packet, castCount: {}, spellId: {}, castFlags: {}, data length = {}", castCount, spellId, castFlags, (uint32)recvPacket.size());
-
-    // ignore for remote control state (for player case)
-    Unit* mover = GetGameClient()->GetActivelyMovedUnit();
-    if (!mover || (mover != _player && mover->GetTypeId() == TYPEID_PLAYER))
-    {
-        recvPacket.rfinish(); // prevent spam at ignore packet
-        return;
-    }
+    TC_LOG_DEBUG("network", "WORLD: got cast spell packet, castCount: %u, spellId: %u, castFlags: %u, data length = %u", castCount, spellId, castFlags, (uint32)recvPacket.size());
 
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
     if (!spellInfo)
     {
-        TC_LOG_ERROR("network", "WORLD: unknown spell id {}", spellId);
+        TC_LOG_ERROR("network", "WORLD: unknown spell id %u", spellId);
         recvPacket.rfinish(); // prevent spam at ignore packet
         return;
     }
@@ -367,13 +359,13 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     HandleClientCastFlags(recvPacket, castFlags, targets);
 
     // not have spell in spellbook
-    if (!_player->HasActiveSpell(spellId))
+    if (_player->GetTypeId() == TYPEID_PLAYER && !_player->ToPlayer()->HasActiveSpell(spellId))
     {
         bool allow = false;
 
         // allow casting of unknown spells for special lock cases
-        if (GameObject* go = targets.GetGOTarget())
-            if (go->GetSpellForLock(_player) == spellInfo)
+        if (GameObject *go = targets.GetGOTarget())
+            if (go->GetSpellForLock(_player->ToPlayer()) == spellInfo)
                 allow = true;
 
         // allow casting of spells triggered by clientside periodic trigger auras
