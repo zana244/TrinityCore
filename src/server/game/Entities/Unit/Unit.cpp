@@ -8362,12 +8362,16 @@ void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
         Pet* pet = player->GetPet();
         if (pet)
         {
-            Battleground* bg = ToPlayer()->GetBattleground();
-            // don't unsummon pet in arena but SetFlag UNIT_FLAG_STUNNED to disable pet's interface
-            if (bg && bg->isArena())
-                pet->SetUnitFlag(UNIT_FLAG_STUNNED);
-            else
-                player->UnsummonPetTemporaryIfAny();
+            /** @epoch-start */
+            pet->SetUnitFlag(UNIT_FLAG_STUNNED); // disable pet's interface
+
+            // Battleground* bg = ToPlayer()->GetBattleground();
+            // // don't unsummon pet in arena but SetFlag UNIT_FLAG_STUNNED to disable pet's interface
+            // if (bg && bg->isArena())
+            //     pet->SetUnitFlag(UNIT_FLAG_STUNNED);
+            // else
+            //     player->UnsummonPetTemporaryIfAny();
+            /** @epoch-end */
         }
 
         // if we have charmed npc, stun him also (everywhere)
