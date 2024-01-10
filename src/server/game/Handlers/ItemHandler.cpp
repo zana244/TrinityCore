@@ -323,27 +323,44 @@ void WorldSession::HandleItemQuerySingleOpcode(WorldPackets::Query::QueryItemSin
     ZoneScopedNC("WorldSession::HandleItemQuerySingleOpcode", WORLD_UPDATE_COLOR)
     TC_LOG_INFO("network", "STORAGE: Item Query = {}", query.ItemID);
 
-    // @tswow-begin mutable version
-    if (ItemTemplate * itemTemplate = sObjectMgr->GetItemTemplateMutable(query.ItemID))
-    // @tswow-end
-    {
-        if (sWorld->getBoolConfig(CONFIG_CACHE_DATA_QUERIES))
-            // @tswow-begin use GetQueryData, const_cast
-            SendPacket(itemTemplate->GetQueryData(static_cast<uint32>(GetSessionDbLocaleIndex())));
-            // @tswow-end
-        else
-        {
-            WorldPacket response = itemTemplate->BuildQueryData(GetSessionDbLocaleIndex());
-            SendPacket(&response);
-        }
-    }
-    else
+    /** @epoch-start */
+    ItemTemplate * itemTemplate = sObjectMgr->GetItemTemplateMutable(query.ItemID);
+    if (! itemTemplate)
     {
         TC_LOG_DEBUG("network", "WORLD: CMSG_ITEM_QUERY_SINGLE - NO item INFO! (ENTRY: {})", query.ItemID);
         WorldPackets::Query::QueryItemSingleResponse response;
         response.ItemID = query.ItemID;
         SendPacket(response.Write());
+        return;
     }
+
+    bool cancel = false;
+
+    FIRE_ID(
+        itemTemplate->ItemId
+        , Item,OnBeforeSendItemQuery
+        , TSItemTemplate(itemTemplate)
+        , TSMutable<bool, bool>(&cancel)
+    );
+
+    if (cancel)
+    {
+        WorldPackets::Query::QueryItemSingleResponse response;
+        response.ItemID = query.ItemID;
+        SendPacket(response.Write());
+        return;
+    }
+
+    if (sWorld->getBoolConfig(CONFIG_CACHE_DATA_QUERIES))
+    {
+        SendPacket(itemTemplate->GetQueryData(static_cast<uint32>(GetSessionDbLocaleIndex())));
+    }
+    else
+    {
+        WorldPacket response = itemTemplate->BuildQueryData(GetSessionDbLocaleIndex());
+        SendPacket(&response);
+    }
+    /** @epoch-end */
 }
 
 void WorldSession::HandleReadItem(WorldPacket& recvData)

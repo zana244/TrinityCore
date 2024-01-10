@@ -1065,6 +1065,15 @@ Item* Item::CreateItem(uint32 itemEntry, uint32 count, Player const* player /*= 
         if (item->Create(sObjectMgr->GetGenerator<HighGuid::Item>().Generate(), itemEntry, player))
         {
             item->SetCount(count);
+
+            /** @epoch-start */
+            FIRE_ID(
+                itemEntry
+                , Item,OnCreate
+                , TSItem(item)
+            );
+            /** @epoch-end */
+
             return item;
         }
         else
