@@ -2324,7 +2324,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
 
     // 7. CRUSHING
     // mobs can score crushing blows if they're 4 or more levels above victim
-    if (GetLevelForTarget(victim) >= victim->GetLevelForTarget(this) + 4 &&
+    if (GetLevelForTarget(victim) >= victim->GetLevelForTarget(this) + 3 &&
         // can be from by creature (if can) or from controlled player that considered as creature
         !IsControlledByPlayer() &&
         !(GetTypeId() == TYPEID_UNIT && ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_CRUSHING_BLOWS))
@@ -2335,8 +2335,8 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         tmp = std::min(tmp, victimMaxSkillValueForLevel);
         // tmp = mob's level * 5 - player's current defense skill
         tmp = attackerMaxSkillValueForLevel - tmp;
-        // minimum of 20 points diff (4 levels difference)
-        tmp = std::max(tmp, 20);
+        // minimum of 15 points diff (3 levels difference)
+        tmp = std::max(tmp, 15);
 
         // add 2% chance per lacking skill point
         tmp = tmp * 200 - 1500;
