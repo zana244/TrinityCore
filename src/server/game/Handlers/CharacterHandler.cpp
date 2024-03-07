@@ -733,6 +733,13 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
         return;
     }
 
+    /** @epoch-start */
+    if (sWorld->getBoolConfig(CONFIG_NAME_RESERVATION)) {
+        KickPlayer("WorldSession::HandlePlayerLoginOpcode Attempted login during Name Reservation state");
+        return;
+    }
+    /** @epoch-end */
+
     std::shared_ptr<LoginQueryHolder> holder = std::make_shared<LoginQueryHolder>(GetAccountId(), playerGuid);
     if (!holder->Initialize())
     {
