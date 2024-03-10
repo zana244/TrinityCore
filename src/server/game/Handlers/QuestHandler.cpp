@@ -283,8 +283,23 @@ void WorldSession::HandleQuestQueryOpcode(WorldPackets::Quest::QueryQuestInfo& q
 {
     TC_LOG_DEBUG("network", "WORLD: Received CMSG_QUEST_QUERY quest = {}", query.QuestID);
 
-    if (Quest const* quest = sObjectMgr->GetQuestTemplate(query.QuestID))
+    /** @epoch-start */
+    if (Quest const* quest = sObjectMgr->GetQuestTemplate(query.QuestID)) {
+        bool cancel = false;
+
+        FIRE_ID(
+            quest->events.id
+            , Quest,OnQuery
+            , TSQuest(quest)
+            , TSMutable<bool,bool>(&cancel)
+        );
+
+        if (cancel)
+            return;
+
         _player->PlayerTalkClass->SendQuestQueryResponse(quest);
+    }
+    /** @epoch-end */
 }
 
 void WorldSession::HandleQuestgiverChooseRewardOpcode(WorldPacket& recvData)

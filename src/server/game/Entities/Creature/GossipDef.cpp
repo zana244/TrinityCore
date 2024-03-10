@@ -23,6 +23,9 @@
 #include "QuestPackets.h"
 #include "World.h"
 #include "WorldSession.h"
+/** @epoch-start */
+#include "TSQuest.h"
+/** @epoch-end */
 
 GossipMenu::GossipMenu()
 {
@@ -397,6 +400,14 @@ void PlayerMenu::SendQuestGiverStatus(uint8 questStatus, ObjectGuid npcGUID) con
 
 void PlayerMenu::SendQuestGiverQuestDetails(Quest const* quest, ObjectGuid npcGUID, bool activateAccept) const
 {
+    // @epoch-begin
+    FIRE_ID(
+        quest->events.id
+        , Quest,OnSendQuestGiverDetails
+        , TSQuest(quest)
+    );
+    // @epoch-end
+
     WorldPackets::Quest::QuestGiverQuestDetails packet;
 
     packet.Title = quest->GetTitle();

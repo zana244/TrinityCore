@@ -229,7 +229,7 @@ uint32 Quest::GetXPReward(Player const* player) const
             xp = std::max(minScaledXP, xp);
         }
 
-        // @tswow-begin
+        // @epoch-begin
         FIRE_ID(
             this->events.id
             , Quest,OnCalcXP
@@ -237,7 +237,7 @@ uint32 Quest::GetXPReward(Player const* player) const
             , TSPlayer(const_cast<Player*>(player))
             , TSMutableNumber<uint32>(&xp)
         );
-        // @tswow-end
+        // @epoch-end
 
         return xp;
     }
