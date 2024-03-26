@@ -772,6 +772,10 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
         return;
     }
 
+    /** @epoch-start */
+    pCurrChar->SetCanTeleport(true);
+    /** @epoch-end */
+
     pCurrChar->GetMotionMaster()->Initialize();
     pCurrChar->SendDungeonDifficulty(false);
 
@@ -1059,6 +1063,10 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
         }
     }
     // @tswow-end
+
+    /** @epoch-start */
+    pCurrChar->SetCanTeleport(false);
+    /** @epoch-end */
 
     sScriptMgr->OnPlayerLogin(pCurrChar, firstLogin);
 

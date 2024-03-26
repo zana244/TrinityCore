@@ -1771,7 +1771,6 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
         {
             SetCanTeleport(true);
             SendTeleportPacket(m_teleport_dest, (options & TELE_TO_TRANSPORT_TELEPORT) != 0);
-            SendTeleportPacket(m_teleport_dest, (options & TELE_TO_TRANSPORT_TELEPORT) != 0);
         }
         // @epoch-end
     }

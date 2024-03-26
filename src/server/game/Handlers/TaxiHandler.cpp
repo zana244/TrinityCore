@@ -287,7 +287,9 @@ void WorldSession::HandleActivateTaxiOpcode(WorldPacket& recvData)
     ObjectGuid guid;
     std::vector<uint32> nodes;
     nodes.resize(2);
-
+    /** @epoch-start */
+    GetPlayer()->SetCanTeleport(true);
+    /** @epoch-end */
     recvData >> guid >> nodes[0] >> nodes[1];
     TC_LOG_DEBUG("network", "WORLD: Received CMSG_ACTIVATETAXI from {} to {}", nodes[0], nodes[1]);
     Creature* npc = GetPlayer()->GetNPCIfCanInteractWith(guid, UNIT_NPC_FLAG_FLIGHTMASTER);
