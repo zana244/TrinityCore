@@ -714,17 +714,22 @@ void WorldSession::HandleCharDeleteOpcode(WorldPacket& recvData)
 
 void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
 {
-    if (PlayerLoading() || GetPlayer() != nullptr)
+    /** @epoch-start */
+    ObjectGuid playerGuid;
+    recvData >> playerGuid;
+
+    if ((sWorld->getBoolConfig(CONFIG_NAME_RESERVATION) && GetSecurity() == SEC_PLAYER) ||
+        PlayerLoading() || GetPlayer() != nullptr || !playerGuid.IsPlayer())
+    // if (sWorld->getBoolConfig(CONFIG_NAME_RESERVATION) && GetSecurity() == SEC_PLAYER)
     {
-        TC_LOG_ERROR("network", "Player tries to login again, AccountId = {}", GetAccountId());
-        KickPlayer("WorldSession::HandlePlayerLoginOpcode Another client logging in");
+        WorldPacket data(SMSG_CHARACTER_LOGIN_FAILED, 1);
+        data << (uint8) 1;
+        SendPacket(&data);
         return;
     }
 
     m_playerLoading = true;
-    ObjectGuid playerGuid;
-
-    recvData >> playerGuid;
+    /** @epoch-end */
 
     if (!IsLegitCharacterForAccount(playerGuid))
     {
@@ -732,13 +737,6 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
         KickPlayer("WorldSession::HandlePlayerLoginOpcode Trying to login with a character of another account");
         return;
     }
-
-    /** @epoch-start */
-    if (sWorld->getBoolConfig(CONFIG_NAME_RESERVATION)) {
-        KickPlayer("WorldSession::HandlePlayerLoginOpcode Attempted login during Name Reservation state");
-        return;
-    }
-    /** @epoch-end */
 
     std::shared_ptr<LoginQueryHolder> holder = std::make_shared<LoginQueryHolder>(GetAccountId(), playerGuid);
     if (!holder->Initialize())
