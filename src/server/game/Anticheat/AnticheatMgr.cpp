@@ -31,6 +31,7 @@
 #include "SpellAuras.h"
 #include "World.h"
 #include "WorldSession.h"
+#include "TSProfile.h"
 
 constexpr auto LANG_ANTICHEAT_ALERT = 30087;
 constexpr auto LANG_ANTICHEAT_TELEPORT = 30088;
@@ -1497,6 +1498,8 @@ void AnticheatMgr::AckUpdate(Player* player, uint32 diff)
 
 void AnticheatMgr::DoActions(Player* player)
 {
+    ZoneScopedNC("AnticheatMgr::DoActions", MAP_UPDATE_COLOR);
+
     auto const now = getMSTime();
 
     for (auto& order : _opackorders)

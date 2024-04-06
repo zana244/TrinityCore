@@ -1042,6 +1042,8 @@ void Player::Update(uint32 p_time)
     if (!IsInWorld())
         return;
 
+    ZoneScopedNC("Player::Update", MAP_UPDATE_COLOR);
+
     // undelivered mail
     if (m_nextMailDelivereTime && m_nextMailDelivereTime <= GameTime::GetGameTime())
     {

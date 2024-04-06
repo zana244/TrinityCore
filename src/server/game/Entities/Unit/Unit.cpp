@@ -439,6 +439,8 @@ Unit::~Unit()
 
 void Unit::Update(uint32 p_time)
 {
+    ZoneScopedNC("Unit::Update", MAP_UPDATE_COLOR);
+
     // @tswow-begin
     m_tsWorldEntity.tick(TSWorldObject(this));
     m_tsCollisions.Tick(TSWorldObject(this));
@@ -9749,6 +9751,8 @@ uint32 Unit::GetCreatePowerValue(Powers power) const
 
 void Unit::AIUpdateTick(uint32 diff)
 {
+    ZoneScopedNC("Unit::AIUpdateTick", MAP_UPDATE_COLOR);
+
     // @tswow-begin
     if(Creature* c = ToCreature())
     {

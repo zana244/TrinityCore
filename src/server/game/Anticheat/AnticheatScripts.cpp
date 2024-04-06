@@ -18,6 +18,7 @@
 #include "AnticheatScripts.h"
 #include "AnticheatMgr.h"
 #include "World.h"
+#include "TSProfile.h"
 
 AnticheatScripts::AnticheatScripts(): PlayerScript("AnticheatScripts") {}
 
@@ -33,6 +34,8 @@ void AnticheatScripts::OnLogin(Player* player,bool)
 
 void AnticheatScripts::OnUpdate(Player* player, uint32 diff)
 {
+    ZoneScopedNC("AnticheatScripts::OnUpdate", MAP_UPDATE_COLOR);
+
     if (!sWorld->getBoolConfig(CONFIG_ANTICHEAT_OP_ACK_HACK_ENABLE) && !sWorld->getBoolConfig(CONFIG_ANTICHEAT_ENABLE))
     {
         return;
