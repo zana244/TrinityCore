@@ -439,6 +439,26 @@ enum ShapeshiftForm
     FORM_SPIRITOFREDEMPTION = 0x20
 };
 
+enum ShapeshiftFlags
+{
+    // from vmangos
+    SHAPESHIFT_FLAG_STANCE                          = 0x00000001,   // Form allows various player activities, which normally cause "You can't X while shapeshifted." errors (npc/go interaction, item use, etc)
+    SHAPESHIFT_FLAG_NOT_TOGGLEABLE                  = 0x00000002,   // NYI
+    SHAPESHIFT_FLAG_PERSIST_ON_DEATH                = 0x00000004,   // NYI
+    SHAPESHIFT_FLAG_CAN_INTERACT_NPC                = 0x00000008,   // Form unconditionally allows talking to NPCs while shapeshifted (even if other activities are disabled)
+    SHAPESHIFT_FLAG_DONT_USE_WEAPON                 = 0x00000010,   // Not using weapon damage in combat
+    SHAPESHIFT_FLAG_AGILITY_ATTACK_BONUS            = 0x00000020,   // Druid Cat form
+    SHAPESHIFT_FLAG_CAN_USE_EQUIPPED_ITEMS          = 0x00000040,   // NYI
+    SHAPESHIFT_FLAG_CAN_USE_ITEMS                   = 0x00000080, // most forms
+    SHAPESHIFT_FLAG_DONT_AUTO_UNSHIFT               = 0x00000100, // ghoul & spirit of redemption
+    SHAPESHIFT_FLAG_CONSIDERED_DEAD                 = 0x00000200, // druid forms
+    SHAPESHIFT_FLAG_CAN_ONLY_CAST_SHAPESHIFT_SPELLS = 0x00000400, // ghoul, Tharon'ja Skeleton, Darkmoon - Test of Strength, Zombie
+    SHAPESHIFT_FLAG_STANCE_CANCELS_AT_FLIGHT_MASTER = 0x00000800, // Tree of Life Form, moonkin
+    SHAPESHIFT_FLAG_NO_EMOTE_SOUNDS                 = 0x00001000, // zombie
+    SHAPESHIFT_FLAG_NO_TRIGGER_TELEPORT             = 0x00002000, // ghoul
+    SHAPESHIFT_FLAG_CANNOT_CHANGE_EQUIPPED_ITEMS    = 0x00004000, // Spirit of redemption
+};
+
 struct TC_GAME_API AuraCreateInfo
 {
     friend class Aura;

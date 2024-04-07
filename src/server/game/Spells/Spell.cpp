@@ -6174,10 +6174,22 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
 
         // check if target already has the same type, but more powerful aura
         if (!nonAuraEffectMask && (approximateAuraEffectMask & (1 << spellEffectInfo.EffectIndex)) && !m_spellInfo->IsTargetingArea())
+        {
             if (Unit* target = m_targets.GetUnitTarget())
+            {
                 if (!target->IsHighestExclusiveAuraEffect(m_spellInfo, AuraType(spellEffectInfo.ApplyAuraName),
                     spellEffectInfo.CalcValue(m_caster, &m_spellValue->EffectBasePoints[spellEffectInfo.EffectIndex]), approximateAuraEffectMask, false))
                     return SPELL_FAILED_AURA_BOUNCED;
+
+                // Not castable on shapeshifted targets
+                if (m_spellInfo->InterruptFlags & AURA_INTERRUPT_FLAG_TRANSFORM && target->IsShapeShifted())
+                    return SPELL_FAILED_BAD_TARGETS;
+
+                // Not castable on mounted targets
+                if (m_spellInfo->InterruptFlags & AURA_INTERRUPT_FLAG_MOUNT && target->IsMounted())
+                    return SPELL_FAILED_BAD_TARGETS;
+            }
+        }
     }
 
     // check trade slot case (last, for allow catch any another cast problems)

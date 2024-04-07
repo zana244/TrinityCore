@@ -1497,6 +1497,7 @@ class TC_GAME_API Unit : public WorldObject
 
         ShapeshiftForm GetShapeshiftForm() const { return ShapeshiftForm(GetByteValue(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_SHAPESHIFT_FORM)); }
         void SetShapeshiftForm(ShapeshiftForm form);
+        bool IsShapeShifted() const; // mirrors clientside logic, moonkin form not counted as shapeshift
 
         bool IsInFeralForm() const;
 
