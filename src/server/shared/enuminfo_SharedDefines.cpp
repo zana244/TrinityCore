@@ -424,7 +424,7 @@ TC_API_EXPORT EnumText EnumUtils<SpellAttr1>::ToString(SpellAttr1 value)
         case SPELL_ATTR1_IS_FISHING: return { "SPELL_ATTR1_IS_FISHING", "Fishing (client only)", "" };
         case SPELL_ATTR1_UNK25: return { "SPELL_ATTR1_UNK25", "Unknown attribute 25@Attr1", "" };
         case SPELL_ATTR1_UNK26: return { "SPELL_ATTR1_UNK26", "Unknown attribute 26@Attr1", "Related to [target=focus] and [target=mouseover] macros?" };
-        case SPELL_ATTR1_UNK27: return { "SPELL_ATTR1_UNK27", "Unknown attribute 27@Attr1", "Melee spell?" };
+        case SPELL_ATTR1_DISCOUNT_POWER_ON_MISS: return { "SPELL_ATTR1_DISCOUNT_POWER_ON_MISS", "Discount Power On Miss", "All these spells refund power on parry or deflect" };
         case SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR: return { "SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR", "Hide in aura bar (client only)", "" };
         case SPELL_ATTR1_CHANNEL_DISPLAY_SPELL_NAME: return { "SPELL_ATTR1_CHANNEL_DISPLAY_SPELL_NAME", "Show spell name during channel (client only)", "" };
         case SPELL_ATTR1_ENABLE_AT_DODGE: return { "SPELL_ATTR1_ENABLE_AT_DODGE", "Enable at dodge", "" };
@@ -468,7 +468,7 @@ TC_API_EXPORT SpellAttr1 EnumUtils<SpellAttr1>::FromIndex(size_t index)
         case 24: return SPELL_ATTR1_IS_FISHING;
         case 25: return SPELL_ATTR1_UNK25;
         case 26: return SPELL_ATTR1_UNK26;
-        case 27: return SPELL_ATTR1_UNK27;
+        case 27: return SPELL_ATTR1_DISCOUNT_POWER_ON_MISS;
         case 28: return SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR;
         case 29: return SPELL_ATTR1_CHANNEL_DISPLAY_SPELL_NAME;
         case 30: return SPELL_ATTR1_ENABLE_AT_DODGE;
@@ -509,7 +509,7 @@ TC_API_EXPORT size_t EnumUtils<SpellAttr1>::ToIndex(SpellAttr1 value)
         case SPELL_ATTR1_IS_FISHING: return 24;
         case SPELL_ATTR1_UNK25: return 25;
         case SPELL_ATTR1_UNK26: return 26;
-        case SPELL_ATTR1_UNK27: return 27;
+        case SPELL_ATTR1_DISCOUNT_POWER_ON_MISS: return 27;
         case SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR: return 28;
         case SPELL_ATTR1_CHANNEL_DISPLAY_SPELL_NAME: return 29;
         case SPELL_ATTR1_ENABLE_AT_DODGE: return 30;

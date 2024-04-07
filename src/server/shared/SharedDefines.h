@@ -461,7 +461,7 @@ enum SpellAttr1 : uint32
     SPELL_ATTR1_IS_FISHING                       = 0x01000000, // TITLE Fishing (client only)
     SPELL_ATTR1_UNK25                            = 0x02000000, // TITLE Unknown attribute 25@Attr1
     SPELL_ATTR1_UNK26                            = 0x04000000, // TITLE Unknown attribute 26@Attr1 DESCRIPTION Related to [target=focus] and [target=mouseover] macros?
-    SPELL_ATTR1_UNK27                            = 0x08000000, // TITLE Unknown attribute 27@Attr1 DESCRIPTION Melee spell?
+    SPELL_ATTR1_DISCOUNT_POWER_ON_MISS           = 0x08000000, // TITLE Discount Power On Miss DESCRIPTION All these spells refund power on parry or deflect
     SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR         = 0x10000000, // TITLE Hide in aura bar (client only)
     SPELL_ATTR1_CHANNEL_DISPLAY_SPELL_NAME       = 0x20000000, // TITLE Show spell name during channel (client only)
     SPELL_ATTR1_ENABLE_AT_DODGE                  = 0x40000000, // TITLE Enable at dodge

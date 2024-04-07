@@ -3933,6 +3933,21 @@ void Spell::finish(bool ok)
         }
     }
 
+    if (m_caster->IsUnit() && m_spellInfo->HasAttribute(SPELL_ATTR1_DISCOUNT_POWER_ON_MISS))
+    {
+        switch (targetMissInfo)
+        {
+            case SPELL_MISS_MISS:
+            case SPELL_MISS_DODGE:
+            case SPELL_MISS_PARRY:
+            case SPELL_MISS_DEFLECT:
+                m_caster->ToUnit()->ModifyPower(Powers(m_spellInfo->PowerType), int32(float(m_powerCost) * 0.8f));
+                break;
+            default:
+                break;
+        }
+    }
+
     /** @epoch-start */
     // if (IsAutoActionResetSpell())
     // {
