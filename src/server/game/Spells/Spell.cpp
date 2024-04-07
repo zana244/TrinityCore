@@ -3494,6 +3494,53 @@ void Spell::_cast(bool skipCheck)
         handle_immediate();
     }
 
+    Unit* unitCaster = m_caster->ToUnit();
+    if (unitCaster)
+    {
+        // handle attack timer reset on cast end, not on impact/delayed
+        if (IsAutoActionResetSpell())
+        {
+            bool found = false;
+            Unit::AuraEffectList const& vIgnoreReset = unitCaster->GetAuraEffectsByType(SPELL_AURA_IGNORE_MELEE_RESET);
+            for (Unit::AuraEffectList::const_iterator i = vIgnoreReset.begin(); i != vIgnoreReset.end(); ++i)
+            {
+                if ((*i)->IsAffectedOnSpell(m_spellInfo))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                // tbc only
+                if (m_spellInfo->HasAttribute(SPELL_ATTR4_IGNORE_COMBAT_TIMER)) //experimental: this maybe means completely reset auto attack. We want to reset auto attack for Aimed Shot.
+                    unitCaster->resetAttackTimer(RANGED_ATTACK);
+
+                if (!m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS)) //only ranged hunter spells use that attribute on TBC
+                {
+                    // sun: reset ranged only to the repeat cast time, not full time
+                    constexpr auto AUTO_REPEAT_CAST_TIME = 500; // move this somewhere
+                    // unitCaster->resetAttackTimer(RANGED_ATTACK);
+                    if (unitCaster->getAttackTimer(RANGED_ATTACK) < AUTO_REPEAT_CAST_TIME)
+                        unitCaster->setAttackTimer(RANGED_ATTACK, AUTO_REPEAT_CAST_TIME);
+
+                    // sun: moved here because we're not supposed to reset melee attack timer for hunter shots either, confirmed on Classic
+                    unitCaster->resetAttackTimer(BASE_ATTACK); // TC stock : full timer reset, bad
+                    if (unitCaster->haveOffhandWeapon())
+                        unitCaster->resetAttackTimer(OFF_ATTACK);
+                }
+            }
+        }
+
+        // Stop Attack for some spells
+        if (m_spellInfo->HasAttribute(SPELL_ATTR0_STOP_ATTACK_TARGET))
+        {
+            if (unitCaster)
+                unitCaster->AttackStop();
+        }
+    }
+
     CallScriptAfterCastHandlers();
 
     if (std::vector<int32> const* spell_triggered = sSpellMgr->GetSpellLinked(m_spellInfo->Id))
@@ -3947,52 +3994,6 @@ void Spell::finish(bool ok)
                 break;
         }
     }
-
-    /** @epoch-start */
-    // if (IsAutoActionResetSpell())
-    // {
-    //     bool found = false;
-    //     Unit::AuraEffectList const& vIgnoreReset = unitCaster->GetAuraEffectsByType(SPELL_AURA_IGNORE_MELEE_RESET);
-    //     for (Unit::AuraEffectList::const_iterator i = vIgnoreReset.begin(); i != vIgnoreReset.end(); ++i)
-    //     {
-    //         if ((*i)->IsAffectedOnSpell(m_spellInfo))
-    //         {
-    //             found = true;
-    //             break;
-    //         }
-    //     }
-
-    //     if (!found && !m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS))
-    //     {
-    //         unitCaster->resetAttackTimer(BASE_ATTACK);
-    //         if (unitCaster->haveOffhandWeapon())
-    //             unitCaster->resetAttackTimer(OFF_ATTACK);
-    //         unitCaster->resetAttackTimer(RANGED_ATTACK);
-    //     }
-    // }
-    /** @epoch-end */
-
-    /** @epoch-start */
-    if (unitCaster && IsMeleeAttackResetSpell() && ! m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS))
-    {
-        unitCaster->resetAttackTimer(BASE_ATTACK);
-        if (unitCaster->haveOffhandWeapon())
-            unitCaster->resetAttackTimer(OFF_ATTACK);
-    }
-    /** @epoch-end */
-
-    // potions disabled by client, send event "not in combat" if need
-    /** @epoch-start */
-    // if (unitCaster->GetTypeId() == TYPEID_PLAYER)
-    // {
-    //     if (!m_triggeredByAuraSpell)
-    //         unitCaster->ToPlayer()->UpdatePotionCooldown(this);
-    // }
-    /** @epoch-end */
-
-    // Stop Attack for some spells
-    if (m_spellInfo->HasAttribute(SPELL_ATTR0_STOP_ATTACK_TARGET))
-        unitCaster->AttackStop();
 }
 
 void Spell::WriteCastResultInfo(WorldPacket& data, Player* caster, SpellInfo const* spellInfo, uint8 castCount, SpellCastResult result, SpellCustomErrors customError, uint32* param1 /*= nullptr*/, uint32* param2 /*= nullptr*/)
