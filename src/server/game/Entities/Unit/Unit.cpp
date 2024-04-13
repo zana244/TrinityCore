@@ -14228,7 +14228,7 @@ std::string Unit::GetDebugInfo() const
         << "GetCharmedGUID(): " << GetCharmedGUID().ToString() << "\n"
         << "GetCharmerGUID(): " << GetCharmerGUID().ToString() << "\n"
         << "" << (GetVehicleKit() ? GetVehicleKit()->GetDebugInfo() : "No vehicle kit") << "\n"
-        << "GetGameClientMovingMe(): " << (GetGameClientMovingMe() ? GetGameClientMovingMe()->GetDebugInfo() : "NULL") << "\n"
+        // << "GetGameClientMovingMe(): " << (GetGameClientMovingMe() ? GetGameClientMovingMe()->GetDebugInfo() : "NULL") << "\n"
         << "m_Controlled size: " << m_Controlled.size();
 
     size_t controlledCount = 0;
