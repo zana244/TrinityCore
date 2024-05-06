@@ -7252,6 +7252,13 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
 
     // in PvP, any not controlled zone (except zone->FactionGroupMask == 6, default case)
     // in PvE, only opposition team capital
+    // @epoch-start
+    bool pvparea = false;
+    FIRE(
+        Player
+        , OnCheckAreaIsPvP, TSPlayer(this)
+        , TSMutable<bool, bool>(&pvparea)
+    );
     switch (zone->FactionGroupMask)
     {
         case AREATEAM_ALLY:
@@ -7263,6 +7270,7 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
         case AREATEAM_NONE:
             // overwrite for battlegrounds, maybe batter some zone flags but current known not 100% fit to this
             pvpInfo.IsInHostileArea = sWorld->IsPvPRealm() || InBattleground() || zone->Flags & AREA_FLAG_WINTERGRASP;
+        // @epoch-end
             break;
         default:                                            // 6 in fact
             pvpInfo.IsInHostileArea = false;
@@ -7270,7 +7278,7 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
     }
 
     // Treat players having a quest flagging for PvP as always in hostile area
-    pvpInfo.IsHostile = pvpInfo.IsInHostileArea || HasPvPForcingQuest();
+    pvpInfo.IsHostile = pvpInfo.IsInHostileArea || HasPvPForcingQuest() || pvparea;
 
     if (zone->Flags & AREA_FLAG_CAPITAL)                     // Is in a capital city
     {
