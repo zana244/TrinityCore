@@ -1580,7 +1580,7 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
         uint32 const victimDefense = victim->GetDefenseSkillValue();
         uint32 const attackerMeleeSkill = GetMaxSkillValueForLevel();
 
-        chance *= attackerMeleeSkill / float(victimDefense) * 0.16f;
+        chance += (attackerMeleeSkill - float(victimDefense)) * 0.16f;
 
         // -probability is between 0% and 40%
         RoundToInterval(chance, 0.0f, 40.0f);
