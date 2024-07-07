@@ -124,7 +124,6 @@ class TC_GAME_API MapManager
         void InitInstanceIds();
         uint32 GenerateInstanceId();
         void RegisterInstanceId(uint32 instanceId);
-        void FreeInstanceId(uint32 instanceId);
 
         MapUpdater * GetMapUpdater() { return &m_updater; }
 
@@ -160,7 +159,7 @@ class TC_GAME_API MapManager
         MapMapType i_maps;
         IntervalTimer i_timer;
 
-        InstanceIds _freeInstanceIds;
+        InstanceIds _instanceIds;
         uint32 _nextInstanceId;
         MapUpdater m_updater;
 

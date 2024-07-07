@@ -110,7 +110,7 @@ InstanceSave* InstanceSaveManager::AddInstanceSave(uint32 mapId, uint32 instance
             resetTime = GetResetTimeFor(mapId, difficulty);
         else
         {
-            resetTime = GameTime::GetGameTime() + 2 * HOUR;
+            resetTime = GameTime::GetGameTime() + sWorld->getIntConfig(CONFIG_INSTANCE_NORMAL_RESET_DELAY);
             // normally this will be removed soon after in InstanceMap::Add, prevent error
             ScheduleReset(true, resetTime, InstResetEvent(0, mapId, difficulty, instanceId));
         }
@@ -639,9 +639,6 @@ void InstanceSaveManager::_ResetInstance(uint32 mapid, uint32 instanceId)
     }
     else
         Map::DeleteRespawnTimesInDB(mapid, instanceId);
-
-    // Free up the instance id and allow it to be reused
-    sMapMgr->FreeInstanceId(instanceId);
 }
 
 void InstanceSaveManager::_ResetOrWarnAll(uint32 mapid, Difficulty difficulty, bool warn, time_t resetTime)
