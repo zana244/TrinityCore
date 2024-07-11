@@ -2236,7 +2236,7 @@ void Spell::EffectSummonType()
         case SUMMON_CATEGORY_ALLY:
         case SUMMON_CATEGORY_UNK:
         {
-            if (properties->Flags & 512)
+            if (properties->Flags & SUMMON_PROP_FLAG_JOIN_SUMMONER_SPAWN_GROUP)
             {
                 SummonGuardian(*effectInfo, entry, properties, numSummons);
                 break;

@@ -1937,7 +1937,7 @@ TempSummon* Map::SummonCreature(uint32 entry, Position const& pos, SummonPropert
                     mask = UNIT_MASK_MINION;
                     break;
                 default:
-                    if (properties->Flags & 512) // Mirror Image, Summon Gargoyle
+                    if (properties->Flags & SUMMON_PROP_FLAG_JOIN_SUMMONER_SPAWN_GROUP) // Mirror Image, Summon Gargoyle
                         mask = UNIT_MASK_GUARDIAN;
                     break;
                 }
@@ -1968,7 +1968,7 @@ TempSummon* Map::SummonCreature(uint32 entry, Position const& pos, SummonPropert
             break;
         case UNIT_MASK_TOTEM:
             // @tswow-begin
-            if (properties->Flags & 512)
+            if (properties->Flags & SUMMON_PROP_FLAG_JOIN_SUMMONER_SPAWN_GROUP)
             {
                 summon = new TotemCreature(properties, summonerUnit);
             }
