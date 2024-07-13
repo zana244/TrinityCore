@@ -1351,13 +1351,26 @@ void World::LoadConfigSettings(bool reload)
 
     // Respawn Settings
     m_int_configs[CONFIG_RESPAWN_MINCHECKINTERVALMS] = sConfigMgr->GetIntDefault("Respawn.MinCheckIntervalMS", 5000);
-    m_int_configs[CONFIG_RESPAWN_DYNAMICMODE] = sConfigMgr->GetIntDefault("Respawn.DynamicMode", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMICMODE] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Mode", 0);
     if (m_int_configs[CONFIG_RESPAWN_DYNAMICMODE] > 1)
     {
-        TC_LOG_ERROR("server.loading", "Invalid value for Respawn.DynamicMode ({}). Set to 0.", m_int_configs[CONFIG_RESPAWN_DYNAMICMODE]);
+        TC_LOG_ERROR("server.loading", "Invalid value for Respawn.Dynamic.Mode ({}). Set to 0.", m_int_configs[CONFIG_RESPAWN_DYNAMICMODE]);
         m_int_configs[CONFIG_RESPAWN_DYNAMICMODE] = 0;
     }
-    m_bool_configs[CONFIG_RESPAWN_DYNAMIC_ESCORTNPC] = sConfigMgr->GetBoolDefault("Respawn.DynamicEscortNPC", false);
+    m_bool_configs[CONFIG_RESPAWN_DYNAMIC_ESCORTNPC] = sConfigMgr->GetBoolDefault("Respawn.Dynamic.EscortNPC", false);
+    m_float_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_RANGE] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.Creature.Range", 0);
+    m_float_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_PERCENT_PER_PLAYER] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.Creature.PercentPerPlayer", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_THRESHOLD] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.PlayersThreshold", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_MAX_LEVEL_DIFF] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.PlayersMaxLevelDiff", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.MinRespawnTime", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_ELITE] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.MinEliteRespawnTime", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_INDOOR] = sConfigMgr->GetIntDefault("Respawn.Dynamic.Creature.MinIndoorRespawnTime", 0);
+    m_float_configs[CONFIG_RESPAWN_DYNAMIC_CREATURE_MAX_REDUCTION_RATE] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.Creature.MaxReductionRate", 0);
+    m_float_configs[CONFIG_RESPAWN_DYNAMIC_GOBJECT_PERCENT_PER_PLAYER] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.GameObject.PercentPerPlayer", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_GOBJECT_PLAYER_THRESHOLD] = sConfigMgr->GetIntDefault("Respawn.Dynamic.GameObject.PlayersThreshold", 0);
+    m_int_configs[CONFIG_RESPAWN_DYNAMIC_GOBJECT_MIN_RESPAWN_TIME] = sConfigMgr->GetIntDefault("Respawn.Dynamic.GameObject.MinRespawnTime", 0);
+    m_float_configs[CONFIG_RESPAWN_DYNAMIC_GOBJECT_MAX_REDUCTION_RATE] = sConfigMgr->GetFloatDefault("Respawn.Dynamic.GameObject.MaxReductionRate", 0);
+
     m_int_configs[CONFIG_RESPAWN_GUIDWARNLEVEL] = sConfigMgr->GetIntDefault("Respawn.GuidWarnLevel", 12000000);
     if (m_int_configs[CONFIG_RESPAWN_GUIDWARNLEVEL] > 16777215)
     {
@@ -1376,20 +1389,6 @@ void World::LoadConfigSettings(bool reload)
         TC_LOG_ERROR("server.loading", "Respawn.RestartQuietTime ({}) must be an hour, between 0 and 23. Set to 3.", m_int_configs[CONFIG_RESPAWN_RESTARTQUIETTIME]);
         m_int_configs[CONFIG_RESPAWN_RESTARTQUIETTIME] = 3;
     }
-    m_float_configs[CONFIG_RESPAWN_DYNAMICRATE_CREATURE] = sConfigMgr->GetFloatDefault("Respawn.DynamicRateCreature", 10.0f);
-    if (m_float_configs[CONFIG_RESPAWN_DYNAMICRATE_CREATURE] < 0.0f)
-    {
-        TC_LOG_ERROR("server.loading", "Respawn.DynamicRateCreature ({}) must be positive. Set to 10.", m_float_configs[CONFIG_RESPAWN_DYNAMICRATE_CREATURE]);
-        m_float_configs[CONFIG_RESPAWN_DYNAMICRATE_CREATURE] = 10.0f;
-    }
-    m_int_configs[CONFIG_RESPAWN_DYNAMICMINIMUM_CREATURE] = sConfigMgr->GetIntDefault("Respawn.DynamicMinimumCreature", 10);
-    m_float_configs[CONFIG_RESPAWN_DYNAMICRATE_GAMEOBJECT] = sConfigMgr->GetFloatDefault("Respawn.DynamicRateGameObject", 10.0f);
-    if (m_float_configs[CONFIG_RESPAWN_DYNAMICRATE_GAMEOBJECT] < 0.0f)
-    {
-        TC_LOG_ERROR("server.loading", "Respawn.DynamicRateGameObject ({}) must be positive. Set to 10.", m_float_configs[CONFIG_RESPAWN_DYNAMICRATE_GAMEOBJECT]);
-        m_float_configs[CONFIG_RESPAWN_DYNAMICRATE_GAMEOBJECT] = 10.0f;
-    }
-    m_int_configs[CONFIG_RESPAWN_DYNAMICMINIMUM_GAMEOBJECT] = sConfigMgr->GetIntDefault("Respawn.DynamicMinimumGameObject", 10);
     _guidWarningMsg = sConfigMgr->GetStringDefault("Respawn.WarningMessage", "There will be an unscheduled server restart at 03:00. The server will be available again shortly after.");
     _alertRestartReason = sConfigMgr->GetStringDefault("Respawn.AlertRestartReason", "Urgent Maintenance");
     m_int_configs[CONFIG_RESPAWN_GUIDWARNING_FREQUENCY] = sConfigMgr->GetIntDefault("Respawn.WarningFrequency", 1800);
@@ -2365,6 +2364,37 @@ void World::SetInitialWorldSettings()
     }
 
     uint32 startupDuration = GetMSTimeDiffToNow(startupBegin);
+
+    if (getIntConfig(CONFIG_RESPAWN_DYNAMICMODE))
+    {
+        TC_LOG_INFO("server.worldserver", "Dynamic Respawns: Enabled");
+        TC_LOG_INFO(
+            "server.worldserver",
+            "Creature - Escort NPC: {} Range: {} Player Threshold: {} Max Level Diff: {} Percent Per Player: {} Min Respawn: {} Min Elite Respawn: {} Min Indoor Respawn: {} Max Reduction Rate: {}",
+            sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) ? "Enabled" : "Disabled",
+            sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_RANGE),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_THRESHOLD),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PLAYER_MAX_LEVEL_DIFF),
+            sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_PERCENT_PER_PLAYER),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_ELITE),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MIN_RESPAWN_TIME_INDOOR),
+            sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_CREATURE_MAX_REDUCTION_RATE)
+        );
+
+        TC_LOG_INFO(
+            "server.worldserver",
+            "Game Object - Player Threshold: {} Percent Per Player: {} Min Respawn: {} Max Reduction Rate: {}",
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_PLAYER_THRESHOLD),
+            sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_PERCENT_PER_PLAYER),
+            sWorld->getIntConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_MIN_RESPAWN_TIME),
+            sWorld->getFloatConfig(CONFIG_RESPAWN_DYNAMIC_GOBJECT_MAX_REDUCTION_RATE)
+        );
+    }
+    else
+    {
+        TC_LOG_INFO("server.worldserver", "Dynamic Respawns: Disabled");
+    }
 
     TC_LOG_INFO("server.worldserver", "World initialized in {} minutes {} seconds", (startupDuration / 60000), ((startupDuration % 60000) / 1000));
 
