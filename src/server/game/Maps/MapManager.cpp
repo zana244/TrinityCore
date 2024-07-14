@@ -324,18 +324,23 @@ void MapManager::InitInstanceIds()
 
 void MapManager::RegisterInstanceId(uint32 instanceId)
 {
-    // Allocation and sizing was done in InitInstanceIds()
+    // Allocation was done in InitInstanceIds()
     _instanceIds[instanceId] = true;
+
+    // Instances are pulled in ascending order from db and _nextInstanceId is initialized with 1,
+    // so if the instance id is used, increment
+    if (_nextInstanceId == instanceId)
+        ++_nextInstanceId;
 }
 
 uint32 MapManager::GenerateInstanceId()
 {
     uint32 newInstanceId = _nextInstanceId;
 
-    // Find the lowest available id starting from the current NextInstanceId (which should be the lowest according to the logic in FreeInstanceId()
+    // find the lowest available id starting from the current _nextInstanceId
     while (_nextInstanceId < 0xFFFFFFFF && ++_nextInstanceId < _instanceIds.size() && _instanceIds[_nextInstanceId]);
-    
-    if (newInstanceId == _nextInstanceId)
+
+    if (_nextInstanceId == 0xFFFFFFFF)
     {
         TC_LOG_ERROR("maps", "Instance ID overflow!! Can't continue, shutting down server. ");
         World::StopNow(ERROR_EXIT_CODE);
