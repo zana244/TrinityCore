@@ -8416,16 +8416,9 @@ void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
         Pet* pet = player->GetPet();
         if (pet)
         {
-            /** @epoch-start */
             pet->SetUnitFlag(UNIT_FLAG_STUNNED); // disable pet's interface
-
-            // Battleground* bg = ToPlayer()->GetBattleground();
-            // // don't unsummon pet in arena but SetFlag UNIT_FLAG_STUNNED to disable pet's interface
-            // if (bg && bg->isArena())
-            //     pet->SetUnitFlag(UNIT_FLAG_STUNNED);
-            // else
-            //     player->UnsummonPetTemporaryIfAny();
-            /** @epoch-end */
+            pet->SetUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
+            pet->SetUnitFlag(UNIT_FLAG_IMMUNE_TO_PC);
         }
 
         // if we have charmed npc, stun him also (everywhere)
@@ -8487,6 +8480,12 @@ void Unit::Dismount()
         {
             if (pPet->HasUnitFlag(UNIT_FLAG_STUNNED) && !pPet->HasUnitState(UNIT_STATE_STUNNED))
                 pPet->RemoveUnitFlag(UNIT_FLAG_STUNNED);
+
+            pPet->RemoveUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
+            pPet->RemoveUnitFlag(UNIT_FLAG_IMMUNE_TO_PC);
+            pPet->UpdateSpeed(MOVE_RUN);
+            pPet->UpdateSpeed(MOVE_SWIM);
+            pPet->UpdateSpeed(MOVE_FLIGHT);
         }
         else
             player->ResummonPetTemporaryUnSummonedIfAny();
@@ -8850,17 +8849,37 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
     /** @epoch-end */
     if (Creature* creature = ToCreature())
     {
-        if (creature->HasUnitTypeMask(UNIT_MASK_MINION) && !creature->IsInCombat())
+        if (creature->HasUnitTypeMask(UNIT_MASK_MINION))
         {
             if (GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
             {
                 Unit* followed = ASSERT_NOTNULL(dynamic_cast<AbstractFollower*>(GetMotionMaster()->GetCurrentMovementGenerator()))->GetTarget();
-                if (followed && followed->GetGUID() == GetOwnerGUID() && !followed->IsInCombat())
+                if (followed && followed->GetGUID() == GetOwnerGUID())
                 {
                     float ownerSpeed = followed->GetSpeedRate(mtype);
-                    if (speed < ownerSpeed || creature->IsWithinDist3d(followed, 10.0f))
-                        speed = ownerSpeed;
-                    speed *= std::min(std::max(1.0f, 0.75f + (GetDistance(followed) - PET_FOLLOW_DIST) * 0.05f), 1.3f);
+                    bool catchup = false;
+                    
+                    if (followed->GetTypeId() == TYPEID_PLAYER)
+                    {
+                        if (! followed->IsInCombat())
+                            catchup = true;
+
+                        if (followed->ToPlayer()->IsMounted())
+                            catchup = true;
+                    }
+                    else
+                    {
+                        if (! followed->IsInCombat() && ! creature->IsInCombat())
+                            catchup = true;
+                    }
+
+                    if (catchup)
+                    {
+                        if (speed < ownerSpeed || creature->IsWithinDist3d(followed, 10.0f))
+                            speed = ownerSpeed;
+                        
+                        speed *= std::min(std::max(1.0f, 0.75f + (GetDistance(followed) - PET_FOLLOW_DIST) * 0.05f), 1.3f);
+                    }
                 }
             }
         }

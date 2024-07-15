@@ -26120,7 +26120,7 @@ void Player::ResummonPetTemporaryUnSummonedIfAny()
 
 bool Player::IsPetNeedBeTemporaryUnsummoned() const
 {
-    return !IsInWorld() || !IsAlive() || IsMounted() /*+in flight*/;
+    return !IsInWorld() || !IsAlive() /*|| IsMounted()*/ /*+in flight*/;
 }
 
 bool Player::CanSeeSpellClickOn(Creature const* c) const
