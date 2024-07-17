@@ -385,6 +385,8 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         void AtEngage(Unit* target) override;
         void AtDisengage() override;
 
+        void SetAssistanceTimer(uint32 value) { m_assistanceTimer = value; }
+
         bool HasCanSwimFlagOutOfCombat() const
         {
             return !_isMissingCanSwimFlagOutOfCombat;
@@ -457,6 +459,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool CanAlwaysSee(WorldObject const* obj) const override;
 
     private:
+        bool CanPeriodicallyCallForAssistance() const;
         void ForcedDespawn(uint32 timeMSToDespawn = 0, Seconds forceRespawnTimer = 0s);
         bool CheckNoGrayAggroConfig(Player* player, uint32 playerLevel, uint32 creatureLevel) const; // No aggro from gray creatures
 
@@ -489,6 +492,8 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool _regenerateHealthLock; // Dynamically set
 
         bool _isMissingCanSwimFlagOutOfCombat;
+
+        uint32 m_assistanceTimer;
 };
 
 class TC_GAME_API AssistDelayEvent : public BasicEvent

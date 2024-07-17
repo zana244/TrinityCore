@@ -263,7 +263,7 @@ Creature::Creature(bool isWorldObject): Unit(isWorldObject), MapObject(), m_grou
     m_defaultMovementType(IDLE_MOTION_TYPE), m_spawnId(0), m_equipmentId(0), m_originalEquipmentId(0), m_AlreadyCallAssistance(false), m_AlreadySearchedAssistance(false), m_cannotReachTarget(false), m_cannotReachTimer(0),
     m_meleeDamageSchoolMask(SPELL_SCHOOL_MASK_NORMAL), m_originalEntry(0), m_homePosition(), m_transportHomePosition(), m_creatureInfo(nullptr), m_creatureData(nullptr), m_detectionDistance(20.0f), _waypointPathId(0),
     m_formation(nullptr), m_triggerJustAppeared(true), m_respawnCompatibilityMode(false), _lastDamagedTime(0),
-    _currentWaypointNodeInfo(0, 0), _regenerateHealth(true), _regenerateHealthLock(false), _isMissingCanSwimFlagOutOfCombat(false)
+    _currentWaypointNodeInfo(0, 0), _regenerateHealth(true), _regenerateHealthLock(false), _isMissingCanSwimFlagOutOfCombat(false), m_assistanceTimer(0)
 {
     m_regenTimer = CREATURE_REGEN_INTERVAL;
     m_valuesCount = UNIT_END;
@@ -933,6 +933,23 @@ void Creature::Update(uint32 diff)
                         }
 
                     m_combatPulseTime = m_combatPulseDelay * IN_MILLISECONDS;
+                }
+            }
+
+            if (m_assistanceTimer)
+            {
+                if (m_assistanceTimer <= diff)
+                {
+                    if (CanPeriodicallyCallForAssistance())
+                    {
+                        SetNoCallAssistance(false);
+                        CallAssistance();
+                    }
+                    m_assistanceTimer = sWorld->getIntConfig(CONFIG_CREATURE_FAMILY_ASSISTANCE_PERIOD);
+                }
+                else
+                {
+                    m_assistanceTimer -= diff;
                 }
             }
 
@@ -3648,4 +3665,21 @@ void Creature::ExitVehicle(Position const* /*exitPosition*/)
     // if the creature exits a vehicle, set it's home position to the
     // exited position so it won't run away (home) and evade if it's hostile
     SetHomePosition(GetPosition());
+}
+
+bool Creature::CanPeriodicallyCallForAssistance() const
+{
+    if (!IsInCombat())
+        return false;
+
+    if (HasUnitState(UNIT_STATE_DIED | UNIT_STATE_POSSESSED))
+        return false;
+
+    if (!CanHaveThreatList())
+        return false;
+
+    if (IsSummon() && GetMap()->Instanceable())
+        return false;
+
+    return true;
 }
