@@ -27,6 +27,7 @@ enum class AnimTier : uint8;
 
 namespace Movement
 {
+    UnitMoveType SelectSpeedType(uint32 moveFlags);
 
     // Transforms coordinates from global to transport offsets
     class TC_GAME_API TransportPathTransform
