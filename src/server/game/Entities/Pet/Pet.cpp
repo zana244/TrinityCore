@@ -2048,20 +2048,52 @@ Player* Pet::GetOwner() const
 
 float Pet::GetNativeObjectScale() const
 {
-    CreatureFamilyEntry const* creatureFamily = sCreatureFamilyStore.LookupEntry(GetCreatureTemplate()->family);
-    if (creatureFamily && creatureFamily->MinScale > 0.0f && getPetType() == HUNTER_PET)
+    uint8 ctFamily = GetCreatureTemplate()->family;
+
+    CreatureFamilyEntry const* creatureFamily = sCreatureFamilyStore.LookupEntry(ctFamily);
+    if (creatureFamily && creatureFamily->MinScale > 0.0f && getPetType() & HUNTER_PET)
     {
-        float scale;
-        if (GetLevel() >= creatureFamily->MaxScaleLevel)
-            scale = creatureFamily->MaxScale;
-        else if (GetLevel() <= creatureFamily->MinScaleLevel)
-            scale = creatureFamily->MinScale;
-        else
-            scale = creatureFamily->MinScale + float(GetLevel() - creatureFamily->MinScaleLevel) / creatureFamily->MaxScaleLevel * (creatureFamily->MaxScale - creatureFamily->MinScale);
+        float minScaleLevel = creatureFamily->MinScaleLevel;
+        uint8 level = GetLevel();
+
+        float minLevelScaleMod = level >= minScaleLevel ? (level / minScaleLevel) : 0.0f;
+        float maxScaleMod = creatureFamily->MaxScaleLevel - minScaleLevel;
+
+        if (minLevelScaleMod > maxScaleMod)
+            minLevelScaleMod = maxScaleMod;
+
+        float scaleMod = creatureFamily->MaxScaleLevel != minScaleLevel ? minLevelScaleMod / maxScaleMod : 0.f;
+
+        float maxScale = creatureFamily->MaxScale;
+
+        // override maxScale
+        switch (ctFamily)
+        {
+            case CREATURE_FAMILY_CHIMAERA:
+            case CREATURE_FAMILY_CORE_HOUND:
+            case CREATURE_FAMILY_CRAB:
+            case CREATURE_FAMILY_DEVILSAUR:
+            case CREATURE_FAMILY_NETHER_RAY:
+            case CREATURE_FAMILY_RHINO:
+            case CREATURE_FAMILY_SPIDER:
+            case CREATURE_FAMILY_TURTLE:
+            case CREATURE_FAMILY_WARP_STALKER:
+            case CREATURE_FAMILY_WASP:
+            case CREATURE_FAMILY_WIND_SERPENT:
+                maxScale = 1.0f;
+                break;
+            default:
+                break;
+        }
+
+        float scale = (maxScale - creatureFamily->MinScale) * scaleMod + creatureFamily->MinScale;
+
+        scale = std::min(scale, maxScale);
 
         return scale;
     }
 
+    // take value for non-hunter pets from DB
     return Guardian::GetNativeObjectScale();
 }
 
