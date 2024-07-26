@@ -1623,6 +1623,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetRaidDifficulty(Difficulty raid_difficulty) { m_raidDifficulty = raid_difficulty; }
         void StoreRaidMapDifficulty();
 
+        uint16 GetWeaponSkillIdForAttack(WeaponAttackType attType) const;
         bool UpdateSkill(uint32 skill_id, uint32 step);
         bool UpdateSkillPro(uint16 SkillId, int32 Chance, uint32 step);
 
