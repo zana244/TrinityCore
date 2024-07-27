@@ -1753,7 +1753,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
         if (!(options & TELE_TO_NOT_UNSUMMON_PET))
         {
             //same map, only remove pet if out of range for new position
-            if (pet && !pet->IsWithinDist3d(x, y, z, GetMap()->GetVisibilityRange()))
+            if (pet && !pet->IsWithinDist3d(x, y, z, 50.0f))
                 UnsummonPetTemporaryIfAny();
         }
 
@@ -21752,6 +21752,7 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature* npc 
     }
 
     // Prepare to flight start now
+    UnsummonPetTemporaryIfAny();
 
     // stop combat at start taxi flight if any
     CombatStop();
