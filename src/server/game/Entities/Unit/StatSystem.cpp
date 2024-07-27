@@ -1551,7 +1551,7 @@ bool Guardian::UpdateStats(Stats stat)
     {
         if (owner->GetClass() == CLASS_WARLOCK && IsPet())
         {
-            ownersBonus = CalculatePct(owner->GetStat(STAT_STAMINA), 75);
+            ownersBonus = CalculatePct(owner->GetStat(STAT_STAMINA), 30);
             value += ownersBonus;
         }
         else
@@ -1735,11 +1735,11 @@ void Guardian::UpdateMaxHealth()
     float multiplicator;
     switch (GetEntry())
     {
-        case ENTRY_IMP:         multiplicator = 8.4f;   break;
-        case ENTRY_VOIDWALKER:  multiplicator = 11.0f;  break;
-        case ENTRY_SUCCUBUS:    multiplicator = 9.1f;   break;
-        case ENTRY_FELHUNTER:   multiplicator = 9.5f;   break;
-        case ENTRY_FELGUARD:    multiplicator = 11.0f;  break;
+        case ENTRY_IMP:         multiplicator = 5.9f;   break;
+        case ENTRY_VOIDWALKER:  multiplicator = 5.1f;  break;
+        case ENTRY_SUCCUBUS:    multiplicator = 4.2f;   break;
+        case ENTRY_FELHUNTER:   multiplicator = 4.4f;   break;
+        case ENTRY_FELGUARD:    multiplicator = 5.1f;  break;
         case ENTRY_BLOODWORM:   multiplicator = 1.0f;   break;
         default:                multiplicator = 10.0f;  break;
     }
@@ -1764,24 +1764,30 @@ void Guardian::UpdateMaxHealth()
 
 void Guardian::UpdateMaxPower(Powers power)
 {
+    if (GetPowerType() != power)
+        return;
+
     UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + AsUnderlyingType(power));
 
-    float addValue = (power == POWER_MANA) ? GetStat(STAT_INTELLECT) - GetCreateStat(STAT_INTELLECT) : 0.0f;
+    float intellect = (power == POWER_MANA) ? GetStat(STAT_INTELLECT) - GetCreateStat(STAT_INTELLECT) : 0.0f;
     float multiplicator = 15.0f;
 
     switch (GetEntry())
     {
-        case ENTRY_IMP:         multiplicator = 4.95f;  break;
-        case ENTRY_VOIDWALKER:
-        case ENTRY_SUCCUBUS:
-        case ENTRY_FELHUNTER:
-        case ENTRY_FELGUARD:    multiplicator = 11.5f;  break;
+        case ENTRY_IMP:         multiplicator = 4.7f;  break;
+        case ENTRY_VOIDWALKER:  multiplicator = 10.7f;  break;
+        case ENTRY_SUCCUBUS:    multiplicator = 10.7f;  break;
+        case ENTRY_FELHUNTER:   multiplicator = 10.8f;  break;
+        case ENTRY_FELGUARD:    multiplicator = 10.7f;  break;
         default:                multiplicator = 15.0f;  break;
     }
 
-    float value  = GetFlatModifierValue(unitMod, BASE_VALUE) + GetCreatePowerValue(power);
+    float value = GetFlatModifierValue(unitMod, BASE_VALUE);
+    if (IsPet())
+        value += GetCreatePowerValue(power);
+
     value *= GetPctModifierValue(unitMod, BASE_PCT);
-    value += GetFlatModifierValue(unitMod, TOTAL_VALUE) + addValue * multiplicator;
+    value += GetFlatModifierValue(unitMod, TOTAL_VALUE) + intellect * multiplicator;
     value *= GetPctModifierValue(unitMod, TOTAL_PCT);
 
     // @tswow-begin
