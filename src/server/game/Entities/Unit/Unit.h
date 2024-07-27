@@ -766,6 +766,11 @@ struct PositionUpdateInfo
 #define ATTACK_DISPLAY_DELAY 200
 #define MAX_PLAYER_STEALTH_DETECT_RANGE 30.0f               // max distance for detection targets by player
 
+// Regeneration defines
+#define REGEN_TIME_FULL_PLAYER  2000                            // For players
+#define REGEN_TIME_FULL_UNIT    5000                            // For npcs
+#define REGEN_TIME_FOCUS        4000                            // For hunter pets
+
 class TC_GAME_API Unit : public WorldObject
 {
     friend class WorldSession;
@@ -945,7 +950,8 @@ class TC_GAME_API Unit : public WorldObject
         inline void SetFullPower(Powers power) { SetPower(power, GetMaxPower(power)); }
         // returns the change in power
         int32 ModifyPower(Powers power, int32 val, bool withPowerUpdate = true);
-
+        float OCTRegenHPPerSpirit() const;
+        float OCTRegenMPPerSpirit() const;
         uint32 GetAttackTime(WeaponAttackType att) const;
         void SetAttackTime(WeaponAttackType att, uint32 val) { SetFloatValue(UNIT_FIELD_BASEATTACKTIME + int32(att), val * m_modAttackSpeedPct[att]); }
         void ApplyAttackTimePercentMod(WeaponAttackType att, float val, bool apply);

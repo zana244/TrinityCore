@@ -1208,14 +1208,13 @@ void Player::ApplyHealthRegenBonus(int32 amount, bool apply)
 
 void Player::UpdateManaRegen()
 {
-    float Intellect = GetStat(STAT_INTELLECT);
-    // Mana regen from spirit and intellect
-    float power_regen = std::sqrt(Intellect) * OCTRegenMPPerSpirit();
+    float power_regen = OCTRegenMPPerSpirit();
+
     // Apply PCT bonus from SPELL_AURA_MOD_POWER_REGEN_PERCENT aura on spirit base regen
     power_regen *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, POWER_MANA);
 
     // Mana regen from SPELL_AURA_MOD_POWER_REGEN aura
-    float power_regen_mp5 = (GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, POWER_MANA) + m_baseManaRegen) / 5.0f;
+    float power_regen_mp5 = GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, POWER_MANA) / 5.0f;
 
     // Get bonus from SPELL_AURA_MOD_MANA_REGEN_FROM_STAT aura
     AuraEffectList const& regenAura = GetAuraEffectsByType(SPELL_AURA_MOD_MANA_REGEN_FROM_STAT);
@@ -1226,6 +1225,7 @@ void Player::UpdateManaRegen()
     int32 modManaRegenInterrupt = GetTotalAuraModifier(SPELL_AURA_MOD_MANA_REGEN_INTERRUPT);
     if (modManaRegenInterrupt > 100)
         modManaRegenInterrupt = 100;
+
     // @tswow-begin
     FIRE(Player,OnUpdateManaRegen
         , TSPlayer(this)
@@ -1234,9 +1234,15 @@ void Player::UpdateManaRegen()
         , TSMutableNumber<int32>(&modManaRegenInterrupt)
     );
     // @tswow-end
-    SetStatFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER, power_regen_mp5 + CalculatePct(power_regen, modManaRegenInterrupt));
+
+    SetStatFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER, power_regen_mp5 + power_regen * modManaRegenInterrupt / 100.0f);
 
     SetStatFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER, power_regen_mp5 + power_regen);
+}
+
+void Player::UpdateEnergyRegen()
+{
+    m_energyRegenRate = GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, POWER_ENERGY);
 }
 
 void Player::UpdateRuneRegen(RuneType rune)

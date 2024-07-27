@@ -221,7 +221,6 @@ Player::Player(WorldSession* session): Unit(true)
     // @tswow-end
 
     m_regenTimer = 0;
-    m_regenTimerCount = 0;
     m_foodEmoteTimerCount = 0;
     m_weaponChangeTimer = 0;
 
@@ -428,6 +427,8 @@ Player::Player(WorldSession* session): Unit(true)
     m_reputationMgr = new ReputationMgr(this);
 
     m_groupUpdateTimer.Reset(5000);
+
+    m_energyRegenRate = 1.f;
 }
 
 Player::~Player()
@@ -545,7 +546,7 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
         SetPvpFlag(UNIT_BYTE2_FLAG_PVP);
         SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED);
     }
-    SetUnitFlag2(UNIT_FLAG2_REGENERATE_POWER);
+
     SetModCastingSpeed(1.0f);               // fix cast time showed in spell tooltip on client
     SetHoverHeight(1.0f);            // default for players in 3.0.3
 
@@ -1261,7 +1262,9 @@ void Player::Update(uint32 p_time)
     if (IsAlive())
     {
         m_regenTimer += p_time;
-        RegenerateAll();
+        HandleFoodEmotes(p_time);
+        if (m_regenTimer >= REGEN_TIME_FULL_PLAYER)
+            RegenerateAll(m_regenTimer / 100 * 100);
     }
 
     if (m_deathState == JUST_DIED)
@@ -2041,47 +2044,9 @@ bool Player::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo 
     return Unit::IsImmunedToSpellEffect(spellInfo, spellEffectInfo, caster, requireImmunityPurgesEffectAttribute);
 }
 
-void Player::RegenerateAll()
+void Player::HandleFoodEmotes(uint32 diff)
 {
-    //if (m_regenTimer <= 500)
-    //    return;
-
-    m_regenTimerCount += m_regenTimer;
     m_foodEmoteTimerCount += m_regenTimer;
-
-    Regenerate(POWER_MANA);
-
-    // Runes act as cooldowns, and they don't need to send any data
-    //@tswow-begin
-    if (HasRunes())
-    {
-    //@tswow-end
-        for (uint8 i = 0; i < MAX_RUNES; ++i)
-            if (uint32 cd = GetRuneCooldown(i))
-                SetRuneCooldown(i, (cd > m_regenTimer) ? cd - m_regenTimer : 0);
-
-    }
-
-    if (m_regenTimerCount >= 2000)
-    {
-        // Not in combat or they have regeneration
-        if (!IsInCombat() || IsPolymorphed() || m_baseHealthRegen ||
-            HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) ||
-            HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT))
-        {
-            RegenerateHealth();
-        }
-
-        Regenerate(POWER_ENERGY);
-        Regenerate(POWER_RAGE);
-        //@tswow-begin
-        if (HasRunes())
-            Regenerate(POWER_RUNIC_POWER);
-
-        m_regenTimerCount -= 2000;
-    }
-
-    m_regenTimer = 0;
 
     // Handles the emotes for drinking and eating.
     // According to sniffs there is a background timer going on that repeats independed from the time window where the aura applies.
@@ -2115,7 +2080,25 @@ void Player::RegenerateAll()
     }
 }
 
-void Player::Regenerate(Powers power)
+void Player::RegenerateAll(uint32 diff)
+{
+    // Not in combat or they have regeneration
+    if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) ||
+            HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT))
+    {
+        RegenerateHealth(diff);
+        if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
+            Regenerate(POWER_RAGE, diff);
+    }
+
+    Regenerate(POWER_ENERGY, diff);
+
+    Regenerate(POWER_MANA, diff);
+
+    m_regenTimer -= diff;
+}
+
+void Player::Regenerate(Powers power, uint32 diff)
 {
     uint32 maxValue = GetMaxPower(power);
     if (!maxValue)
@@ -2136,53 +2119,30 @@ void Player::Regenerate(Powers power)
             bool recentCast = IsUnderLastManaUseEffect();
             float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
 
-            /** @epoch-start */
-            // if (GetLevel() < 15)
-            //     ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA) * (2.066f - (GetLevel() * 0.066f));
-            /** @epoch-end */
-
             if (recentCast) // Trinity Updates Mana in intervals of 2s, which is correct
-                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) *  ManaIncreaseRate * 0.001f * m_regenTimer;
+                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) * ManaIncreaseRate * uint32(float(diff) / 1000);
             else
-                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * ManaIncreaseRate * 0.001f * m_regenTimer;
+                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * ManaIncreaseRate * uint32(float(diff) / 1000);
         }   break;
         case POWER_RAGE:                                    // Regenerate rage
         {
-            if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
-            {
-                float RageDecreaseRate = sWorld->getRate(RATE_POWER_RAGE_LOSS);
-                addvalue += -20 * RageDecreaseRate;               // 2 rage by tick (= 2 seconds => 1 rage/sec)
-            }
+            float RageDecreaseRate = sWorld->getRate(RATE_POWER_RAGE_LOSS);
+            addvalue += uint32(float(diff) / 200) * (-2.5 * RageDecreaseRate); // decay 2.5 rage per 2 seconds
+            addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
         }   break;
         case POWER_ENERGY:                                  // Regenerate energy (rogue)
-            addvalue += 20 * sWorld->getRate(RATE_POWER_ENERGY);
-            break;
-        case POWER_RUNIC_POWER:
         {
-            if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
-            {
-                float RunicPowerDecreaseRate = sWorld->getRate(RATE_POWER_RUNICPOWER_LOSS);
-                addvalue += -30 * RunicPowerDecreaseRate;         // 3 RunicPower by tick
-            }
+            float EnergyRate = sWorld->getRate(RATE_POWER_ENERGY);
+            addvalue = 20 * EnergyRate * m_energyRegenRate;
         }   break;
         case POWER_RUNE:
+        case POWER_RUNIC_POWER:
         case POWER_FOCUS:
         case POWER_HAPPINESS:
-            break;
         case POWER_HEALTH:
             return;
         default:
             break;
-    }
-
-    // Mana regen calculated in Player::UpdateManaRegen()
-    if (power != POWER_MANA)
-    {
-        addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
-
-        // Butchery requires combat for this effect
-        if (power != POWER_RUNIC_POWER || IsInCombat())
-            addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * ((power != POWER_ENERGY) ? m_regenTimerCount : m_regenTimer) / (5 * IN_MILLISECONDS);
     }
 
     if (addvalue < 0.0f)
@@ -2226,13 +2186,11 @@ void Player::Regenerate(Powers power)
         else
             m_powerFraction[power] = addvalue - integerValue;
     }
-    if (m_regenTimerCount >= 2000)
-        SetPower(power, curValue);
-    else
-        UpdateUInt32Value(UNIT_FIELD_POWER1 + AsUnderlyingType(power), curValue);
+
+    SetPower(power, curValue);
 }
 
-void Player::RegenerateHealth()
+void Player::RegenerateHealth(uint32 diff)
 {
     uint32 curValue = GetHealth();
     uint32 maxValue = GetMaxHealth();
@@ -2242,41 +2200,31 @@ void Player::RegenerateHealth()
 
     float HealthIncreaseRate = sWorld->getRate(RATE_HEALTH);
 
-    /** @epoch-start */
-    // if (GetLevel() < 15)
-    //     HealthIncreaseRate = sWorld->getRate(RATE_HEALTH) * (2.066f - (GetLevel() * 0.066f));
-    /** @epoch-end */
-
     float addValue = 0.0f;
 
-    // polymorphed case
-    if (IsPolymorphed())
-        addValue = float(GetMaxHealth()) / 3.0f;
     // normal regen case (maybe partly in combat case)
-    else if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
+    if (!IsInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
     {
         addValue = OCTRegenHPPerSpirit() * HealthIncreaseRate;
-        if (!IsInCombat())
+
+        if (! IsInCombat())
         {
             addValue *= GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALTH_REGEN_PERCENT);
-
-            addValue += GetTotalAuraModifier(SPELL_AURA_MOD_REGEN) * 0.4f;
         }
         else if (HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
             ApplyPct(addValue, GetTotalAuraModifier(SPELL_AURA_MOD_REGEN_DURING_COMBAT));
 
-        if (!IsStandState())
-            addValue *= 1.33f;
+        if (! IsStandState())
+            addValue *= 1.5f;
     }
 
     // always regeneration bonus (including combat)
     addValue += GetTotalAuraModifier(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT);
-    addValue += m_baseHealthRegen / 2.5f;
 
     if (addValue < 0.0f)
         addValue = 0.0f;
 
-    ModifyHealth(int32(addValue));
+    ModifyHealth(int32(addValue * float(diff) / 1000));
 }
 
 void Player::ResetAllPowers()
@@ -2913,8 +2861,6 @@ void Player::InitStatsForLevel(bool reapplyMods)
         UNIT_FLAG_SKINNABLE      | UNIT_FLAG_MOUNT        | UNIT_FLAG_ON_TAXI          );
     SetUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED);   // must be set
 
-    SetUnitFlag2(UNIT_FLAG2_REGENERATE_POWER);// must be set
-
     // cleanup player flags (will be re-applied if need at aura load), to avoid have ghost flag without ghost aura, for example.
     RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK | PLAYER_FLAGS_DND | PLAYER_FLAGS_GM | PLAYER_FLAGS_GHOST | PLAYER_ALLOW_ONLY_ABILITY);
 
@@ -2940,12 +2886,6 @@ void Player::InitStatsForLevel(bool reapplyMods)
     // update level to hunter/summon pet
     if (Pet* pet = GetPet())
         pet->SynchronizeLevelWithOwner();
-
-    if (GetClass() == CLASS_ROGUE || GetClass() == CLASS_DRUID)
-    {
-        SetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER + POWER_ENERGY, -10.f);
-        SetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER + POWER_ENERGY, -10.f);
-    }
 }
 
 void Player::SendInitialSpells()
@@ -5578,48 +5518,6 @@ float Player::GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const
             break;
     }
     return 0.0f;
-}
-
-float Player::OCTRegenHPPerSpirit() const
-{
-    uint8 level = GetLevel();
-    uint32 pclass = GetClass();
-
-    if (level > GT_MAX_LEVEL)
-        level = GT_MAX_LEVEL;
-
-    GtOCTRegenHPEntry     const* baseRatio = sGtOCTRegenHPStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
-    GtRegenHPPerSptEntry  const* moreRatio = sGtRegenHPPerSptStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
-    if (baseRatio == nullptr || moreRatio == nullptr)
-        return 0.0f;
-
-    // Formula from PaperDollFrame script
-    float spirit = GetStat(STAT_SPIRIT);
-    float baseSpirit = spirit;
-    if (baseSpirit > 50)
-        baseSpirit = 50;
-    float moreSpirit = spirit - baseSpirit;
-    float regen = (baseSpirit * baseRatio->Data + moreSpirit * moreRatio->Data) * 2;
-    return regen;
-}
-
-float Player::OCTRegenMPPerSpirit() const
-{
-    uint8 level = GetLevel();
-    uint32 pclass = GetClass();
-
-    if (level > GT_MAX_LEVEL)
-        level = GT_MAX_LEVEL;
-
-//    GtOCTRegenMPEntry     const* baseRatio = sGtOCTRegenMPStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
-    GtRegenMPPerSptEntry  const* moreRatio = sGtRegenMPPerSptStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
-    if (moreRatio == nullptr)
-        return 0.0f;
-
-    // Formula get from PaperDollFrame script
-    float spirit    = GetStat(STAT_SPIRIT);
-    float regen     = spirit * moreRatio->Data;
-    return regen;
 }
 
 void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)

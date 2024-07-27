@@ -263,9 +263,8 @@ Creature::Creature(bool isWorldObject): Unit(isWorldObject), MapObject(), m_grou
     m_defaultMovementType(IDLE_MOTION_TYPE), m_spawnId(0), m_equipmentId(0), m_originalEquipmentId(0), m_AlreadyCallAssistance(false), m_AlreadySearchedAssistance(false), m_cannotReachTarget(false), m_cannotReachTimer(0),
     m_meleeDamageSchoolMask(SPELL_SCHOOL_MASK_NORMAL), m_originalEntry(0), m_homePosition(), m_transportHomePosition(), m_creatureInfo(nullptr), m_creatureData(nullptr), m_detectionDistance(20.0f), _waypointPathId(0),
     m_formation(nullptr), m_triggerJustAppeared(true), m_respawnCompatibilityMode(false), _lastDamagedTime(0),
-    _currentWaypointNodeInfo(0, 0), _regenerateHealth(true), _regenerateHealthLock(false), _isMissingCanSwimFlagOutOfCombat(false), m_assistanceTimer(0)
+    _currentWaypointNodeInfo(0, 0), _regenerateHealth(true), _regenerateHealthLock(false), _isMissingCanSwimFlagOutOfCombat(false), m_assistanceTimer(0), m_forcePowerRegen(false)
 {
-    m_regenTimer = CREATURE_REGEN_INTERVAL;
     m_valuesCount = UNIT_END;
 
     for (uint8 i = 0; i < MAX_CREATURE_SPELLS; ++i)
@@ -968,48 +967,112 @@ void Creature::Update(uint32 diff)
                         ai->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_PATH);
             }
 
-            if (m_regenTimer > 0)
-            {
-                if (diff >= m_regenTimer)
-                    m_regenTimer = 0;
-                else
-                    m_regenTimer -= diff;
-            }
-
-            if (m_regenTimer == 0)
-            {
-                if (!IsInEvadeMode())
-                {
-                    // regenerate health if not in combat or if polymorphed)
-                    if (!IsEngaged() || IsPolymorphed())
-                        RegenerateHealth();
-                    else if (CanNotReachTarget() && m_cannotReachTimer >= CREATURE_NOPATH_REGEN_TIME)
-                    {
-                        // regenerate health if cannot reach the target and the setting is set to do so.
-                        // this allows to disable the health regen of raid bosses if pathfinding has issues for whatever reason
-                        if (sWorld->getBoolConfig(CONFIG_REGEN_HP_CANNOT_REACH_TARGET_IN_RAID) || !GetMap()->IsRaid())
-                        {
-                            RegenerateHealth();
-                            TC_LOG_DEBUG("entities.unit.chase", "RegenerateHealth() enabled because Creature cannot reach the target. Detail: {}", GetDebugInfo());
-                        }
-                        else
-                            TC_LOG_DEBUG("entities.unit.chase", "RegenerateHealth() disabled even if the Creature cannot reach the target. Detail: {}", GetDebugInfo());
-                    }
-                }
-
-                if (GetPowerType() == POWER_ENERGY)
-                    Regenerate(POWER_ENERGY);
-                else
-                    Regenerate(POWER_MANA);
-
-                m_regenTimer = CREATURE_REGEN_INTERVAL;
-            }
+            RegenerateAll(diff);
 
             break;
         }
         default:
             break;
     }
+}
+
+void Creature::RegenerateAll(uint32 diff)
+{
+    m_regenTimer += diff;
+    if (m_regenTimer < REGEN_TIME_FULL_UNIT)
+        return;
+
+    if (!IsInEvadeMode())
+    {
+        if (!IsEngaged() || IsPolymorphed())
+            RegenerateHealth();
+        else if (CanNotReachTarget() && m_cannotReachTimer >= CREATURE_NOPATH_REGEN_TIME)
+        {
+            // regenerate health if cannot reach the target and the setting is set to do so.
+            // this allows to disable the health regen of raid bosses if pathfinding has issues for whatever reason
+            if (sWorld->getBoolConfig(CONFIG_REGEN_HP_CANNOT_REACH_TARGET_IN_RAID) || !GetMap()->IsRaid())
+            {
+                RegenerateHealth();
+                TC_LOG_DEBUG("entities.unit.chase", "RegenerateHealth() enabled because Creature cannot reach the target. Detail: {}", GetDebugInfo());
+            }
+            else
+                TC_LOG_DEBUG("entities.unit.chase", "RegenerateHealth() disabled even if the Creature cannot reach the target. Detail: {}", GetDebugInfo());
+        }
+    }
+
+    RegeneratePower(REGEN_TIME_FULL_UNIT / 1000);
+
+    m_regenTimer -= REGEN_TIME_FULL_UNIT;
+}
+
+void Creature::RegenerateHealth()
+{
+    if (!CanRegenerateHealth())
+        return;
+
+    uint32 curValue = GetHealth();
+    uint32 maxValue = GetMaxHealth();
+
+    if (curValue >= maxValue)
+        return;
+
+    uint32 addValue = 0;
+
+    // regenerate 33% for npc and ~13% for player controlled npc (enslave etc) ToDo: Find Regenvalue based on Spirit, might differ due to mob types
+    addValue = HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED) ? maxValue * 0.13 : maxValue / 3;
+
+    ModifyHealth(addValue);
+}
+
+void Creature::RegeneratePower(float timerMultiplier)
+{
+    if (!HasUnitFlag2(UNIT_FLAG2_REGENERATE_POWER) && ! m_forcePowerRegen)
+        return;
+
+    Powers powerType = GetPowerType();
+    uint32 curValue = GetPower(powerType);
+    uint32 maxValue = GetMaxPower(powerType);
+
+    if (curValue >= maxValue)
+        return;
+
+    float addValue = 0.0f;
+
+    switch (powerType)
+    {
+        case POWER_MANA:
+            // Combat and any controlled creature
+            if (IsInCombat() || GetCharmerOrOwnerGUID())
+            {
+                if (!IsUnderLastManaUseEffect())
+                {
+                    float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
+                    float intellect = GetStat(STAT_INTELLECT);
+                    addValue = sqrt(intellect) * OCTRegenMPPerSpirit() * ManaIncreaseRate / 5.f * timerMultiplier;
+                    if (!IsPet() && !HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED) && addValue == 0.f)
+                        addValue = (GetMaxPower(POWER_MANA) / 20) / 5.f * timerMultiplier;
+                }
+            }
+            else
+                addValue = maxValue / 3.0f;
+            break;
+        case POWER_ENERGY:
+            // ToDo: for vehicle this is different - NEEDS TO BE FIXED!
+            addValue = 20 * sWorld->getRate(RATE_POWER_ENERGY);
+            break;
+        case POWER_FOCUS:
+            addValue = 24 * sWorld->getRate(RATE_POWER_FOCUS);
+            break;
+        default:
+            return;
+    }
+
+    // Apply modifiers (if any).
+    addValue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, powerType) / 5.f * timerMultiplier;
+
+    addValue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, powerType);
+
+    ModifyPower(powerType, int32(addValue));
 }
 
 bool Creature::IsFreeToMove()
@@ -1024,98 +1087,6 @@ bool Creature::IsFreeToMove()
     }
 
     return true;
-}
-
-void Creature::Regenerate(Powers power)
-{
-    uint32 curValue = GetPower(power);
-    uint32 maxValue = GetMaxPower(power);
-
-    if (!HasUnitFlag2(UNIT_FLAG2_REGENERATE_POWER))
-        return;
-
-    if (curValue >= maxValue)
-        return;
-
-    float addvalue = 0.0f;
-
-    switch (power)
-    {
-        case POWER_FOCUS:
-        {
-            // For hunter pets.
-            addvalue = 24 * sWorld->getRate(RATE_POWER_FOCUS);
-            break;
-        }
-        case POWER_ENERGY:
-        {
-            // For deathknight's ghoul.
-            addvalue = 20;
-            break;
-        }
-        case POWER_MANA:
-        {
-            // Combat and any controlled creature
-            if (IsInCombat() || GetCharmerOrOwnerGUID())
-            {
-                if (!IsUnderLastManaUseEffect())
-                {
-                    float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
-                    float Spirit = GetStat(STAT_SPIRIT);
-
-                    addvalue = uint32((Spirit / 5.0f + 17.0f) * ManaIncreaseRate);
-                }
-            }
-            else
-                addvalue = maxValue / 3;
-
-            break;
-        }
-        default:
-            return;
-    }
-
-    // Apply modifiers (if any).
-    addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
-
-    addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * (IsHunterPet() ? PET_FOCUS_REGEN_INTERVAL : CREATURE_REGEN_INTERVAL) / (5 * IN_MILLISECONDS);
-
-    ModifyPower(power, int32(addvalue));
-}
-
-void Creature::RegenerateHealth()
-{
-    if (!CanRegenerateHealth())
-        return;
-
-    uint32 curValue = GetHealth();
-    uint32 maxValue = GetMaxHealth();
-
-    if (curValue >= maxValue)
-        return;
-
-    uint32 addvalue = 0;
-
-    // Not only pet, but any controlled creature (and not polymorphed)
-    if (GetCharmerOrOwnerGUID() && !IsPolymorphed())
-    {
-        float HealthIncreaseRate = sWorld->getRate(RATE_HEALTH);
-        float Spirit = GetStat(STAT_SPIRIT);
-
-        if (GetPower(POWER_MANA) > 0)
-            addvalue = uint32(Spirit * 0.25 * HealthIncreaseRate);
-        else
-            addvalue = uint32(Spirit * 0.80 * HealthIncreaseRate);
-    }
-    else
-        addvalue = maxValue/3;
-
-    // Apply modifiers (if any).
-    addvalue *= GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALTH_REGEN_PERCENT);
-
-    addvalue += GetTotalAuraModifier(SPELL_AURA_MOD_REGEN) * CREATURE_REGEN_INTERVAL  / (5 * IN_MILLISECONDS);
-
-    ModifyHealth(addvalue);
 }
 
 void Creature::DoFleeToGetAssistance()

@@ -1392,10 +1392,10 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetBindPoint(ObjectGuid guid) const;
         void SendTalentWipeConfirm(ObjectGuid guid) const;
         void ResetPetTalents();
-        void RegenerateAll();
-        void Regenerate(Powers power);
-        void RegenerateHealth();
-        void setRegenTimerCount(uint32 time) {m_regenTimerCount = time;}
+        void RegenerateAll(uint32 diff = REGEN_TIME_FULL_PLAYER);
+        void Regenerate(Powers power, uint32 diff);
+        void RegenerateHealth(uint32 diff);
+        void HandleFoodEmotes(uint32 diff);
         void setWeaponChangeTimer(uint32 time) {m_weaponChangeTimer = time;}
 
         uint32 GetMoney() const { return GetUInt32Value(PLAYER_FIELD_COINAGE); }
@@ -1661,8 +1661,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void GetDodgeFromAgility(float &diminishing, float &nondiminishing) const;
         float GetMissPercentageFromDefense() const;
         float GetSpellCritFromIntellect() const;
-        float OCTRegenHPPerSpirit() const;
-        float OCTRegenMPPerSpirit() const;
         float GetRatingMultiplier(CombatRating cr) const;
         float GetRatingBonusValue(CombatRating cr) const;
         uint32 GetBaseSpellPowerBonus() const { return m_baseSpellPower; }
@@ -1687,6 +1685,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void ApplyManaRegenBonus(int32 amount, bool apply);
         void ApplyHealthRegenBonus(int32 amount, bool apply);
         void UpdateManaRegen();
+        void UpdateEnergyRegen();
         void UpdateRuneRegen(RuneType rune);
         uint32 GetRuneTimer(uint8 index) const { return m_runeGraceCooldown[index]; }
         void SetRuneTimer(uint8 index, uint32 timer) { m_runeGraceCooldown[index] = timer; }
@@ -2058,6 +2057,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         float m_homebindY;
         float m_homebindZ;
 
+        float m_energyRegenRate;
+
         WorldLocation GetStartPosition() const;
 
         // currently visible objects at player client
@@ -2256,7 +2257,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
     protected:
         // Gamemaster whisper whitelist
         GuidList WhisperList;
-        uint32 m_regenTimerCount;
         uint32 m_foodEmoteTimerCount;
         float m_powerFraction[MAX_POWERS];
         uint32 m_contestedPvPTimer;
