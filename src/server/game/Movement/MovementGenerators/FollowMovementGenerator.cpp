@@ -42,7 +42,7 @@ static void DoMovementInform(Unit* owner, Unit* target)
     // @tswow-end
 }
 
-FollowMovementGenerator::FollowMovementGenerator(Unit* target, float range, ChaseAngle angle) : AbstractFollower(ASSERT_NOTNULL(target)), _range(range), _angle(angle)
+FollowMovementGenerator::FollowMovementGenerator(Unit* target, float range, ChaseAngle angle) : AbstractFollower(ASSERT_NOTNULL(target)), _range(range), _angle(angle), _recheckPredictedDistanceTimer(0), _recheckPredictedDistance(false)
 {
     Mode = MOTION_MODE_DEFAULT;
     Priority = MOTION_PRIORITY_NORMAL;
@@ -50,16 +50,6 @@ FollowMovementGenerator::FollowMovementGenerator(Unit* target, float range, Chas
     BaseUnitState = UNIT_STATE_FOLLOW;
 }
 FollowMovementGenerator::~FollowMovementGenerator() = default;
-
-void FollowMovementGenerator::MovementInform(Unit* owner)
-{
-    if (owner->GetTypeId() != TYPEID_UNIT)
-        return;
-
-    // Pass back the GUIDLow of the target. If it is pet's owner then PetAI will handle
-    if (CreatureAI* AI = owner->ToCreature()->AI())
-        AI->MovementInform(FOLLOW_MOTION_TYPE, GetTarget()->GetGUID().GetCounter());
-}
 
 static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const& dest, bool playerPet)
 {
@@ -75,14 +65,21 @@ static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const
 
         UnitMoveType moveType = Movement::SelectSpeedType(moveFlags);
         speed = target->GetSpeed(moveType);
-        if (playerPet)
+
+        if (owner->IsCreature() && target->IsCreature())
+            speed = target->GetSpeedInMotion();
+
+        float distance = owner->GetDistance2d(dest.x, dest.y) - target->GetObjectSize() - (*speed / 2.f);
+        if (distance > 0.f)
         {
-            float distance = owner->GetDistance2d(dest.x, dest.y) - target->GetObjectSize() - (*speed / 2.f);
-            if (distance > 0.f)
-            {
-                float multiplier = 1.f + (distance / 10.f);
-                *speed *= multiplier;
-            }
+            float multiplier = 1.0f;
+
+            if (playerPet)
+                multiplier += (distance / 30.f);
+            else
+                *speed = owner->IsCreature() ? owner->ToCreature()->GetCreatureTemplate()->speed_run : owner->GetSpeed(MOVE_RUN);
+            
+            *speed *= multiplier;
         }
     }
 
@@ -227,7 +224,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         {
             owner->ClearUnitState(UNIT_STATE_FOLLOW_MOVE);
             _path = nullptr;
-            MovementInform(owner);
+            DoMovementInform(owner, target);
 
             if (_recheckPredictedDistance)
             {

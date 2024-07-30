@@ -34,6 +34,7 @@
 #include "Player.h"
 #include "PointMovementGenerator.h"
 #include "RBAC.h"
+#include "Nav/DetourFilters.h"
 
 #if TRINITY_COMPILER == TRINITY_COMPILER_GNU
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -157,7 +158,7 @@ public:
         handler->PSendSysMessage("Calc   [%02i, %02i]", tilex, tiley);
 
         // navmesh poly -> navmesh tile location
-        dtQueryFilter filter = dtQueryFilter();
+        dtCustomCostQueryFilter filter = dtCustomCostQueryFilter();
         dtPolyRef polyRef = INVALID_POLYREF;
         if (dtStatusFailed(navmeshquery->findNearestPoly(location, extents, &filter, &polyRef, nullptr)))
         {
@@ -176,6 +177,8 @@ public:
                 if (tile)
                 {
                     handler->PSendSysMessage("Dt     [%02i,%02i]", tile->header->x, tile->header->y);
+                    handler->PSendSysMessage("Type     %03u", tile->polys->getType());
+                    handler->PSendSysMessage("Area     %03u", tile->polys->getArea());
                     return true;
                 }
             }
