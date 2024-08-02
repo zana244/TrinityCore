@@ -1489,6 +1489,9 @@ namespace Trinity
                 if (!i_obj->IsWithinLOSInMap(u))
                     return false;
 
+                if (!u->IsAlive())
+                    return false;
+
                 i_range = i_obj->GetDistance(u);            // use found unit range as new range limit for next check
                 return true;
             }

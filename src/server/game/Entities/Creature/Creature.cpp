@@ -1111,7 +1111,11 @@ void Creature::DoFleeToGetAssistance()
             /// @todo use 31365
             SetControlled(true, UNIT_STATE_FLEEING);
         else
-            GetMotionMaster()->MoveSeekAssistance(creature->GetPositionX(), creature->GetPositionY(), creature->GetPositionZ());
+        {
+            float x, y, z;
+            creature->GetClosePoint(x, y, z, 0, 1);
+            GetMotionMaster()->MoveSeekAssistance(x, y, z);
+        }
     }
 }
 
