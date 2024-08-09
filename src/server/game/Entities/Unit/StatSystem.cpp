@@ -876,18 +876,14 @@ void Player::UpdateBlockPercentage()
     {
         // Base value
         value = 5.0f;
-        // Modify value from defense skill
-        value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.04f;
         // Increase from SPELL_AURA_MOD_BLOCK_PERCENT aura
         value += GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
         // Increase from rating
         value += GetRatingBonusValue(CR_BLOCK);
-
-        if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
-             value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_BLOCK) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_BLOCK) : value;
-
-        value = value < 0.0f ? 0.0f : value;
+        // Set UI display value: modify value from defense skill against same level target
+        value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.04f;
     }
+
     // @tswow-begin
     FIRE(
           Player,OnUpdateBlockPercentage
@@ -895,7 +891,8 @@ void Player::UpdateBlockPercentage()
         , TSMutableNumber<float>(&value)
     );
     // @tswow-end
-    SetStatFloatValue(PLAYER_BLOCK_PERCENTAGE, value);
+
+    SetStatFloatValue(PLAYER_BLOCK_PERCENTAGE, std::max(0.0f, std::min(value, 100.0f)));
 }
 
 void Player::UpdateCritPercentage(WeaponAttackType attType)
@@ -924,16 +921,13 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
             break;
     }
 
-    // flat = bonus from crit auras, pct = bonus from agility, combat rating = mods from items
-    float value = GetBaseModValue(modGroup, FLAT_MOD) + GetBaseModValue(modGroup, PCT_MOD) + GetRatingBonusValue(cr);
+    float value = GetBaseModValue(modGroup, FLAT_MOD) + GetBaseModValue(modGroup, PCT_MOD); // + GetRatingBonusValue(cr);
 
     // Modify crit from weapon skill and maximized defense skill of same level victim difference
     value += (int32(GetWeaponSkillValue(attType)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
 
-    if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
-         value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_CRIT) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_CRIT) : value;
-
     value = std::max(0.0f, value);
+
     // @tswow-begin
     FIRE(
         Player,OnUpdateCrit
@@ -942,7 +936,8 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
         , uint32(attType)
     );
     // @tswow-end
-    SetStatFloatValue(index, value);
+
+    SetStatFloatValue(index, std::max(0.0f, std::min(value, 100.0f)));
 }
 
 void Player::UpdateAllCritPercentages()
@@ -989,13 +984,7 @@ float CalculateDiminishingReturns(float const (&capArray)[MAX_CLASSES], uint8 pl
 
 float Player::GetMissPercentageFromDefense() const
 {
-    float diminishing = 0.0f, nondiminishing = 0.0f;
-    // Modify value from defense skill (only bonus from defense rating diminishes)
-    nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-    diminishing += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
-
-    // apply diminishing formula to diminishing miss chance
-    return CalculateDiminishingReturns(miss_cap, GetClass(), nondiminishing, diminishing);
+    return (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
 }
 
 // @tswow-begin move parry-cap to top of file
@@ -1005,32 +994,25 @@ void Player::UpdateParryPercentage()
 {
     // No parry
     float value = 0.0f;
-    uint32 pclass = GetClass() - 1;
-    if (CanParry() && parry_cap[pclass] > 0.0f)
+    if (CanParry())
     {
-        float nondiminishing  = 5.0f;
-        // Parry from rating
-        float diminishing = GetRatingBonusValue(CR_PARRY);
-        // Modify value from defense skill (only bonus from defense rating diminishes)
-        nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-        diminishing += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
+        // Base parry
+        value  = 5.0f;
         // Parry from SPELL_AURA_MOD_PARRY_PERCENT aura
-        nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
-
-        // apply diminishing formula to diminishing parry chance
-        value = CalculateDiminishingReturns(parry_cap, GetClass(), nondiminishing, diminishing);
-
-        if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
-             value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_PARRY) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_PARRY) : value;
-
-        value = value < 0.0f ? 0.0f : value;
+        value += GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
+        // Parry from rating
+        value += GetRatingBonusValue(CR_PARRY);
+        // Set UI display value: modify value from defense skill against same level target
+        value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.04f;
     }
+
     // @tswow-begin
     FIRE(
           Player,OnUpdateParryPercentage
         , TSPlayer(this)
         , TSMutableNumber<float>(&value)
     );
+
     // @tswow-end
     SetStatFloatValue(PLAYER_PARRY_PERCENTAGE, value);
 }
@@ -1038,25 +1020,36 @@ void Player::UpdateParryPercentage()
 // @tswow-begin move dodge_cap to top of file
 // @tswow-end
 
+// Base static dodge values in percentages (%)
+static const float PLAYER_BASE_DODGE[MAX_CLASSES] =
+{
+    0.0000f, // [0]  <Unused>
+    0.7500f, // [1]  Warrior
+    0.6520f, // [2]  Paladin
+    -5.4500f, // [3]  Hunter
+    -0.5900f, // [4]  Rogue
+    3.1830f, // [5]  Priest
+    1.1400f, // [6]  DK
+    1.6700f, // [7]  Shaman
+    3.4575f, // [8]  Mage
+    2.0110f, // [9]  Warlock
+    0.0000f, // [10] <Unused>
+    -1.8700f, // [11] Druid
+};
+
 void Player::UpdateDodgePercentage()
 {
-    float diminishing = 0.0f, nondiminishing = 0.0f;
-    GetDodgeFromAgility(diminishing, nondiminishing);
-    // Modify value from defense skill (only bonus from defense rating diminishes)
-    nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-    diminishing += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
+    // Base dodge
+    float value = (GetClass() < MAX_CLASSES) ? PLAYER_BASE_DODGE[GetClass()] : 0.0f;
+    // Dodge from agility
+    value += GetDodgeFromAgility(GetStat(STAT_AGILITY));
     // Dodge from SPELL_AURA_MOD_DODGE_PERCENT aura
-    nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
-    // Dodge from rating
-    diminishing += GetRatingBonusValue(CR_DODGE);
-
-    // apply diminishing formula to diminishing dodge chance
-    float value = CalculateDiminishingReturns(dodge_cap, GetClass(), nondiminishing, diminishing);
-
-    if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
-         value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_DODGE) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_DODGE) : value;
+    value += GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
+    // Set UI display value: modify value from defense skill against same level target
+    value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.04f;
 
     value = value < 0.0f ? 0.0f : value;
+
     // @tswow-begin
     FIRE(
           Player,OnUpdateDodgePercentage
@@ -1064,7 +1057,8 @@ void Player::UpdateDodgePercentage()
         , TSMutableNumber<float>(&value)
     );
     // @tswow-end
-    SetStatFloatValue(PLAYER_DODGE_PERCENTAGE, value);
+
+    SetStatFloatValue(PLAYER_DODGE_PERCENTAGE, std::max(0.0f, std::min(value, 100.0f)));
 }
 
 void Player::UpdateSpellCritChance(uint32 school)
@@ -1097,7 +1091,7 @@ void Player::UpdateSpellCritChance(uint32 school)
     );
     // @tswow-end
     // Store crit value
-    SetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1 + school, crit);
+    SetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1 + school, std::max(0.0f, std::min(crit, 100.0f)));
 }
 
 void Player::UpdateArmorPenetration(int32 amount)
