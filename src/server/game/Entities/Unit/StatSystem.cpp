@@ -1783,7 +1783,7 @@ void Guardian::UpdateMaxPower(Powers power)
     }
 
     float value = GetFlatModifierValue(unitMod, BASE_VALUE);
-    if (IsPet())
+    if (IsPet() || IsGuardian())
         value += GetCreatePowerValue(power);
 
     value *= GetPctModifierValue(unitMod, BASE_PCT);
