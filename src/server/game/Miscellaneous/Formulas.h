@@ -64,10 +64,8 @@ namespace Trinity
                 level = 0;
             else if (pl_level <= 39)
                 level = pl_level - 5 - pl_level / 10;
-            else if (pl_level <= 59)
-                level = pl_level - 1 - pl_level / 5;
             else
-                level = pl_level - 9;
+                level = pl_level - 1 - pl_level / 5;
 
             sScriptMgr->OnGrayLevelCalculation(level, pl_level);
             // @tswow-begin
