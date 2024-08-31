@@ -2100,11 +2100,18 @@ void GameObject::Use(Unit* user)
 
             if (info->spellcaster.partyOnly)
             {
-                Unit* caster = GetOwner();
-                if (!caster || caster->GetTypeId() != TYPEID_PLAYER)
+                ObjectGuid ownerGuid = GetOwnerGUID();
+                if (!ownerGuid)
                     return;
 
-                if (user->GetTypeId() != TYPEID_PLAYER || !user->ToPlayer()->IsInSameRaidWith(caster->ToPlayer()))
+                if (user->GetTypeId() != TYPEID_PLAYER)
+                    return;
+
+                Group* group = user->ToPlayer()->GetGroup();
+                if (!group)
+                    return;
+
+                if (!group->IsMember(ownerGuid))
                     return;
             }
 
