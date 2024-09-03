@@ -232,7 +232,7 @@ struct npc_pet_dk_rune_weapon : ScriptedAI
         me->CombatStop(true);
         me->SetLootRecipient(nullptr);
         me->ResetPlayerDamageReq();
-        me->SetLastDamagedTime(0);
+        me->UpdateLeashExtensionTime();
         me->SetCannotReachTarget(false);
         me->DoNotReacquireSpellFocusTarget();
         me->SetTarget(ObjectGuid::Empty);

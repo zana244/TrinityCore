@@ -370,8 +370,11 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool IsMovementPreventedByCasting() const override;
 
         // Part of Evade mechanics
-        time_t GetLastDamagedTime() const { return _lastDamagedTime; }
-        void SetLastDamagedTime(time_t val) { _lastDamagedTime = val; }
+        std::shared_ptr<time_t> const& GetLastLeashExtensionTimePtr() const;
+        void SetLastLeashExtensionTimePtr(std::shared_ptr<time_t> const& timer);
+        void ClearLastLeashExtensionTimePtr();
+        time_t GetLastLeashExtensionTime() const;
+        void UpdateLeashExtensionTime();
 
         bool IsFreeToMove();
         static constexpr uint32 MOVE_CIRCLE_CHECK_INTERVAL = 3000;
@@ -492,7 +495,9 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
 
         std::shared_ptr<CreatureOutfit> m_outfit;
 
-        time_t _lastDamagedTime; // Part of Evade mechanics
+        // Shared timer between mobs who assist another.
+        // Damaging one extends leash range on all of them.
+        mutable std::shared_ptr<time_t> m_lastLeashExtensionTime;
         CreatureTextRepeatGroup m_textRepeat;
 
         // Regenerate health

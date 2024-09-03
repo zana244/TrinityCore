@@ -109,7 +109,7 @@ struct npc_pet_mage_mirror_image : ScriptedAI
         me->CombatStop(true);
         me->SetLootRecipient(nullptr);
         me->ResetPlayerDamageReq();
-        me->SetLastDamagedTime(0);
+        me->ClearLastLeashExtensionTimePtr();
         me->SetCannotReachTarget(false);
         me->DoNotReacquireSpellFocusTarget();
         me->SetTarget(ObjectGuid::Empty);

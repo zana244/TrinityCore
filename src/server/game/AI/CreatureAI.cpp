@@ -347,7 +347,7 @@ bool CreatureAI::_EnterEvadeMode(EvadeReason /*why*/)
     me->LoadCreaturesAddon();
     me->SetLootRecipient(nullptr);
     me->ResetPlayerDamageReq();
-    me->SetLastDamagedTime(0);
+    me->ClearLastLeashExtensionTimePtr();
     me->SetCannotReachTarget(false);
     me->DoNotReacquireSpellFocusTarget();
     me->SetTarget(ObjectGuid::Empty);

@@ -106,7 +106,7 @@ static void DoMovementInform(Unit* owner, Unit* target)
 }
 
 ChaseMovementGenerator::ChaseMovementGenerator(Unit *target, Optional<ChaseRange> range, Optional<ChaseAngle> angle) : AbstractFollower(ASSERT_NOTNULL(target)), _range(range),
-    _angle(angle), _rangeCheckTimer(RANGE_CHECK_INTERVAL)
+    _angle(angle), _rangeCheckTimer(RANGE_CHECK_INTERVAL), i_leashExtensionTimer(0)
 {
     Mode = MOTION_MODE_DEFAULT;
     Priority = MOTION_PRIORITY_NORMAL;
@@ -202,6 +202,15 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
         owner->ClearUnitState(UNIT_STATE_CHASE_MOVE);
         owner->SetInFront(target);
         DoMovementInform(owner, target);
+
+        // Mobs should chase you infinitely if you stop and wait every few seconds.
+        i_leashExtensionTimer.Update(diff);
+        if (i_leashExtensionTimer.Passed())
+        {
+            i_leashExtensionTimer.Reset(5000);
+            if (Creature* creature = owner->ToCreature())
+                creature->UpdateLeashExtensionTime();
+        }
     }
 
     // if the target moved, we have to consider whether to adjust

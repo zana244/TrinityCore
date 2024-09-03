@@ -49,6 +49,7 @@ class ChaseMovementGenerator : public MovementGenerator, public AbstractFollower
         Optional<ChaseRange> const _range;
         Optional<ChaseAngle> const _angle;
 
+        TimeTracker i_leashExtensionTimer;
         std::unique_ptr<PathGenerator> _path;
         Optional<Position> _lastTargetPosition;
         TimeTracker _rangeCheckTimer;
