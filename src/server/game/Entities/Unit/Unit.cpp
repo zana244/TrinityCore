@@ -918,6 +918,10 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
 
         if (victim->GetTypeId() != TYPEID_PLAYER)
         {
+            /// @fix: Hack to avoid premature leashing
+            if (damagetype != DOT && damage > 0 && !victim->GetOwnerGUID().IsPlayer() && (!spellProto || !spellProto->HasAura(SPELL_AURA_DAMAGE_SHIELD)))
+                victim->ToCreature()->UpdateLeashExtensionTime();
+
             if (attacker)
                 victim->GetThreatManager().AddThreat(attacker, float(damage), spellProto);
         }
