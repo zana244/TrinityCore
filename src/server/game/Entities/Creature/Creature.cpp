@@ -2875,7 +2875,7 @@ CreatureMovementData const& Creature::GetMovementTemplate() const
 
 bool Creature::CanSwim() const
 {
-    if (Unit::CanSwim() || (!Unit::CanSwim() && !CanFly()))
+    if (Unit::CanSwim())
         return true;
 
     if (IsPet())
