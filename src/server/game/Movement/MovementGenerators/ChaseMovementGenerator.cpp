@@ -106,7 +106,7 @@ static void DoMovementInform(Unit* owner, Unit* target)
 }
 
 ChaseMovementGenerator::ChaseMovementGenerator(Unit *target, Optional<ChaseRange> range, Optional<ChaseAngle> angle) : AbstractFollower(ASSERT_NOTNULL(target)), _range(range),
-    _angle(angle), _rangeCheckTimer(RANGE_CHECK_INTERVAL), i_leashExtensionTimer(0)
+    _angle(angle), _rangeCheckTimer(RANGE_CHECK_INTERVAL), i_leashExtensionTimer(1500)
 {
     Mode = MOTION_MODE_DEFAULT;
     Priority = MOTION_PRIORITY_NORMAL;
@@ -148,7 +148,10 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
         owner->StopMoving();
         _lastTargetPosition.reset();
         if (Creature* cOwner = owner->ToCreature())
+        {
+            cOwner->UpdateLeashExtensionTime();
             cOwner->SetCannotReachTarget(false);
+        }
         return true;
     }
 
@@ -202,16 +205,22 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
         owner->ClearUnitState(UNIT_STATE_CHASE_MOVE);
         owner->SetInFront(target);
         DoMovementInform(owner, target);
+    }
 
-        // Mobs should chase you infinitely if you stop and wait every few seconds.
+    if (owner->movespline->Finalized())
+    { // Mobs should chase you infinitely if you stop and wait every few seconds.
         i_leashExtensionTimer.Update(diff);
         if (i_leashExtensionTimer.Passed())
         {
-            i_leashExtensionTimer.Reset(5000);
+            i_leashExtensionTimer.Reset(1500);
             if (Creature* creature = owner->ToCreature())
                 creature->UpdateLeashExtensionTime();
         }
     }
+    // equivalent of i_recalculateTravel in AC?
+//    else if (HasFlag(MOVEMENTGENERATOR_FLAG_INFORM_ENABLED)) {
+//        i_leashExtensionTimer.Reset(1500);
+//    }
 
     // if the target moved, we have to consider whether to adjust
     if (!_lastTargetPosition || target->GetPosition() != _lastTargetPosition.value() || mutualChase != _mutualChase)

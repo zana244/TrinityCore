@@ -3708,7 +3708,7 @@ bool Creature::CallNearestGuard(Unit* enemy) const
 std::shared_ptr<time_t> const& Creature::GetLastLeashExtensionTimePtr() const
  {
     if (m_lastLeashExtensionTime == nullptr)
-        m_lastLeashExtensionTime = std::make_shared<time_t>(time(nullptr));
+        m_lastLeashExtensionTime = std::make_shared<time_t>(GameTime::GetGameTime());
     return m_lastLeashExtensionTime;
 }
 
@@ -3729,5 +3729,5 @@ time_t Creature::GetLastLeashExtensionTime() const
 
 void Creature::UpdateLeashExtensionTime()
 {
-    (*GetLastLeashExtensionTimePtr()) = time(nullptr);
+    (*GetLastLeashExtensionTimePtr()) = GameTime::GetGameTime();
 }
