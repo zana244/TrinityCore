@@ -284,6 +284,12 @@ void WorldSession::HandleCharEnumOpcode(WorldPacket& /*recvData*/)
 
 void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
 {
+    if (CharacterCreating())
+    {
+        SendCharCreate(CHAR_CREATE_FAILED);
+        return;
+    }
+
     std::shared_ptr<CharacterCreateInfo> createInfo = std::make_shared<CharacterCreateInfo>();
 
     recvData >> createInfo->Name
@@ -296,6 +302,8 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
              >> createInfo->HairColor
              >> createInfo->FacialHair
              >> createInfo->OutfitId;
+
+    m_characterCreating = true;
 
     if (!HasPermission(rbac::RBAC_PERM_SKIP_CHECK_CHARACTER_CREATION_TEAMMASK))
     {
@@ -2210,6 +2218,8 @@ void WorldSession::HandleCharFactionOrRaceChangeCallback(std::shared_ptr<Charact
 
 void WorldSession::SendCharCreate(ResponseCodes result)
 {
+    m_characterCreating = false;
+    
     WorldPacket data(SMSG_CHAR_CREATE, 1);
     data << uint8(result);
     SendPacket(&data);

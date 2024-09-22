@@ -409,6 +409,8 @@ class TC_GAME_API WorldSession
         bool PlayerRecentlyLoggedOut() const { return m_playerRecentlyLogout; }
         bool PlayerDisconnected() const { return !m_Socket; }
 
+        bool CharacterCreating() const { return m_characterCreating; }
+
         void ReadAddonsInfo(ByteBuffer& data);
         void SendAddonsInfo();
 
@@ -1225,6 +1227,7 @@ class TC_GAME_API WorldSession
         bool m_playerLogout;                                // code processed in LogoutPlayer
         bool m_playerRecentlyLogout;
         bool m_playerSave;
+        bool m_characterCreating;
         LocaleConstant m_sessionDbcLocale;
         LocaleConstant m_sessionDbLocaleIndex;
         std::atomic<uint32> m_latency;
