@@ -5097,8 +5097,8 @@ void Map::LoadCorpseData()
 
 void Map::DeleteCorpseData()
 {
-    // DELETE FROM corpse WHERE mapId = ? AND instanceId = ?
-    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CORPSES_FROM_MAP);
+    // Set instance ID to 0 so corpse still exists.
+    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CORPSE_FROM_MAP);
     stmt->setUInt32(0, GetId());
     stmt->setUInt32(1, GetInstanceId());
     CharacterDatabase.Execute(stmt);
