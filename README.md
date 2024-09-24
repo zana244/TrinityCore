@@ -2,6 +2,10 @@
 
 This is simply the a fork of the TS-WoW specific variant of TrinityCore. Any changes within are either to add missing functionality, disable existing features or revert behaviour to a TBC state. Any and all commits can be cherry picked freely.
 
+## Build Instructions
+
+This fork requires TS-WoW. See setup docs here: https://github.com/Project-Epoch/tswow?tab=readme-ov-file#pre-requisites
+
 -------------------------------------
 
 
