@@ -11586,6 +11586,7 @@ InventoryResult Player::CanEquipItem(uint8 slot, uint16 &dest, Item* pItem, bool
                 , TSPlayer(const_cast<Player*>(this))
                 , slot
                 , swap
+                , not_loading
                 , TSMutableNumber<uint32>(&evtRes)
             );
             return InventoryResult(evtRes);
