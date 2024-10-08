@@ -752,6 +752,11 @@ enum RBACPermissions
     // IF YOU ADD NEW PERMISSIONS, ADD THEM IN MASTER BRANCH AS WELL!
     //
     // custom permissions 1000+
+    // @epoch-begin
+    RBAC_PERM_COMMAND_TELE_INSTANCE_ID                       = 1009,
+    RBAC_PERM_COMMAND_LIST_INSTANCE_ID                       = 1010,
+    // @epoch-end
+
     // @tswow-begin
     RBAC_PERM_AT                                             = 17688,
     RBAC_PERM_CLEAR_AT                                       = 17689,
