@@ -42,9 +42,9 @@ public:
      * @return The cost of traversing between the start and destination points.
      */
     float getCost(const float* pa, const float* pb,
-        const dtPolyRef prevRef, const dtMeshTile* prevTile, const dtPoly* prevPoly,
-        const dtPolyRef curRef, const dtMeshTile* curTile, const dtPoly* curPoly,
-        const dtPolyRef nextRef, const dtMeshTile* nextTile, const dtPoly* nextPoly) const override
+        const dtPolyRef /* prevRef */, const dtMeshTile* /* prevTile */, const dtPoly* /* prevPoly */,
+        const dtPolyRef /* curRef */, const dtMeshTile* /* curTile */, const dtPoly* curPoly,
+        const dtPolyRef /* nextRef */, const dtMeshTile* /* nextTile */, const dtPoly* /* nextPoly */) const override
     {
         // Extract coordinates from the input arrays
         float start_x = pa[2], start_y = pa[0], start_z = pa[1];
