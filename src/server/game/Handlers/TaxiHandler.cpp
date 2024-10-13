@@ -133,8 +133,9 @@ void WorldSession::SendDoFlight(uint32 mountDisplayId, uint32 path, uint32 pathN
     uint32 display = mountDisplayId;
     bool cancel = false;
 
-    FIRE(Player,OnFlightPathMount
+    FIRE(Player,OnSendDoFlight
         ,TSPlayer(GetPlayer())
+        ,path
         ,TSMutableNumber<uint32>(&display)
         ,TSMutable<bool, bool>(&cancel)
     );

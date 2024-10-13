@@ -21643,6 +21643,16 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature* npc 
     if (nodes.size() < 2)
         return false;
 
+    bool cancel = false;
+
+    FIRE(Player,OnActivateTaxiPathEarly
+        ,TSPlayer(this)
+        ,TSMutable<bool, bool>(&cancel)
+    );
+
+    if (cancel)
+        return false;
+
     // not let cheating with start flight in time of logout process || while in combat || has type state: stunned || has type state: root
     if (GetSession()->isLogingOut() || IsInCombat() || HasUnitState(UNIT_STATE_STUNNED) || HasUnitState(UNIT_STATE_ROOT))
     {
