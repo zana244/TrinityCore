@@ -349,7 +349,8 @@ class TC_GAME_API Quest
         TSRegistryRef events;
         // @tswow-end
 
-        // cached data
+        // Helpers
+        static uint32 RoundXPValue(uint32 xp);
     private:
         uint32 _reqItemsCount = 0;
         uint32 _reqCreatureOrGOcount = 0;
@@ -421,9 +422,6 @@ class TC_GAME_API Quest
         uint32 _startItemCount = 0;
         uint32 _rewardMailSenderEntry = 0;
         uint32 _specialFlags = 0; // custom flags, not sniffed/WDB
-
-        // Helpers
-        static uint32 RoundXPValue(uint32 xp);
 
         Trinity::unique_weak_ptr<Quest> _weakRef;
 };

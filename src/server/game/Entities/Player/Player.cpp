@@ -27965,4 +27965,13 @@ bool Player::TeleportToInstanceId(WorldLocation const& loc, uint32 instanceId, u
 {
     return TeleportToInstanceId(loc.GetMapId(), loc.GetPositionX(), loc.GetPositionY(), loc.GetPositionZ(), loc.GetOrientation(), instanceId, options);
 }
+
+uint32 Player::GetXPForDifficulty(uint8 difficulty)
+{
+    QuestXPEntry const* xpentry = sQuestXPStore.LookupEntry(GetLevel());
+    if (!xpentry)
+        return 0;
+
+    return Quest::RoundXPValue(xpentry->Difficulty[difficulty]);
+}
 //@epoch-end

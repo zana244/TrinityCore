@@ -2223,6 +2223,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetCanTeleport(bool value) { m_canTeleport = value; }
         bool CanKnockback() { return m_canKnockback; }
         void SetCanKnockback(bool value) { m_canKnockback = value; }
+
+        uint32 GetXPForDifficulty(uint8 difficulty);
         // @epoch-end
 
         bool isAllowedToLoot(Creature const* creature) const;
