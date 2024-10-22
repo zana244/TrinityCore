@@ -307,6 +307,10 @@ void BattlegroundWS::EventPlayerCapturedFlag(Player* player)
     if (GetStatus() != STATUS_IN_PROGRESS)
         return;
 
+    // @tswow-begin
+    Battleground::ObjectiveEventFlagCaptured(player, 0);
+    // @tswow-end
+
     uint32 winner = 0;
 
     player->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
@@ -548,6 +552,10 @@ void BattlegroundWS::EventPlayerClickedOnFlag(Player* player, GameObject* target
     {
         if (player->GetTeam() == ALLIANCE)
         {
+            // @tswow-begin
+            Battleground::ObjectiveEventFlagReturned(player);
+            // @tswow-end
+            
             SendBroadcastText(BG_WS_TEXT_ALLIANCE_FLAG_RETURNED, CHAT_MSG_BG_SYSTEM_ALLIANCE, player);
             UpdateFlagState(HORDE, BG_WS_FLAG_STATE_WAIT_RESPAWN);
             RespawnFlag(ALLIANCE, false);
@@ -582,6 +590,10 @@ void BattlegroundWS::EventPlayerClickedOnFlag(Player* player, GameObject* target
     {
         if (player->GetTeam() == HORDE)
         {
+            // @tswow-begin
+            Battleground::ObjectiveEventFlagReturned(player);
+            // @tswow-end
+
             SendBroadcastText(BG_WS_TEXT_HORDE_FLAG_RETURNED, CHAT_MSG_BG_SYSTEM_HORDE, player);
             UpdateFlagState(ALLIANCE, BG_WS_FLAG_STATE_WAIT_RESPAWN);
             RespawnFlag(HORDE, false);

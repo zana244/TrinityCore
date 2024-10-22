@@ -742,6 +742,10 @@ void BattlegroundEY::EventTeamCapturedPoint(Player* player, uint32 Point)
     if (GetStatus() != STATUS_IN_PROGRESS)
         return;
 
+    // @tswow-begin
+    Battleground::ObjectiveEventAreaPointCaptured(player, Point);
+    // @tswow-end
+
     uint32 Team = player->GetTeam();
 
     SpawnBGObject(m_CapturingPointTypes[Point].DespawnNeutralObjectType, RESPAWN_ONE_DAY);
@@ -804,6 +808,10 @@ void BattlegroundEY::EventPlayerCapturedFlag(Player* player, uint32 BgObjectType
 {
     if (GetStatus() != STATUS_IN_PROGRESS || GetFlagPickerGUID() != player->GetGUID())
         return;
+
+    // @tswow-begin
+    Battleground::ObjectiveEventFlagCaptured(player, BgObjectType);
+    // @tswow-end
 
     SetFlagPicker(ObjectGuid::Empty);
     m_FlagState = BG_EY_FLAG_STATE_WAIT_RESPAWN;

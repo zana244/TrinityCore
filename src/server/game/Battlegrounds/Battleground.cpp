@@ -2057,6 +2057,38 @@ bool Battleground::SetupBattleground()
     return result;
 }
 
+void Battleground::ObjectiveEventFlagCaptured(Player* player, uint32 BgObjectType)
+{
+    FIRE_ID(
+          GetMapId()
+        , Battleground,OnPlayerCapturedFlag
+        , TSBattleground(m_Map, this)
+        , TSPlayer(player)
+        , TSNumber<uint32>(BgObjectType)
+    );
+}
+
+void Battleground::ObjectiveEventFlagReturned(Player* player)
+{
+    FIRE_ID(
+          GetMapId()
+        , Battleground,OnPlayerReturnedFlag
+        , TSBattleground(m_Map, this)
+        , TSPlayer(player)
+    );
+}
+
+void Battleground::ObjectiveEventAreaPointCaptured(Player* player, uint32 point)
+{
+    FIRE_ID(
+          GetMapId()
+        , Battleground,OnPlayerCapturedAreaPoint
+        , TSBattleground(m_Map, this)
+        , TSPlayer(player)
+        , TSNumber<uint32>(point)
+    );
+}
+
 void Battleground::StartingEventCloseDoors()
 {
     if (std::vector<BattlegroundDoorData> const* doors = sObjectMgr->GetBattlegroundDoors(m_MapId))

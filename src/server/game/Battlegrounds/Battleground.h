@@ -266,10 +266,11 @@ class TC_GAME_API Battleground
         virtual void Reset();                               // resets all common properties for battlegrounds, must be implemented and called in BG subclass
         virtual void StartingEventCloseDoors();
         virtual void StartingEventOpenDoors();
-
         virtual void ResetBGSubclass() {};                   // must be implemented in BG subclass
-
         virtual void DestroyGate(Player* /*player*/, GameObject* /*go*/);
+        virtual void ObjectiveEventFlagCaptured(Player* /*player*/, uint32 BgObjectType);
+        virtual void ObjectiveEventFlagReturned(Player* /*player*/);
+        virtual void ObjectiveEventAreaPointCaptured(Player* /*player*/, uint32 point);
         // @tswow-end
 
         /* achievement req. */
