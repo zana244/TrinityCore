@@ -3108,6 +3108,9 @@ void Map::SendInitTransports(Player* player)
         if (*i != player->GetTransport())
             (*i)->BuildCreateUpdateBlockForPlayer(&transData, player);
 
+    if (!transData.HasData())
+        return;
+
     WorldPacket packet;
     transData.BuildPacket(&packet);
     player->SendDirectMessage(&packet);
@@ -3122,6 +3125,9 @@ void Map::SendRemoveTransports(Player* player)
     for (TransportsContainer::const_iterator i = _transports.begin(); i != _transports.end(); ++i)
         if (*i != player->GetTransport())
             (*i)->BuildOutOfRangeUpdateBlock(&transData);
+
+    if (!transData.HasData())
+        return;
 
     WorldPacket packet;
     transData.BuildPacket(&packet);
