@@ -2321,6 +2321,11 @@ void Spell::EffectSummonType()
                         }
 
                         ExecuteLogEffectSummonObject(effectInfo->EffectIndex, summon);
+
+                        if (!unitCaster)
+                            continue;
+
+                        summon->CheckSummonPropertiesFlags(unitCaster);
                     }
                     return;
                 }
@@ -2380,6 +2385,9 @@ void Spell::EffectSummonType()
     {
         summon->SetCreatorGUID(caster->GetGUID());
         ExecuteLogEffectSummonObject(effectInfo->EffectIndex, summon);
+
+        if (unitCaster)
+            summon->CheckSummonPropertiesFlags(unitCaster);
     }
 }
 
@@ -5491,6 +5499,8 @@ void Spell::SummonGuardian(SpellEffectInfo const& spellEffectInfo, uint32 entry,
         }
 
         ExecuteLogEffectSummonObject(spellEffectInfo.EffectIndex, summon);
+
+        summon->CheckSummonPropertiesFlags(unitCaster);
     }
 }
 

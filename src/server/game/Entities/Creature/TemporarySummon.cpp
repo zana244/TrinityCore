@@ -18,6 +18,7 @@
 #include "TemporarySummon.h"
 #include "CreatureAI.h"
 #include "DBCStructure.h"
+#include "DBCEnums.h"
 #include "GameObject.h"
 #include "GameObjectAI.h"
 #include "Log.h"
@@ -317,6 +318,42 @@ void TempSummon::RemoveFromWorld()
     //    TC_LOG_ERROR("entities.unit", "Unit {} has owner guid when removed from world", GetEntry());
 
     Creature::RemoveFromWorld();
+}
+
+void TempSummon::CheckSummonPropertiesFlags(Unit* caster)
+{
+    if (m_Properties->Flags & SUMMON_PROP_FLAG_ATTACK_SUMMONER)
+        if (CombatManager::CanBeginCombat(this, caster) && CanStartAttack(caster, true))
+            AI()->AttackStart(caster);
+
+    if (m_Properties->Flags & SUMMON_PROP_FLAG_ASSIST_COMBAT_SUMMON)
+    {
+        if (!caster->CanHaveThreatList())
+        {
+            for (auto ref : caster->GetCombatManager().GetPvECombatRefs())
+                if (Unit* victim = ref.second->GetOther(caster))
+                    if (CanStartAttack(victim, true))
+                    {
+                        AI()->AttackStart(victim);
+                        break;
+                    }
+        }
+        else
+        {
+            for (auto ref : caster->GetThreatManager().GetSortedThreatList())
+                if (Unit* victim = ref->GetVictim())
+                    if (CanStartAttack(victim, true))
+                    {
+                        AI()->AttackStart(victim);
+                        break;
+                    }
+        }
+
+        if (!GetThreatManager().IsThreatListEmpty())
+            if (Unit* enemy = GetThreatManager().GetAnyTarget())
+                if (CanStartAttack(enemy, true))
+                    AI()->AttackStart(enemy);
+    }
 }
 
 std::string TempSummon::GetDebugInfo() const
