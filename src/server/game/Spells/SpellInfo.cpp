@@ -817,6 +817,7 @@ SpellInfo::SpellInfo(SpellEntry const* spellEntry)
     AttributesEx6 = spellEntry->AttributesExF;
     AttributesEx7 = spellEntry->AttributesExG;
     AttributesCu = 0;
+    AttributesCu1 = 0;
     Stances = MAKE_PAIR64(spellEntry->ShapeshiftMask[0], spellEntry->ShapeshiftMask[1]);
     StancesNot = MAKE_PAIR64(spellEntry->ShapeshiftExclude[0], spellEntry->ShapeshiftExclude[1]);
     Targets = spellEntry->Targets;

@@ -2575,7 +2575,7 @@ SpellMissInfo WorldObject::MagicSpellHitResult(Unit* victim, SpellInfo const* sp
     // Chance hit from victim SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE auras
     modHitChance += victim->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE, schoolMask);
     // Reduce spell hit chance for Area of effect spells from victim SPELL_AURA_MOD_AOE_AVOIDANCE aura
-    if (spellInfo->IsAffectingArea())
+    if (spellInfo->IsAffectingArea() && ! spellInfo->HasAttribute(SPELL_ATTR0_CU_IGNORE_HIT_AVOIDANCE))
         modHitChance -= victim->GetTotalAuraModifier(SPELL_AURA_MOD_AOE_AVOIDANCE);
 
     // Decrease hit chance from victim rating bonus

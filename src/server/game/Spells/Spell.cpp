@@ -7906,7 +7906,9 @@ void Spell::DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, Spe
     {
         if (spellEffectInfo.IsTargetingArea() || spellEffectInfo.IsAreaAuraEffect() || spellEffectInfo.IsEffect(SPELL_EFFECT_PERSISTENT_AREA_AURA))
         {
-            m_damage = unit->CalculateAOEAvoidance(m_damage, m_spellInfo->SchoolMask, m_originalCaster->GetGUID());
+            SpellInfo const* spellInfo = GetSpellInfo();
+            if (spellInfo && ! spellInfo->HasAttribute(SPELL_ATTR0_CU_IGNORE_DMG_AVOIDANCE))
+                m_damage = unit->CalculateAOEAvoidance(m_damage, m_spellInfo->SchoolMask, m_originalCaster->GetGUID());
 
             if (m_originalCaster->GetTypeId() == TYPEID_PLAYER)
             {

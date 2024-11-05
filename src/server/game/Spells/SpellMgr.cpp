@@ -2595,7 +2595,7 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
     uint32 oldMSTime = getMSTime();
     uint32 oldMSTime2 = oldMSTime;
 
-    QueryResult result = WorldDatabase.Query("SELECT entry, attributes FROM spell_custom_attr");
+    QueryResult result = WorldDatabase.Query("SELECT entry, attributes, attributes1 FROM spell_custom_attr");
 
     if (!result)
         TC_LOG_INFO("server.loading", ">> Loaded 0 spell custom attributes from DB. DB table `spell_custom_attr` is empty.");
@@ -2608,6 +2608,7 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
 
             uint32 spellId = fields[0].GetUInt32();
             uint32 attributes = fields[1].GetUInt32();
+            uint32 attributes1 = fields[2].GetUInt32();
 
             SpellInfo* spellInfo = _GetSpellInfo(spellId);
             if (!spellInfo)
@@ -2632,6 +2633,7 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
             }
 
             spellInfo->AttributesCu |= attributes;
+            spellInfo->AttributesCu1 |= attributes1;
             ++count;
         } while (result->NextRow());
 

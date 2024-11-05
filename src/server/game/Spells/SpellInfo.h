@@ -145,7 +145,7 @@ enum SpellSpecificType
     SPELL_SPECIFIC_HAND                          = 28
 };
 
-enum SpellCustomAttributes
+enum SpellCustomAttributes0
 {
     SPELL_ATTR0_CU_ENCHANT_PROC                  = 0x00000001,
     SPELL_ATTR0_CU_CONE_BACK                     = 0x00000002,
@@ -174,6 +174,35 @@ enum SpellCustomAttributes
     SPELL_ATTR0_CU_AURA_CANNOT_BE_SAVED          = 0x01000000,
 
     SPELL_ATTR0_CU_NEGATIVE                      = SPELL_ATTR0_CU_NEGATIVE_EFF0 | SPELL_ATTR0_CU_NEGATIVE_EFF1 | SPELL_ATTR0_CU_NEGATIVE_EFF2
+};
+
+enum SpellCustomAttributes1
+{
+    SPELL_ATTR0_CU_IGNORE_HIT_AVOIDANCE  = 0x00000001, // Ignore hit based avoidance effects.
+    SPELL_ATTR0_CU_IGNORE_DMG_AVOIDANCE  = 0x00000002, // Ignore damage based avoidance effects.
+    SPELL_ATTR0_CU_UNK2                  = 0x00000004, // Unused
+    SPELL_ATTR0_CU_UNK3                  = 0x00000008, // Unused
+    SPELL_ATTR0_CU_UNK4                  = 0x00000010, // Unused
+    SPELL_ATTR0_CU_UNK5                  = 0x00000020, // Unused
+    SPELL_ATTR0_CU_UNK6                  = 0x00000040, // Unused
+    SPELL_ATTR0_CU_UNK7                  = 0x00000080, // Unused
+    SPELL_ATTR0_CU_UNK8                  = 0x00000100, // Unused
+    SPELL_ATTR0_CU_UNK9                  = 0x00000200, // Unused
+    SPELL_ATTR0_CU_UNK10                 = 0x00000400, // Unused
+    SPELL_ATTR0_CU_UNK11                 = 0x00000800, // Unused
+    SPELL_ATTR0_CU_UNK12                 = 0x00001000, // Unused
+    SPELL_ATTR0_CU_UNK13                 = 0x00002000, // Unused
+    SPELL_ATTR0_CU_UNK14                 = 0x00004000, // Unused
+    SPELL_ATTR0_CU_UNK15                 = 0x00008000, // Unused
+    SPELL_ATTR0_CU_UNK16                 = 0x00010000, // Unused
+    SPELL_ATTR0_CU_UNK17                 = 0x00020000, // Unused
+    SPELL_ATTR0_CU_UNK18                 = 0x00040000, // Unused
+    SPELL_ATTR0_CU_UNK19                 = 0x00080000, // Unused
+    SPELL_ATTR0_CU_UNK20                 = 0x00100000, // Unused
+    SPELL_ATTR0_CU_UNK21                 = 0x00200000, // Unused
+    SPELL_ATTR0_CU_UNK22                 = 0x00400000, // Unused
+    SPELL_ATTR0_CU_UNK23                 = 0x00800000, // Unused
+    SPELL_ATTR0_CU_UNK24                 = 0x01000000  // Unused
 };
 
 uint32 GetTargetFlagMask(SpellTargetObjectTypes objType);
@@ -307,6 +336,7 @@ class TC_GAME_API SpellInfo
         uint32 AttributesEx6;
         uint32 AttributesEx7;
         uint32 AttributesCu;
+        uint32 AttributesCu1;
         uint64 Stances;
         uint64 StancesNot;
         uint32 Targets;
@@ -393,7 +423,8 @@ class TC_GAME_API SpellInfo
         inline bool HasAttribute(SpellAttr5 attribute) const { return !!(AttributesEx5 & attribute); }
         inline bool HasAttribute(SpellAttr6 attribute) const { return !!(AttributesEx6 & attribute); }
         inline bool HasAttribute(SpellAttr7 attribute) const { return !!(AttributesEx7 & attribute); }
-        inline bool HasAttribute(SpellCustomAttributes customAttribute) const { return !!(AttributesCu & customAttribute); }
+        inline bool HasAttribute(SpellCustomAttributes0 customAttribute) const { return !!(AttributesCu & customAttribute); }
+        inline bool HasAttribute(SpellCustomAttributes1 customAttribute) const { return !!(AttributesCu1 & customAttribute); }
 
         bool IsExplicitDiscovery() const;
         bool IsLootCrafting() const;
