@@ -1251,6 +1251,7 @@ enum TrinityStrings
     LANG_CANNOT_LIST_INSTANCEID                   = 12004,
     LANG_LIST_INSTANCEID_PLAYER                   = 12005,
     LANG_LIST_INSTANCEID_PLAYER_OFFLINE           = 12006,
+    LANG_NO_REQUIRED_QUEST_TO_LOOT_ITEM           = 14000,
     // @epoch-end
 };
 #endif

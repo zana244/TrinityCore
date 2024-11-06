@@ -25276,6 +25276,14 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
         return;
     }
 
+    ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item->itemid);
+    if (!proto || !proto->HasFlag(ITEM_FLAGS_CU_IGNORE_QUEST_STATUS) &&
+        ((item->needs_quest || (proto->StartQuest && GetQuestStatus(proto->StartQuest) != QUEST_STATUS_NONE)) && !HasQuestForItem(item->itemid)))
+    {
+        GetSession()->SendNotification(LANG_NO_REQUIRED_QUEST_TO_LOOT_ITEM);
+        return;
+    }
+
     if (!item->AllowedForPlayer(this))
     {
         SendLootRelease(GetLootGUID());
