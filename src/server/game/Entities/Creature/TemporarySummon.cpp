@@ -322,6 +322,9 @@ void TempSummon::RemoveFromWorld()
 
 void TempSummon::CheckSummonPropertiesFlags(Unit* caster)
 {
+    if (!m_Properties)
+        return;
+    
     if (m_Properties->Flags & SUMMON_PROP_FLAG_ATTACK_SUMMONER)
         if (CombatManager::CanBeginCombat(this, caster) && CanStartAttack(caster, true))
             AI()->AttackStart(caster);
