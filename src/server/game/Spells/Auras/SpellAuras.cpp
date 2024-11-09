@@ -730,7 +730,7 @@ void Aura::UpdateTargetMap(Unit* caster, bool apply)
 
             if (aurApp)
             {
-                aurApp->UpdateApplyEffectMask(aurApp->GetEffectsToApply() & ~itr->second, true); // aura is already applied, this means we need to update effects of current application
+                aurApp->UpdateApplyEffectMask(itr->second, true); // aura is already applied, this means we need to update effects of current application
                 itr = targets.erase(itr);
             }
             else
