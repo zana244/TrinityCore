@@ -33,6 +33,7 @@
 #include "Player.h"
 #include "World.h"
 #include "WorldStatePackets.h"
+#include "TSMainThreadContext.h"
 
 GameEventMgr* GameEventMgr::instance()
 {
@@ -152,6 +153,7 @@ bool GameEventMgr::StartEvent(uint16 event_id, bool overwrite)
               event_id
             , GameEvent,OnStart
             , event_id
+            , TSMainThreadContext()
         );
         // @tswow-end
         return false;
@@ -182,6 +184,7 @@ bool GameEventMgr::StartEvent(uint16 event_id, bool overwrite)
               event_id
             , GameEvent,OnStart
             , event_id
+            , TSMainThreadContext()
         );
         // @tswow-end
 
