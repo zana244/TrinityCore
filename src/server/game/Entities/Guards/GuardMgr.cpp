@@ -18,6 +18,7 @@
 #include "GuardMgr.h"
 #include "Creature.h"
 #include "CreatureAI.h"
+#include "CellImpl.h"
 #include "GridNotifiers.h"
 #include "Player.h"
 #include "ScriptMgr.h"
