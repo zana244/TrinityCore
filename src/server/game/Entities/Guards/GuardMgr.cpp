@@ -188,7 +188,7 @@ void GuardMgr::SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldown)
     if (!civilian || !enemy)
         return;
 
-    TC_LOG_ERROR("sql.sql", "GuardMgr::SummonGuard {}", civilian->GetEntry());
+    // TC_LOG_ERROR("sql.sql", "GuardMgr::SummonGuard {}", civilian->GetEntry());
 
     bool summonedOrCalledGuard = false;
     if (GameObject* guardPost = civilian->FindNearestGuardPost(50.0f))
