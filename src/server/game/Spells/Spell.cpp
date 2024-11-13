@@ -5511,13 +5511,23 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
         {
             if (spellEffectInfo.TargetA.GetTarget() == TARGET_UNIT_PET)
             {
-                if (!unitCaster->GetGuardianPet())
+                Unit* pet = unitCaster->GetGuardianPet();
+                if (!pet)
                 {
                     if (m_triggeredByAuraSpell)              // not report pet not existence for triggered spells
                         return SPELL_FAILED_DONT_REPORT;
                     else
                         return SPELL_FAILED_NO_PET;
                 }
+                else if (!pet->IsAlive())
+                {
+                    if (m_triggeredByAuraSpell)
+                        return SPELL_FAILED_DONT_REPORT;
+                    else
+                        return SPELL_FAILED_TARGETS_DEAD;
+                }
+                else if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS) && !m_spellInfo->HasAttribute(SPELL_ATTR5_SKIP_CHECKCAST_LOS_CHECK) && !pet->IsWithinLOSInMap(m_caster, LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2))
+                    return SPELL_FAILED_LINE_OF_SIGHT;
                 break;
             }
         }
@@ -6655,6 +6665,12 @@ SpellCastResult Spell::CheckRange(bool strict) const
     maxRange *= maxRange;
 
     Unit* target = m_targets.GetUnitTarget();
+    for (SpellEffectInfo const& spellEffectInfo : m_spellInfo->GetEffects())
+        if (spellEffectInfo.TargetA.GetTarget() == TARGET_UNIT_PET)
+            if (m_caster->ToUnit())
+                if (Guardian* pPet = m_caster->ToUnit()->GetGuardianPet())
+                    target = pPet;
+
     if (target && target != m_caster)
     {
         if (m_caster->GetExactDistSq(target) > maxRange)
