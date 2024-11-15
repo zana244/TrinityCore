@@ -23,6 +23,9 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "DBCStores.h"
+#include "TSEvents.h"
+#include "TSCreature.h"
+#include "TSMutable.h"
 
 GuardMgr* GuardMgr::instance()
 {
@@ -202,7 +205,11 @@ void GuardMgr::SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldown)
     // civilian say call for guard
     if (ignoreCooldown || summonedOrCalledGuard)
     {
-        if (uint32 textId = GetTextId(civilian->GetFactionTemplateEntry()->ID, civilian->GetAreaId(), civilian->GetDisplayId()))
+        uint32 textId = GetTextId(civilian->GetFactionTemplateEntry()->ID, civilian->GetAreaId(), civilian->GetDisplayId());
+
+        FIRE_ID(civilian->GetCreatureTemplate()->events.id,Creature,OnBeforeGuardSay,TSCreature(civilian), TSMutableNumber<uint32>(&textId));
+
+        if (textId)
         {
             civilian->Say(textId, enemy);
         }
