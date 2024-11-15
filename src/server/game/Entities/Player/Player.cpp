@@ -6879,20 +6879,22 @@ bool Player::RewardHonor(Unit* victim, uint32 groupsize, int32 honor, bool pvpto
             //  [15..28] Horde honor titles and player name
             //  [29..38] Other title and player name
             //  [39+]    Nothing
-            uint32 victim_title = victim->GetUInt32Value(PLAYER_CHOSEN_TITLE);
+            /** @epoch-start */
+            victim_rank = victim->GetByteValue(PLAYER_FIELD_BYTES,PLAYER_FIELD_BYTES_OFFSET_LIFETIME_MAX_PVP_RANK);
                                                         // Get Killer titles, CharTitlesEntry::MaskID
             // Ranks:
             //  title[1..14]  -> rank[5..18]
             //  title[15..28] -> rank[5..18]
             //  title[other]  -> 0
-            if (victim_title == 0)
-                victim_guid.Clear();                     // Don't show HK: <rank> message, only log.
-            else if (victim_title < 15)
-                victim_rank = victim_title + 4;
-            else if (victim_title < 29)
-                victim_rank = victim_title - 14 + 4;
-            else
-                victim_guid.Clear();                     // Don't show HK: <rank> message, only log.
+            //if (victim_title == 0)
+            //    victim_guid.Clear();                     // Don't show HK: <rank> message, only log.
+            //else if (victim_title < 15)
+            //    victim_rank = victim_title + 4;
+            //else if (victim_title < 29)
+            //    victim_rank = victim_title - 14 + 4;
+            //else
+            //    victim_guid.Clear();                     // Don't show HK: <rank> message, only log.
+            /** @epoch-end */
 
             honor_f = std::ceil(Trinity::Honor::hk_honor_at_level_f(k_level) * (v_level - k_grey) / (k_level - k_grey));
 
