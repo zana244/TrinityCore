@@ -6369,6 +6369,9 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
 
 SpellCastResult Spell::CheckCasterAuras(uint32* param1) const
 {
+    if (!m_caster->IsUnit())
+        return SPELL_CAST_OK;
+
     Unit* unitCaster = (m_originalCaster ? m_originalCaster : m_caster->ToUnit());
     if (!unitCaster)
         return SPELL_CAST_OK;
