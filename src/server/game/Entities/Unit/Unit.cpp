@@ -2193,9 +2193,13 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType, bool extr
 
     // melee attack spell cast at main hand attack only - no normal melee dmg dealt
     if (attType == BASE_ATTACK && m_currentSpells[CURRENT_MELEE_SPELL] && !extra)
-        m_currentSpells[CURRENT_MELEE_SPELL]->cast();
-    else
     {
+        m_currentSpells[CURRENT_MELEE_SPELL]->cast();
+        Spell* spell = m_currentSpells[CURRENT_MELEE_SPELL];
+        if (!spell || !spell->m_spellInfo->IsNextMeleeSwingSpell() || spell->isSuccessCast())
+            return;
+    }
+
         // attack can be redirected to another target
         victim = GetMeleeHitRedirectTarget(victim);
 
@@ -2220,7 +2224,6 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType, bool extr
         else
             TC_LOG_DEBUG("entities.unit", "AttackerStateUpdate: (NPC)    {} attacked {} for {} dmg, absorbed {}, blocked {}, resisted {}.",
                 GetGUID().ToString(), victim->GetGUID().ToString(), dmgInfo.GetDamage(), dmgInfo.GetAbsorb(), dmgInfo.GetBlock(), dmgInfo.GetResist());
-    }
 }
 
 void Unit::HandleProcExtraAttackFor(Unit* victim, uint32 count)

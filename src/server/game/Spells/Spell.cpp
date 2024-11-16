@@ -4007,6 +4007,8 @@ void Spell::update(uint32 difftime)
 
 void Spell::finish(bool ok)
 {
+    m_successCast = ok;
+
     if (m_spellState == SPELL_STATE_FINISHED)
         return;
     m_spellState = SPELL_STATE_FINISHED;
