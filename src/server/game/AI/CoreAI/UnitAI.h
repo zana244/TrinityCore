@@ -256,7 +256,9 @@ class TC_GAME_API UnitAI
         virtual void OnGameEvent(bool /*start*/, uint16 /*eventId*/) { }
 
         virtual std::string GetDebugInfo() const;
-
+    protected:
+        // Used only for PetAI at the moment
+        bool   m_bMeleeAttack;                                     // If we allow melee auto attack
     private:
         UnitAI(UnitAI const& right) = delete;
         UnitAI& operator=(UnitAI const& right) = delete;

@@ -48,6 +48,8 @@ PetAI::PetAI(Creature* creature) : CreatureAI(creature), _tracker(TIME_INTERVAL_
     if (!me->GetCharmInfo())
         throw InvalidAIException("Creature doesn't have a valid charm info");
 
+    m_bMeleeAttack = !(me->GetEntry() == 416 || me->GetEntry() == 510 || me->GetEntry() == 37994);
+
     UpdateAllies();
 }
 
@@ -83,18 +85,17 @@ void PetAI::UpdateAI(uint32 diff)
 
         // Check before attacking to prevent pets from leaving stay position
         /** @epoch-start */
-        bool canMelee = ! (me->GetEntry() == 416 || me->GetEntry() == 510 || me->GetEntry() == 37994); // Imp / Water Ele
         if (me->GetCharmInfo()->HasCommandState(COMMAND_STAY))
         {
             if (me->GetCharmInfo()->IsCommandAttack() || (me->GetCharmInfo()->IsAtStay() && me->IsWithinMeleeRange(me->GetVictim())))
             {
-                if (canMelee)
+                if (m_bMeleeAttack)
                     DoMeleeAttackIfReady();
             }
         }
         else
         {
-            if (canMelee)
+            if (m_bMeleeAttack)
                 DoMeleeAttackIfReady();
         }
         /** @epoch-end */
@@ -436,7 +437,7 @@ void PetAI::DoAttack(Unit* target, bool chase)
                 me->GetMotionMaster()->Remove(FOLLOW_MOTION_TYPE);
 
             // Pets with ranged attacks should not care about the chase angle at all.
-            float chaseDistance = me->GetPetChaseDistance();
+            float chaseDistance = m_bMeleeAttack ? 0.f : me->GetPetChaseDistance();
             float angle = chaseDistance == 0.f && target->GetTypeId() != TYPEID_PLAYER && !target->IsPet() ? float(M_PI) : 0.f;
             float tolerance = chaseDistance == 0.f ? float(M_PI_4) : float(M_PI * 2);
             me->GetMotionMaster()->MoveChase(target, ChaseRange(0.f, chaseDistance), ChaseAngle(angle, tolerance));
