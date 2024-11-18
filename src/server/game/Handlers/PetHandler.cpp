@@ -379,9 +379,10 @@ void WorldSession::HandlePetActionHelper(Unit* pet, ObjectGuid guid1, uint32 spe
                 spell->finish(false);
                 delete spell;
 
+                // Commenting out, we probably should check result and clear flags accordingly (TODO?)
                 // reset specific flags in case of spell fail. AI will reset other flags
-                if (pet->GetCharmInfo())
-                    pet->GetCharmInfo()->SetIsCommandAttack(false);
+                //if (pet->GetCharmInfo())
+                    //pet->GetCharmInfo()->SetIsCommandAttack(false);
             }
             break;
         }
