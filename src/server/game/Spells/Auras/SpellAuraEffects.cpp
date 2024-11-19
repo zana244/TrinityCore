@@ -2202,6 +2202,7 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
     if (!(mode & AURA_EFFECT_HANDLE_REAL))
         return;
 
+    bool success = true;
     Unit* target = aurApp->GetTarget();
 
     if (apply)
@@ -2212,37 +2213,70 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
         data << uint8(0);
         target->SendMessageToSet(&data, true);
         */
-
-        UnitList targets;
-        Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(target, target, target->GetMap()->GetVisibilityRange());
-        Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(target, targets, u_check);
-        Cell::VisitAllObjects(target, searcher, target->GetMap()->GetVisibilityRange());
-        for (UnitList::iterator iter = targets.begin(); iter != targets.end(); ++iter)
+        // For whatever reason maybe a creature uses FD Aura, it probably (?) should be success 100%
+        if (target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED))
         {
-            if (!(*iter)->HasUnitState(UNIT_STATE_CASTING))
-                continue;
-
-            for (uint32 i = CURRENT_FIRST_NON_MELEE_SPELL; i < CURRENT_MAX_SPELL; i++)
+            for (auto& pair : target->GetThreatManager().GetThreatenedByMeList())
             {
-                if ((*iter)->GetCurrentSpell(i)
-                && (*iter)->GetCurrentSpell(i)->m_targets.GetUnitTargetGUID() == target->GetGUID())
+                if (Creature* pCreature = pair.second->GetOwner())
                 {
-                    (*iter)->InterruptSpell(CurrentSpellTypes(i), false);
+                    // Feign Death cannot be resisted by players.
+                    // Seems to be obsolete in TC? Hunter pets and players charmed by creatures seem to not be
+                    // included in GetThreatenedByMeList.
+                    if (pCreature->IsCharmedOwnedByPlayerOrPlayer()) // Hopefully right function
+                    {
+                        continue;
+                    }
+                    float const distance = pCreature->GetAttackDistance(target);
+                    if (pCreature->IsWithinDistInMap(target, distance) &&
+                        target->MagicSpellHitResult(pCreature, GetSpellInfo()) != SPELL_MISS_NONE)
+                    {
+                        success = false;
+                    }
                 }
             }
         }
 
-        for (auto& pair : target->GetThreatManager().GetThreatenedByMeList())
-          pair.second->ScaleThreat(0.0f);
-
-        if (target->GetMap()->IsDungeon()) // feign death does not remove combat in dungeons
+        if (success)
         {
-            target->AttackStop();
-            if (Player* targetPlayer = target->ToPlayer())
-                targetPlayer->SendAttackSwingCancelAttack();
+            UnitList targets;
+            Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(target, target, target->GetMap()->GetVisibilityRange());
+            Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(target, targets, u_check);
+            Cell::VisitAllObjects(target, searcher, target->GetMap()->GetVisibilityRange());
+            for (UnitList::iterator iter = targets.begin(); iter != targets.end(); ++iter)
+            {
+                if (!(*iter)->HasUnitState(UNIT_STATE_CASTING))
+                    continue;
+
+                for (uint32 i = CURRENT_FIRST_NON_MELEE_SPELL; i < CURRENT_MAX_SPELL; i++)
+                {
+                    if ((*iter)->GetCurrentSpell(i)
+                    && (*iter)->GetCurrentSpell(i)->m_targets.GetUnitTargetGUID() == target->GetGUID())
+                    {
+                        (*iter)->InterruptSpell(CurrentSpellTypes(i), false);
+                    }
+                }
+            }
+
+            for (auto& pair : target->GetThreatManager().GetThreatenedByMeList())
+            pair.second->ScaleThreat(0.0f);
+
+            if (target->GetMap()->IsDungeon()) // feign death does not remove combat in dungeons
+            {
+                target->AttackStop();
+                if (Player* targetPlayer = target->ToPlayer())
+                    targetPlayer->SendAttackSwingCancelAttack();
+            }
+            else
+                target->CombatStop(false, false);
         }
-        else
-            target->CombatStop(false, false);
+        else // Send Resisted message
+        {
+            WorldPacket data(SMSG_FEIGN_DEATH_RESISTED, 9);
+            data << target->GetGUID();
+            data << uint8(0);
+            target->SendMessageToSet(&data, true);
+        }
 
         target->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_IMMUNE_OR_LOST_SELECTION);
 
@@ -2258,7 +2292,8 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
         target->SetUnitFlag(UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT);            // blizz like 2.0.x
         target->SetUnitFlag2(UNIT_FLAG2_FEIGN_DEATH);    // blizz like 2.0.x
         target->SetDynamicFlag(UNIT_DYNFLAG_DEAD);         // blizz like 2.0.x
-        target->AddUnitState(UNIT_STATE_DIED);
+        if (success) // This is the one that clears aggro
+            target->AddUnitState(UNIT_STATE_DIED);
 
         if (Creature* creature = target->ToCreature())
             creature->SetReactState(REACT_PASSIVE);
