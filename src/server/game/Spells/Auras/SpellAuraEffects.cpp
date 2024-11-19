@@ -2232,6 +2232,7 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
                         target->MagicSpellHitResult(pCreature, GetSpellInfo()) != SPELL_MISS_NONE)
                     {
                         success = false;
+                        break;
                     }
                 }
             }
