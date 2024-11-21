@@ -2106,8 +2106,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         float m_homebindY;
         float m_homebindZ;
 
-        float m_energyRegenRate;
-
         WorldLocation GetStartPosition() const;
 
         // currently visible objects at player client

@@ -430,8 +430,6 @@ Player::Player(WorldSession* session): Unit(true)
     m_reputationMgr = new ReputationMgr(this);
 
     m_groupUpdateTimer.Reset(5000);
-
-    m_energyRegenRate = 1.f;
 }
 
 Player::~Player()
@@ -2134,7 +2132,7 @@ void Player::Regenerate(Powers power, uint32 diff)
         case POWER_ENERGY:                                  // Regenerate energy (rogue)
         {
             float EnergyRate = sWorld->getRate(RATE_POWER_ENERGY);
-            addvalue = 20 * EnergyRate * m_energyRegenRate;
+            addvalue = 20 * EnergyRate * GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
         }   break;
         case POWER_RUNE:
         case POWER_RUNIC_POWER:
