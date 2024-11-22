@@ -936,12 +936,18 @@ class spell_pri_power_word_shield_aura : public AuraScript
         if (dmgInfo.GetSpellInfo() && dmgInfo.GetSpellInfo()->Id == SPELL_PRIEST_REFLECTIVE_SHIELD_TRIGGERED)
             return;
 
-        if (AuraEffect* talentAurEff = target->GetAuraEffectOfRankedSpell(SPELL_PRIEST_REFLECTIVE_SHIELD_R1, EFFECT_0))
+        /** epoch-start */
+        Unit* caster = GetCaster();
+        if (! caster)
+            return;
+
+        if (AuraEffect* talentAurEff = caster->GetAuraEffectOfRankedSpell(SPELL_PRIEST_REFLECTIVE_SHIELD_R1, EFFECT_0))
         {
             CastSpellExtraArgs args(aurEff);
             args.AddSpellBP0(CalculatePct(absorbAmount, talentAurEff->GetAmount()));
             target->CastSpell(dmgInfo.GetAttacker(), SPELL_PRIEST_REFLECTIVE_SHIELD_TRIGGERED, args);
         }
+        /** epoch-end */
     }
 
     void Register() override
