@@ -191,8 +191,6 @@ void GuardMgr::SummonGuard(Creature* civilian, Unit* enemy, bool ignoreCooldown)
     if (!civilian || !enemy)
         return;
 
-    // TC_LOG_ERROR("sql.sql", "GuardMgr::SummonGuard {}", civilian->GetEntry());
-
     bool summonedOrCalledGuard = false;
     if (GameObject* guardPost = civilian->FindNearestGuardPost(50.0f))
     {
@@ -221,7 +219,8 @@ void GuardMgr::SummonGuard(Player* attackedPlayer, Unit* enemy, bool ignoreCoold
     if (!attackedPlayer)
         return;
 
-    // TC_LOG_DEBUG("misc", "GuardMgr::SummonGuard Player {}", attackedPlayer->GetName());
+    if (!enemy)
+        return;
 
     AreaTableEntry const* area = sAreaTableStore.LookupEntry(attackedPlayer->GetAreaId());
     if (!area || !(area->Flags & AREA_FLAG_PLAYERS_CALL_GUARDS))
