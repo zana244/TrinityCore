@@ -807,4 +807,22 @@ namespace Trinity
 
 using SpellEffectHandlerFn = void(Spell::*)();
 
+class TC_GAME_API SpellEvent : public BasicEvent
+{
+public:
+    explicit SpellEvent(Spell* spell);
+    ~SpellEvent();
+
+    bool Execute(uint64 e_time, uint32 p_time) override;
+    void Abort(uint64 e_time) override;
+    bool IsDeletable() const override;
+    Spell const* GetSpell() const { return m_Spell.get(); }
+    Trinity::unique_weak_ptr<Spell> GetSpellWeakPtr() const { return m_Spell; }
+    Spell* GetNonConstSpell() const { return m_Spell.get(); }
+    std::string GetDebugInfo() const { return m_Spell->GetDebugInfo(); }
+
+protected:
+    Trinity::unique_trackable_ptr<Spell> m_Spell;
+};
+
 #endif

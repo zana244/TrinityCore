@@ -5897,6 +5897,65 @@ void Unit::CombatStopWithPets(bool includingCast)
         minion->CombatStop(includingCast);
 }
 
+void Unit::InterruptSpellsCastedOnMe(bool killDelayed, bool interruptPositiveSpells, bool onlyIfNotStalked)
+{
+
+    UnitList targets;
+    // Maximum spell range=100m ?
+    Trinity::AnyUnitInObjectRangeCheck u_check(this, 100.0f);
+    Trinity::UnitListSearcher<Trinity::AnyUnitInObjectRangeCheck> searcher(this, targets, u_check);
+    Cell::VisitAllObjects(this, searcher, GetMap()->GetVisibilityRange());
+
+    for (const auto& iter : targets)
+    {
+        if (!interruptPositiveSpells && IsFriendlyTo(iter))
+            continue;
+
+        if (onlyIfNotStalked && HasAuraTypeWithCaster(SPELL_AURA_MOD_STALKED, iter->GetGUID()))
+            continue;
+
+        for (uint32 i = CURRENT_FIRST_NON_MELEE_SPELL; i < CURRENT_MAX_SPELL; i++)
+            if (Spell* spell = iter->GetCurrentSpell(CurrentSpellTypes(i)))
+                if (spell->m_targets.GetUnitTargetGUID() == GetGUID())
+                    if (killDelayed || (spell->getState() == SPELL_STATE_PREPARING && spell->GetTimer()) || i == CURRENT_CHANNELED_SPELL)
+                        iter->InterruptSpell(CurrentSpellTypes(i), true);
+
+        if (!killDelayed)
+            continue;
+
+        // Interruption of spells which are no longer referenced, but for which there is still an event (not yet hit the target for example)
+        auto i_Events = iter->m_Events.GetEvents().begin();
+        for (; i_Events != iter->m_Events.GetEvents().end(); ++i_Events)
+            if (SpellEvent* event = dynamic_cast<SpellEvent*>(i_Events->second))
+                if (event && event->GetSpell()->m_targets.GetUnitTargetGUID() == GetGUID())
+                    if (event->GetSpell()->getState() != SPELL_STATE_FINISHED)
+                        event->GetNonConstSpell()->cancel();
+
+    }
+}
+
+void Unit::InterruptAttacksOnMe(float dist, bool guard_check)
+{
+    if (dist == 0.0f)
+        dist = GetMap()->GetVisibilityRange();
+
+    UnitList targets;
+    Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(this, this, GetMap()->GetVisibilityRange());
+    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(this, targets, u_check);
+    Cell::VisitAllObjects(this, searcher, GetMap()->GetVisibilityRange());
+
+    for (const auto& iter : targets)
+    {
+        if (iter->GetVictim() != this)
+            continue;
+        if (guard_check && iter->IsContestedGuard())
+            continue;
+        iter->AttackStop();
+        if (Player* pAttacker = iter->ToPlayer())
+            pAttacker->SendAttackSwingCancelAttack();
+    }
+}
+
 bool Unit::isAttackingPlayer() const
 {
     if (HasUnitState(UNIT_STATE_ATTACK_PLAYER))
