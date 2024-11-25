@@ -11963,6 +11963,9 @@ bool Unit::SetCharmedBy(Unit* charmer, CharmType type, AuraApplication const* au
 
     CastStop();
     AttackStop();
+    // If a priest Mind Controls a unit, do not clear combat
+    if (type != CHARM_TYPE_POSSESS)
+       CombatStop();
 
     Player* playerCharmer = charmer->ToPlayer();
 
