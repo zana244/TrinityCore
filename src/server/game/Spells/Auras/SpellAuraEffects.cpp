@@ -4484,6 +4484,12 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
                 //    break;
                 //}
                 // @epoch-end
+                case 22646:                             // Goblin Rocket Helmet
+                {
+                    if (caster)
+                        caster->CastSpell(caster, 13360, true);
+                    break;
+                }
                 case 37096:                                     // Blood Elf Illusion
                 {
                     if (caster)
