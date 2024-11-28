@@ -49,6 +49,14 @@ class ThreatManager::Heap : public boost::heap::fibonacci_heap<ThreatReference c
 
 void ThreatReference::AddThreat(float amount)
 {
+    // Even if amount is 0, we still want to attack the owner (e.g. pet/totem enters combat, doesn't attack and dies)
+    if (GetOwner() && amount >= 0)
+    {
+        Unit *pVictimOwner = GetVictim()->GetCharmerOrOwner(); // Do for charmed units too
+        if (pVictimOwner && GetOwner()->_IsTargetAcceptable(pVictimOwner)) {
+            GetOwner()->GetThreatManager().AddThreat(pVictimOwner, 0.0f);
+        }
+    }
     if (amount == 0.0f)
         return;
     _baseAmount = std::max<float>(_baseAmount + amount, 0.0f);
