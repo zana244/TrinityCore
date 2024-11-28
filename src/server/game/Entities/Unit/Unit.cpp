@@ -11963,6 +11963,9 @@ bool Unit::SetCharmedBy(Unit* charmer, CharmType type, AuraApplication const* au
 
     CastStop();
     AttackStop();
+    // If a priest Mind Controls a unit, do not clear combat
+    if (type != CHARM_TYPE_POSSESS)
+       CombatStop();
 
     Player* playerCharmer = charmer->ToPlayer();
 
@@ -12011,6 +12014,8 @@ bool Unit::SetCharmedBy(Unit* charmer, CharmType type, AuraApplication const* au
 
     // Set charmed
     charmer->SetCharm(this, true);
+
+    StopAttackingInvalidTarget();
 
     if (Player* player = ToPlayer())
     {
@@ -12148,6 +12153,8 @@ void Unit::RemoveCharmedBy(Unit* charmer)
 
     charmer->SetCharm(this, false);
     m_combatManager.RevalidateCombat();
+
+    StopAttackingInvalidTarget();
 
     Player* playerCharmer = charmer->ToPlayer();
     if (playerCharmer)
@@ -13601,6 +13608,37 @@ void Unit::StopAttackFaction(uint32 faction_id)
 
     for (Unit* minion : m_Controlled)
         minion->StopAttackFaction(faction_id);
+}
+
+void Unit::StopAttackingInvalidTarget()
+{
+    AttackerSet const& attackers = getAttackers();
+    for (AttackerSet::const_iterator itr = attackers.begin(); itr != attackers.end();)
+    {
+        Unit* attacker = (*itr);
+        if (!attacker->IsValidAttackTarget(this))
+        {
+            attacker->AttackStop();
+            if (attacker->GetTypeId() == TYPEID_PLAYER)
+            {
+                attacker->ToPlayer()->SendAttackSwingCancelAttack();
+            }
+
+            for (Unit* controled : attacker->m_Controlled)
+            {
+                if (controled->GetVictim() == this && !controled->IsValidAttackTarget(this))
+                {
+                    controled->AttackStop();
+                }
+            }
+
+            itr = attackers.begin();
+        }
+        else
+        {
+            ++itr;
+        }
+    }
 }
 
 void Unit::OutDebugInfo() const
