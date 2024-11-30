@@ -24013,7 +24013,17 @@ void Player::SendSummonRequestFrom(Unit* summoner)
 
 void Player::SummonIfPossible(bool agree)
 {
-    if (!agree)
+    // @epoch-start
+    bool cancel = false;
+    FIRE(
+        Player
+        , OnSummonIfPossible
+        , TSPlayer(this)
+        , TSMutable<bool, bool>(&cancel)
+    );
+    // @epoch-end
+
+    if (!agree || cancel)
     {
         m_summon_expire = 0;
         return;
