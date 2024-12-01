@@ -13621,8 +13621,11 @@ void Unit::RewardRage(uint32 damage, uint32 weaponSpeedHitFactor, bool attacker)
         addRage = damage / rageconversion * 2.5f;
 
         // Berserker Rage effect
+        /** @epoch-start */
         if (HasAura(18499))
-            addRage *= 2.0f;
+            addRage *= 1.3f
+            // addRage *= 2.0f;
+        /** @epoch-end */
     }
 
     addRage *= sWorld->getRate(RATE_POWER_RAGE_INCOME);
