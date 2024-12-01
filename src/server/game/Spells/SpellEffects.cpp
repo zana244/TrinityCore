@@ -364,12 +364,20 @@ void Spell::EffectSchoolDMG()
                     break;
 
                 // Shield Slam
-                if ((m_spellInfo->SpellFamilyFlags[1] & 0x200) && m_spellInfo->GetCategory() == 1209)
+                /** @epoch-start */
+                if ((m_spellInfo->SpellFamilyFlags[1] & 0x200) && m_spellInfo->GetCategory() == 971)
                 {
-                    uint8 level = unitCaster->GetLevel();
-                    uint32 block_value = unitCaster->GetShieldBlockValue(uint32(float(level) * 24.5f), uint32(float(level) * 34.5f));
-                    damage += int32(unitCaster->ApplyEffectModifiers(m_spellInfo, effectInfo->EffectIndex, float(block_value)));
+                    if (Player* player = unitCaster->ToPlayer())
+                    {
+                        uint32 block_value = player->GetShieldBlockValue();
+                        damage += int32(unitCaster->ApplyEffectModifiers(m_spellInfo, effectInfo->EffectIndex, float(block_value)));
+                    }
+
+                    // uint8 level = unitCaster->GetLevel();
+                    // uint32 block_value = unitCaster->GetShieldBlockValue(uint32(float(level) * 24.5f), uint32(float(level) * 34.5f));
+                    // damage += int32(unitCaster->ApplyEffectModifiers(m_spellInfo, effectInfo->EffectIndex, float(block_value)));
                 }
+                /** @epoch-end */
                 // Victory Rush
                 else if (m_spellInfo->SpellFamilyFlags[1] & 0x100)
                     ApplyPct(damage, unitCaster->GetTotalAttackPowerValue(BASE_ATTACK));
