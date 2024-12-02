@@ -13623,7 +13623,7 @@ void Unit::RewardRage(uint32 damage, uint32 weaponSpeedHitFactor, bool attacker)
         // Berserker Rage effect
         /** @epoch-start */
         if (HasAura(18499))
-            addRage *= 1.3f
+            addRage *= 1.3f;
             // addRage *= 2.0f;
         /** @epoch-end */
     }
