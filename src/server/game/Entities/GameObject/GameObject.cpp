@@ -2791,6 +2791,9 @@ bool GameObject::IsLootAllowedFor(Player const* player) const
     if (!playerGroup || playerGroup != GetLootRecipientGroup()) // if we dont have a group we arent the recipient
         return false;                                           // if go doesnt have group bound it means it was solo killed by someone else
 
+    if (!HasAllowedLooter(player->GetGUID()))
+        return false;
+
     return true;
 }
 

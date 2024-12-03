@@ -18238,6 +18238,9 @@ bool Player::isAllowedToLoot(Creature const* creature) const
     else if (thisGroup != creature->GetLootRecipientGroup())
         return false;
 
+    if (!creature->HasAllowedLooter(GetGUID()))
+        return false;
+
     switch (thisGroup->GetLootMethod())
     {
         case MASTER_LOOT:
