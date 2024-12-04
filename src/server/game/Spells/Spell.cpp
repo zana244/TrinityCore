@@ -7147,16 +7147,30 @@ SpellCastResult Spell::CheckItems(uint32* param1 /*= nullptr*/, uint32* param2 /
                 uint32 item_quality = itemProto->Quality;
                 // 2.0.x addon: Check player enchanting level against the item disenchanting requirements
                 uint32 item_disenchantskilllevel = itemProto->RequiredDisenchantSkill;
+
+                /** @epoch-start */
+                uint32 result = 0;
+
                 if (item_disenchantskilllevel == uint32(-1))
-                    return SPELL_FAILED_CANT_BE_DISENCHANTED;
+                    result = SPELL_FAILED_CANT_BE_DISENCHANTED;
                 if (item_disenchantskilllevel > player->GetSkillValue(SKILL_ENCHANTING))
-                    return SPELL_FAILED_LOW_CASTLEVEL;
+                    result = SPELL_FAILED_LOW_CASTLEVEL;
                 if (item_quality > 4 || item_quality < 2)
-                    return SPELL_FAILED_CANT_BE_DISENCHANTED;
+                    result = SPELL_FAILED_CANT_BE_DISENCHANTED;
                 if (itemProto->Class != ITEM_CLASS_WEAPON && itemProto->Class != ITEM_CLASS_ARMOR)
-                    return SPELL_FAILED_CANT_BE_DISENCHANTED;
+                    result = SPELL_FAILED_CANT_BE_DISENCHANTED;
                 if (!itemProto->DisenchantID)
-                    return SPELL_FAILED_CANT_BE_DISENCHANTED;
+                    result = SPELL_FAILED_CANT_BE_DISENCHANTED;
+
+                FIRE_ID(itemProto->events.id
+                    , Item,OnCanDisenchant
+                    , TSItemTemplate(itemProto)
+                    , TSMutableNumber<uint32>(&result)
+                );
+
+                if (result > SPELL_FAILED_SUCCESS)
+                    return static_cast<SpellCastResult>(result);
+                /** @epoch-end */
                 break;
             }
             case SPELL_EFFECT_PROSPECTING:
