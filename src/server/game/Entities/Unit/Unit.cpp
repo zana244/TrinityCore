@@ -8506,6 +8506,10 @@ void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
         if (pet)
             pet->SetUnitFlag(UNIT_FLAG_STUNNED); // disable pet's interface
 
+        Guardian* guardian = player->GetGuardianPet();
+        if (guardian)
+            guardian->SetUnitFlag(UNIT_FLAG_STUNNED);
+
         // if we have charmed npc, stun him also (everywhere)
         if (Unit* charm = player->GetCharmed())
             if (charm->GetTypeId() == TYPEID_UNIT)
@@ -8565,6 +8569,11 @@ void Unit::Dismount()
         {
             if (pPet->HasUnitFlag(UNIT_FLAG_STUNNED) && !pPet->HasUnitState(UNIT_STATE_STUNNED))
                 pPet->RemoveUnitFlag(UNIT_FLAG_STUNNED);
+        }
+        else if (Guardian* pGuardian = player->GetGuardianPet())
+        {
+            if (pGuardian->HasUnitFlag(UNIT_FLAG_STUNNED) && !pGuardian->HasUnitState(UNIT_STATE_STUNNED))
+                pGuardian->RemoveUnitFlag(UNIT_FLAG_STUNNED);
         }
         else
             player->ResummonPetTemporaryUnSummonedIfAny();
