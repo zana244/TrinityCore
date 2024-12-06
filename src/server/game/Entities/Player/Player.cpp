@@ -8142,6 +8142,20 @@ void Player::CastItemCombatSpell(DamageInfo const& damageInfo, Item* item, ItemT
             if (FindCurrentSpellBySpellId(5938) && e_slot == TEMP_ENCHANTMENT_SLOT)
                 chance = 100.0f;
 
+            // @epoch-start
+            FIRE_ID(
+                spellInfo->events.id,
+                Spell,OnBeforeItemEnchantmentProc,
+                TSSpellInfo(spellInfo),
+                TSItem(item),
+                TSDamageInfo(&damageInfo),
+                enchant_id,
+                e_slot,
+                s,
+                TSMutableNumber<float>(&chance)
+            );
+            // @epoch-end
+
             if (roll_chance_f(chance))
             {
                 Unit* target = spellInfo->IsPositive() ? this : damageInfo.GetVictim();
