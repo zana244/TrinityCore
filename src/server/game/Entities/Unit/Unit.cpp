@@ -6822,6 +6822,12 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     // Default calculation
     if (DoneAdvertisedBenefit)
     {
+        // @epoch-start
+        // Physical spells should not gain spell damage modifiers
+        if (spellProto->GetSchoolMask() & SPELL_SCHOOL_MASK_NORMAL)
+            DoneAdvertisedBenefit = 0;
+        // @epoch-end
+
         if (coeff < 0.f)
             coeff = CalculateDefaultCoefficient(spellProto, damagetype);  // As wowwiki says: C = (Cast Time / 3.5)
 
