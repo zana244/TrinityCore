@@ -1820,8 +1820,14 @@ bool WorldObject::CanDetectStealthOf(WorldObject const* obj, bool checkAlert) co
         // Detection is level * 5 plus any modifiers
         int32 detectSkill = int32(GetLevelForTarget(obj)) * 5 + m_stealthDetect.GetValue(StealthType(i));
         if (go)
-            if (Unit* owner = go->GetOwner())
-                detectSkill -= int32(owner->GetLevelForTarget(this)) * 5;
+        {
+            // commenting out, obj->GetLevelForTarget(this) in stealthSkill already checks GetOwner() and returns owner level
+            // However, use the m_stealth value for traps (70 by default)
+            // if (Unit* owner = go->GetOwner())
+            //     detectSkill -= int32(owner->GetLevelForTarget(this)) * 5;
+            // Could potentially add a check here for STEALTH_TRAP only? seems only m_stealth.AddValue for traps anyway
+            detectSkill -= int32(obj->m_stealth.GetValue(StealthType(i)));
+        }
 
         // Calculate max distance
         visibilityRange += (detectSkill - stealthSkill) * yardsPerLevel / 5.0f;
