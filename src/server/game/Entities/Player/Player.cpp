@@ -8147,6 +8147,7 @@ void Player::CastItemCombatSpell(DamageInfo const& damageInfo, Item* item, ItemT
                 spellInfo->events.id,
                 Spell,OnBeforeItemEnchantmentProc,
                 TSSpellInfo(spellInfo),
+                TSPlayer(this),
                 TSItem(item),
                 TSDamageInfo(&damageInfo),
                 enchant_id,
