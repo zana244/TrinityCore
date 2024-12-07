@@ -1716,6 +1716,11 @@ void Spell::EffectCreateRandomItem()
 void Spell::EffectPersistentAA()
 {
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT)
+    {
+        if (!(m_spellInfo->Id == 1543 && effectHandleMode == SPELL_EFFECT_HANDLE_LAUNCH)) // Handle only Flare on Launch, return otherwise
+            return;
+    }
+    else if (m_spellInfo->Id == 1543) // Do not handle Flare on Hit, handle everything else
         return;
 
     Unit* unitCaster = GetUnitCasterForEffectHandlers();
