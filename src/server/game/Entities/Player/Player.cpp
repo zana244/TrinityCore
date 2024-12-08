@@ -5143,6 +5143,18 @@ void Player::UpdateLocalChannels(uint32 newZone)
     if (GetSession()->PlayerLoading() && !IsBeingTeleportedFar())
         return;                                              // The client handles it automatically after loading, but not after teleporting
 
+    // @epoch-start
+    bool cancel = false;
+    FIRE(
+        Player
+        , OnBeforeUpdateLocalChannels
+        , TSPlayer(this)
+        , TSMutable<bool, bool>(&cancel)
+    );
+    if (cancel)
+        return;
+    // @epoch-end
+
     AreaTableEntry const* current_zone = sAreaTableStore.LookupEntry(newZone);
     if (!current_zone)
         return;
