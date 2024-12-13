@@ -2293,6 +2293,10 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         std::string GetMapAreaAndZoneString() const;
         std::string GetCoordsMapAreaAndZoneString() const;
+        
+        // @epoch-start
+        std::string GetAreaString() const;
+        // @epoch-end
 
 // @tswow-begin (Using Rochet2/Transmog)
 #ifdef PRESETS

@@ -27224,6 +27224,23 @@ std::string Player::GetMapAreaAndZoneString() const
     return str.str();
 }
 
+// @epoch-start
+std::string Player::GetAreaString() const
+{
+    uint32 areaId = GetAreaId();
+    std::string areaName = "Unknown";
+    if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(areaId))
+    {
+        int locale = GetSession()->GetSessionDbcLocale();
+        areaName = area->AreaName[locale];
+    }
+
+    std::ostringstream str;
+    str << areaName.c_str();
+    return str.str();
+}
+// @epoch-end
+
 std::string Player::GetCoordsMapAreaAndZoneString() const
 {
     std::ostringstream str;
