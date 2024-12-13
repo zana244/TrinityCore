@@ -858,6 +858,21 @@ void Channel::LeaveNotify(ObjectGuid guid) const
         SendToAll(builder);
 }
 
+void Channel::System(std::string const& what, uint32 lang)
+{
+    if (what.empty())
+        return;
+    
+    auto builder = [&](WorldPacket& data, LocaleConstant locale)
+    {
+        LocaleConstant localeIdx = sWorld->GetAvailableDbcLocale(locale);
+
+        ChatHandler::BuildChatPacket(data, CHAT_MSG_CHANNEL, Language(lang), ObjectGuid::Empty, ObjectGuid::Empty, what, 0, "", "", 0, false, GetName(localeIdx));
+    };
+
+    SendToAll(builder);
+}
+
 template<class Builder>
 void Channel::SendToAll(Builder& builder, ObjectGuid guid /*= ObjectGuid::Empty*/) const
 {

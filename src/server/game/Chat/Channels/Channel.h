@@ -211,6 +211,7 @@ class TC_GAME_API Channel
         void LeaveNotify(ObjectGuid guid) const;                                      // invisible notify
         void SetOwnership(bool ownership) { _ownershipEnabled = ownership; }
 
+        void System(std::string const& what, uint32 lang);
     private:
 
         template<class Builder>
