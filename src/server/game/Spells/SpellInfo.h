@@ -541,6 +541,10 @@ class TC_GAME_API SpellInfo
 
         uint32 GetMechanicImmunityMask(Unit* caster) const;
 
+        // @epoch-start
+        bool CanResetAutoActions(Unit* caster) const;
+        // @epoch-end
+
     private:
         // loading helpers
         void _InitializeExplicitTargetMask();

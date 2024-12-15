@@ -3241,7 +3241,7 @@ bool Unit::IsNonMeleeSpellCast(bool withDelayed, bool skipChanneled, bool skipAu
     {
         if (!skipInstant || m_currentSpells[CURRENT_GENERIC_SPELL]->GetCastTime())
         {
-            if (!isAutoshoot || !(m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS)))
+            if (!isAutoshoot || (m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->CanResetAutoActions(const_cast<Unit*>(this))))
                 return true;
         }
     }
@@ -3249,7 +3249,7 @@ bool Unit::IsNonMeleeSpellCast(bool withDelayed, bool skipChanneled, bool skipAu
     if (!skipChanneled && m_currentSpells[CURRENT_CHANNELED_SPELL] &&
         (m_currentSpells[CURRENT_CHANNELED_SPELL]->getState() != SPELL_STATE_FINISHED))
     {
-        if (!isAutoshoot || !(m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS)))
+        if (!isAutoshoot || m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->CanResetAutoActions(const_cast<Unit*>(this)))
             return true;
     }
     // autorepeat spells may be finished or delayed, but they are still considered cast

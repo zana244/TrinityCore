@@ -3982,3 +3982,23 @@ void SpellInfo::_UnloadImplicitTargetConditionLists()
         delete cur;
     }
 }
+
+// @epoch-start
+bool SpellInfo::CanResetAutoActions(Unit* caster) const
+{
+    bool reset = ! HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS);
+
+    if (! caster)
+        return reset;
+
+    FIRE_ID(
+        events.id,
+        Spell,OnCanResetAutoActions,
+        TSSpellInfo(this),
+        TSUnit(caster),
+        TSMutable<bool,bool>(&reset)
+    );
+
+    return reset;
+}
+// @epoch-end

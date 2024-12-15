@@ -3588,7 +3588,7 @@ void Spell::_cast(bool skipCheck)
                 if (m_spellInfo->HasAttribute(SPELL_ATTR4_IGNORE_COMBAT_TIMER)) //experimental: this maybe means completely reset auto attack. We want to reset auto attack for Aimed Shot.
                     unitCaster->resetAttackTimer(RANGED_ATTACK);
 
-                if (!m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS)) //only ranged hunter spells use that attribute on TBC
+                if (m_spellInfo->CanResetAutoActions(unitCaster)) //only ranged hunter spells use that attribute on TBC
                 {
                     // sun: reset ranged only to the repeat cast time, not full time
                     constexpr auto AUTO_REPEAT_CAST_TIME = 500; // move this somewhere
