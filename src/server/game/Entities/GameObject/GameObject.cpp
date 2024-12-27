@@ -2174,12 +2174,14 @@ void GameObject::Use(Unit* user)
                 return;
 
             //required lvl checks!
+            // @epoch-start
             uint8 level = player->GetLevel();
-            if (level < info->meetingstone.minLevel)
+            if (level < info->meetingstone.minLevel || level > info->meetingstone.maxLevel)
                 return;
             level = targetPlayer->GetLevel();
-            if (level < info->meetingstone.minLevel)
+            if (level < info->meetingstone.minLevel || level > info->meetingstone.maxLevel)
                 return;
+            // @epoch-end
 
             if (info->entry == 194097)
                 spellId = 61994;                            // Ritual of Summoning
