@@ -263,6 +263,9 @@ void Transport::AddPassenger(WorldObject* passenger)
 
         if (Player* plr = passenger->ToPlayer())
             sScriptMgr->OnAddPassenger(this, plr);
+
+        if (Pet* pet = plr->GetPet())
+            AddFollowerToTransport(passenger, pet);
     }
 }
 
@@ -295,7 +298,37 @@ void Transport::RemovePassenger(WorldObject* passenger)
         {
             sScriptMgr->OnRemovePassenger(this, plr);
             plr->SetFallInformation(0, plr->GetPositionZ());
+
+            if (Pet* pet = plr->GetPet())
+                RemoveFollowerToTransport(passenger, pet);
         }
+    }
+}
+
+void Transport::AddFollowerToTransport(WorldObject* passenger, WorldObject* follower)
+{
+    AddPassenger(follower);
+    float x, y, z, o;
+    passenger->m_movementInfo.transport.pos.GetPosition(x, y, z, o);
+    follower->m_movementInfo.transport.pos.Relocate(x, y, z, o);
+    if (follower->IsCreature())
+        follower->NearTeleportTo(passenger->m_movementInfo.pos.x, passenger->m_movementInfo.pos.y, passenger->m_movementInfo.pos.z, passenger->m_movementInfo.pos.o);
+    else
+    {
+        follower->Relocate(passenger->m_movementInfo.pos.x, passenger->m_movementInfo.pos.y, passenger->m_movementInfo.pos.z, passenger->m_movementInfo.pos.o);
+        follower->SendMovementFlagUpdate();
+    }
+}
+
+void Transport::RemoveFollowerFromTransport(WorldObject* passenger, WorldObject* follower)
+{
+    RemovePassenger(follower);
+    if (follower->IsCreature())
+        follower->NearTeleportTo(passenger->m_movementInfo.pos.x, passenger->m_movementInfo.pos.y, passenger->m_movementInfo.pos.z, passenger->m_movementInfo.pos.o);
+    else
+    {
+        follower->Relocate(passenger->m_movementInfo.pos.x, passenger->m_movementInfo.pos.y, passenger->m_movementInfo.pos.z, passenger->m_movementInfo.pos.o);
+        follower->SendMovementFlagUpdate();
     }
 }
 

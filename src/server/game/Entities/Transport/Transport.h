@@ -44,6 +44,9 @@ class TC_GAME_API Transport : public GameObject, public TransportBase
 
         void AddPassenger(WorldObject* passenger);
         void RemovePassenger(WorldObject* passenger);
+        void AddFollowerToTransport(WorldObject* passenger, WorldObject* follower);
+        void RemoveFollowerToTransport(WorldObject* passenger, WorldObject* follower);
+
         PassengerSet const& GetPassengers() const { return _passengers; }
 
         Creature* CreateNPCPassenger(ObjectGuid::LowType guid, CreatureData const* data);
