@@ -106,7 +106,7 @@ static void DoMovementInform(Unit* owner, Unit* target)
 }
 
 ChaseMovementGenerator::ChaseMovementGenerator(Unit *target, Optional<ChaseRange> range, Optional<ChaseAngle> angle) : AbstractFollower(ASSERT_NOTNULL(target)), _range(range),
-    _angle(angle), _rangeCheckTimer(RANGE_CHECK_INTERVAL), i_leashExtensionTimer(1500)
+    _angle(angle), _rangeCheckTimer(RANGE_CHECK_INTERVAL), i_leashExtensionTimer(5000)
 {
     Mode = MOTION_MODE_DEFAULT;
     Priority = MOTION_PRIORITY_NORMAL;
@@ -212,14 +212,14 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
         i_leashExtensionTimer.Update(diff);
         if (i_leashExtensionTimer.Passed())
         {
-            i_leashExtensionTimer.Reset(1500);
+            i_leashExtensionTimer.Reset(5000);
             if (Creature* creature = owner->ToCreature())
                 creature->UpdateLeashExtensionTime();
         }
     }
     // equivalent of i_recalculateTravel in AC?
 //    else if (HasFlag(MOVEMENTGENERATOR_FLAG_INFORM_ENABLED)) {
-//        i_leashExtensionTimer.Reset(1500);
+//        i_leashExtensionTimer.Reset(5000);
 //    }
 
     // if the target moved, we have to consider whether to adjust
