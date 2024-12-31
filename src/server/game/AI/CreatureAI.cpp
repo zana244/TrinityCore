@@ -38,6 +38,7 @@
 #include "UnitDefines.h"
 #include "Vehicle.h"
 #include "World.h"
+#include "Totem.h"
 
 AISpellInfoType* UnitAI::AISpellInfo;
 AISpellInfoType* GetAISpellInfo(uint32 i) { return &UnitAI::AISpellInfo[i]; }
@@ -359,6 +360,27 @@ bool CreatureAI::_EnterEvadeMode(EvadeReason /*why*/)
     me->SetTarget(ObjectGuid::Empty);
     me->GetSpellHistory()->ResetAllCooldowns();
     EngagementOver();
+
+    // Make all controlled units also evade
+    for (Unit* unit : me->m_Controlled)
+    {
+        if (unit->IsCreature() && unit->ToCreature()->IsTotem())
+            ((Totem*)unit)->UnSummon();
+        else if (unit->IsAlive())
+        {
+            unit->GetMotionMaster()->Clear();
+            // for a controlled unit this will result in a follow move
+            unit->GetMotionMaster()->MoveTargetedHome();
+            unit->CombatStop(true);
+
+            // This actually makes the pet evade attacks (intended), but requires cleaning up
+            // when the pet actually reaches the owner at its targeted home;
+            // most npcs recall their pet, which will create new NPCs without STATE_EVADE
+            // however, some do not dismiss their initial pet, leaving this mob in an evade state
+            // permanently.
+            //unit->AddUnitState(UNIT_STATE_EVADE);
+        }
+    }
 
     return true;
 }
