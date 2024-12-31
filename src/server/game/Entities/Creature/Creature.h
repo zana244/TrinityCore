@@ -265,6 +265,8 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         void CallForHelp(float fRadius);
         void CallAssistance();
         void SetNoCallAssistance(bool val) { m_AlreadyCallAssistance = val; }
+        void SetInitialAggroCallAssistance(bool val) { m_InitialAggroCallAssistance = val; }
+        bool IsInitialAggroCallAssistance() { return m_InitialAggroCallAssistance; }
         void SetNoSearchAssistance(bool val) { m_AlreadySearchedAssistance = val; }
         bool HasSearchedAssistance() const { return m_AlreadySearchedAssistance; }
         bool CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction = true) const;
@@ -447,6 +449,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         int8 m_originalEquipmentId; // can be -1
 
         bool m_AlreadyCallAssistance;
+        bool m_InitialAggroCallAssistance; // Signifies first Call Assistance, true for 1st call, false for others
         bool m_AlreadySearchedAssistance;
         bool m_cannotReachTarget;
         uint32 m_cannotReachTimer;

@@ -5790,7 +5790,7 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
         EngageWithTarget(victim); // ensure that anything we're attacking has threat
 
         creature->SendAIReaction(AI_REACTION_HOSTILE);
-        creature->CallAssistance();
+        creature->CallAssistance(); // the first call that happens on initial aggro, will link nearby creatures
 
         creature->SetAssistanceTimer(sWorld->getIntConfig(CONFIG_CREATURE_FAMILY_ASSISTANCE_PERIOD));
 
@@ -5845,6 +5845,7 @@ bool Unit::AttackStop()
     if (Creature* creature = ToCreature())
     {
         creature->SetNoCallAssistance(false);
+        creature->SetInitialAggroCallAssistance(true);
     }
 
     SendMeleeAttackStop(victim);
