@@ -149,7 +149,7 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
         _lastTargetPosition.reset();
         if (Creature* cOwner = owner->ToCreature())
         {
-            cOwner->UpdateLeashExtensionTime();
+            if (!owner->IsMovementPreventedByCasting()) cOwner->UpdateLeashExtensionTime();
             cOwner->SetCannotReachTarget(false);
         }
         return true;
