@@ -154,8 +154,14 @@ void CreatureAI::OnOwnerCombatInteraction(Unit* target)
     if (!target || !me->IsAlive())
         return;
 
-    if (!me->HasReactState(REACT_PASSIVE) && me->CanStartAttack(target, true))
+    if (!me->HasReactState(REACT_PASSIVE) && me->CanStartAttack(target, true)){
         me->EngageWithTarget(target);
+
+        // Link the leash timer for creatures and their pets
+        if (Unit* owner = me->GetOwner())
+            if (owner->IsCreature()) // Unsure if we need the check but ...
+                me->SetLastLeashExtensionTimePtr(owner->ToCreature()->GetLastLeashExtensionTimePtr());
+    }
 }
 
 // Distract creature, if player gets too close while stealthed/prowling
