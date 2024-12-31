@@ -240,6 +240,8 @@ bool AssistDelayEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
             if (assistant && assistant->CanAssistTo(&m_owner, victim))
             {
                 assistant->SetNoCallAssistance(true);
+                // Keep as fallback in case no AI()?
+                // Will be called again by AI()->AttackStart() inside Unit::Attack()
                 assistant->EngageWithTarget(victim);
                 if (assistant->IsAIEnabled())
                 {
@@ -247,8 +249,8 @@ bool AssistDelayEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
 
                     // When nearby mobs aggro from another mob's initial call for assistance
                     // their leash timers become linked and attacking one will keep the rest from evading.
-                    if (assistant->GetVictim())
-                        assistant->SetLastLeashExtensionTimePtr(m_owner->GetLastLeashExtensionTimePtr());
+                    if (assistant->GetVictim() && m_owner.IsCreature())
+                        assistant->SetLastLeashExtensionTimePtr(m_owner.ToCreature()->GetLastLeashExtensionTimePtr());
                 }
             }
         }
