@@ -377,6 +377,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         void ClearLastLeashExtensionTimePtr();
         time_t GetLastLeashExtensionTime() const;
         void UpdateLeashExtensionTime();
+        uint32 GetLeashTimeForLevel() const;
 
         bool IsFreeToMove();
         static constexpr uint32 MOVE_CIRCLE_CHECK_INTERVAL = 3000;

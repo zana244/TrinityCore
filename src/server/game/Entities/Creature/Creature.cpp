@@ -2700,7 +2700,7 @@ bool Creature::CanCreatureAttack(Unit const* victim, bool /*force*/, bool checkA
             return true;
 
         // don't check distance to home position if recently damaged, this should include taunt auras
-        if (!isWorldBoss() && (GetLastLeashExtensionTime() + 12 > GameTime::GetGameTime() || HasAuraType(SPELL_AURA_MOD_TAUNT)))
+        if (!isWorldBoss() && (GetLastLeashExtensionTime() + GetLeashTimeForLevel() > GameTime::GetGameTime() || HasAuraType(SPELL_AURA_MOD_TAUNT)))
             return true;
     }
 
@@ -3742,4 +3742,20 @@ time_t Creature::GetLastLeashExtensionTime() const
 void Creature::UpdateLeashExtensionTime()
 {
     (*GetLastLeashExtensionTimePtr()) = GameTime::GetGameTime();
+}
+
+uint32 Creature::GetLeashTimeForLevel() const
+{
+    int32 clevel = GetLevel();
+
+    if (clevel >= 1 && clevel <= 29)
+        return 11;
+    else if (clevel >= 30 && clevel <= 39)
+        return 12;
+    else if (clevel >= 40 && clevel <= 44)
+        return 13;
+    else if (clevel >= 45 && clevel <= 49)
+        return 14;
+    else // Blanket for all creature past level 50 or invalid GetLevel() values
+        return 15;
 }
