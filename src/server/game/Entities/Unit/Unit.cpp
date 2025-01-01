@@ -2837,6 +2837,10 @@ float Unit::GetUnitMissChance() const
 {
     float miss_chance = 5.0f;
 
+    // Totems have no inherit miss chance
+    if (IsTotem())
+        miss_chance = 0.0f;
+
     if (Player const* player = ToPlayer())
         miss_chance += player->GetMissPercentageFromDefense();
     // @tswow-begin
@@ -12702,15 +12706,39 @@ float Unit::MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, i
     // bonus from skills is 0.04%
     //miss_chance -= skillDiff * 0.04f;
     int32 diff = -skillDiff;
-    if (victim->GetTypeId() == TYPEID_PLAYER)
-        missChance += diff > 0 ? diff * 0.04f : diff * 0.02f;
-    else
+    // Skill difference can be both negative and positive. Positive difference means that:
+    // a) Victim's level is higher
+    // b) Victim has additional defense skill bonuses
+    const bool vsPlayerOrPet = victim->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+
+    // if (victim->GetTypeId() == TYPEID_PLAYER)
+    //     missChance += diff > 0 ? diff * 0.04f : diff * 0.02f;
+    // else
+    // {
+    //     missChance += diff > 10 ? 1 + (diff - 10) * 0.4f : diff * 0.1f;
+    //     float levelFactor = victim->GetLevelForTarget(this);
+    //     if (levelFactor < 10.f)
+    //         missChance *= (levelFactor / 10.f);
+    // }
+
+    // Defense/weapon skill factor: for players and NPCs
+    float factor = 0.04f;
+    // NPCs gain additional bonus to incoming hit chance reduction based on positive skill difference (same value as bonus parry rate)
+    if (!vsPlayerOrPet && diff > 0)
     {
-        missChance += diff > 10 ? 1 + (diff - 10) * 0.4f : diff * 0.1f;
-        float levelFactor = victim->GetLevelForTarget(this);
-        if (levelFactor < 10.f)
-            missChance *= (levelFactor / 10.f);
+        if (diff > 10)
+        {
+            // First 10 points of difference (2 levels): usual decrease
+            missChance += (10 * 0.1f);
+            diff -= 10;
+            // Each additional point of difference:
+            factor = 0.4f;
+            missChance += (diff * 0.2f); // Pre-WotLK: Additional 1% miss chance for each level (final @ 3% per level)
+        }
+        else
+            factor = 0.1f;
     }
+    missChance += (diff * factor);
 
     // Spellmod from SPELLMOD_RESIST_MISS_CHANCE
     float resistMissChance = 100.0f;
