@@ -2712,11 +2712,13 @@ float Unit::GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) con
     int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
 
     float chance = 0.0f;
-    float skillBonus = 0.0f;
+    //float skillBonus = 0.0f;
+
+    // Base chance
     if (victim->GetTypeId() == TYPEID_PLAYER)
     {
         chance = victim->GetFloatValue(PLAYER_DODGE_PERCENTAGE);
-        skillBonus = 0.04f * skillDiff;
+        //skillBonus = 0.04f * skillDiff;
     }
     else
     {
@@ -2725,14 +2727,27 @@ float Unit::GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) con
             chance = 5.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
 
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
+            // if (skillDiff <= 10)
+            //     skillBonus = skillDiff * 0.1f;
+            // else
+            //     skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
         }
     }
 
-    chance += skillBonus;
+    // Own chance appears to be zero / below zero / unmeaningful for some reason (debuffs?): skip calculation, unit is incapable
+    if (chance < 0.005f)
+        return 0.0f;
+
+    // Skill difference can be negative (and reduce our chance to mitigate an attack), which means:
+    // a) Attacker's level is higher
+    // b) Attacker has +skill bonuses
+    bool const isPlayerOrPet = victim->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+    // Defense/weapon skill factor: for players and NPCs
+    float factor = 0.04f;
+    // NPCs gain additional bonus dodge chance based on positive skill difference
+    if (!isPlayerOrPet && skillDiff > 0)
+        factor = 0.1f;
+    chance += (skillDiff * factor);
 
     // Reduce enemy dodge chance by SPELL_AURA_MOD_COMBAT_RESULT_CHANCE
     chance += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_COMBAT_RESULT_CHANCE, VICTIMSTATE_DODGE);
