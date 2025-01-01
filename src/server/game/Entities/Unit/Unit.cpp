@@ -2856,7 +2856,8 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
     int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
 
     float chance = 0.0f;
-    float skillBonus = 0.0f;
+    //float skillBonus = 0.0f;
+    // Base chance
     if (Player const* playerVictim = victim->ToPlayer())
     {
         if (playerVictim->CanBlock())
@@ -2865,7 +2866,7 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
             if (tmpitem && !tmpitem->IsBroken() && tmpitem->GetTemplate()->Block)
             {
                 chance = playerVictim->GetFloatValue(PLAYER_BLOCK_PERCENTAGE);
-                skillBonus = 0.04f * skillDiff;
+                //skillBonus = 0.04f * skillDiff;
             }
         }
     }
@@ -2876,14 +2877,31 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
             chance = 5.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
 
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
+            // if (skillDiff <= 10)
+            //     skillBonus = skillDiff * 0.1f;
+            // else
+            //     skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
         }
     }
 
-    chance += skillBonus;
+    // Own chance appears to be zero / below zero / unmeaningful for some reason (debuffs?): skip calculation, unit is incapable
+    if (chance < 0.005f)
+        return 0.0f;
+
+    // Skill difference can be negative (and reduce our chance to mitigate an attack), which means:
+    // a) Attacker's level is higher
+    // b) Attacker has +skill bonuses
+    bool const isPlayerOrPet = victim->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+    // Defense/weapon skill factor: for players and NPCs
+    float factor = 0.04f;
+    // NPCs cannot gain bonus block chance based on positive skill difference
+    if (!isPlayerOrPet && skillDiff > 0)
+        factor = 0.0f;
+    chance += (skillDiff * factor);
+
+    // None present in 3.3.5 as far as I can see but added for visibility
+    // Reduce enemy block chance by SPELL_AURA_MOD_COMBAT_RESULT_CHANCE
+    chance += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_COMBAT_RESULT_CHANCE, VICTIMSTATE_BLOCKS);
     return std::max(chance, 0.0f);
 }
 
