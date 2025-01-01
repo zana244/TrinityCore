@@ -2770,7 +2770,9 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
     int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
 
     float chance = 0.0f;
-    float skillBonus = 0.0f;
+    //float skillBonus = 0.0f;
+
+    // Base chance
     if (Player const* playerVictim = victim->ToPlayer())
     {
         if (playerVictim->CanParry())
@@ -2782,7 +2784,7 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
             if (tmpitem)
                 chance = playerVictim->GetFloatValue(PLAYER_PARRY_PERCENTAGE);
 
-            skillBonus = 0.04f * skillDiff;
+            //skillBonus = 0.04f * skillDiff;
         }
     }
     else
@@ -2792,14 +2794,36 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
             chance = 5.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
 
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 1.6f;
+            // if (skillDiff <= 10)
+            //     skillBonus = skillDiff * 0.1f;
+            // else
+            //     skillBonus = 1.0f + (skillDiff - 10) * 1.6f;
         }
     }
 
-    chance += skillBonus;
+    // Own chance appears to be zero / below zero / unmeaningful for some reason (debuffs?): skip calculation, unit is incapable
+    if (chance < 0.005f)
+        return 0.0f;
+
+    // Skill difference can be negative (and reduce our chance to mitigate an attack), which means:
+    // a) Attacker's level is higher
+    // b) Attacker has +skill bonuses
+    bool const isPlayerOrPet = victim->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+    // Defense/weapon skill factor: for players and NPCs
+    float factor = 0.04f;
+    // NPCs gain additional bonus parry chance based on positive skill difference (same value as bonus miss rate)
+    if (!isPlayerOrPet && skillDiff > 0)
+    {
+        if (skillDiff > 10)
+            factor = 0.6f; // Pre-WotLK: 0.2 additional factor for each level above 2
+        else
+            factor = 0.1f;
+    }
+    chance += (skillDiff * factor);
+
+    // None present in 3.3.5 as far as I can see but added for visibility
+    // Reduce enemy parry chance by SPELL_AURA_MOD_COMBAT_RESULT_CHANCE
+    chance += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_COMBAT_RESULT_CHANCE, VICTIMSTATE_PARRY);
 
     // Reduce parry chance by attacker expertise rating
     if (GetTypeId() == TYPEID_PLAYER)
