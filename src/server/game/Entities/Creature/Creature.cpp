@@ -249,9 +249,7 @@ bool AssistDelayEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
             {
                 assistant->SetNoCallAssistance(true);
                 assistant->SetInitialAggroCallAssistance(false); // Set to true on CombatStop
-                // Keep as fallback in case no AI()?
-                // Will be called again by AI()->AttackStart() inside Unit::Attack()
-                assistant->EngageWithTarget(victim);
+
                 if (assistant->IsAIEnabled())
                 {
                     assistant->AI()->AttackStart(victim);
@@ -260,7 +258,8 @@ bool AssistDelayEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
                     // their leash timers become linked and attacking one will keep the rest from evading.
                     if (assistant->GetVictim() && m_owner.IsCreature() && linkLeashTimers)
                         assistant->SetLastLeashExtensionTimePtr(m_owner.ToCreature()->GetLastLeashExtensionTimePtr());
-                }
+                } else
+                    assistant->EngageWithTarget(victim); // Keep as fallback in case no AI()? otherwise called by AI()->AttackStart() inside Unit::Attack()
             }
         }
     }
