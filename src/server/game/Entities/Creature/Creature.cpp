@@ -3746,15 +3746,15 @@ void Creature::UpdateLeashExtensionTime()
 
 uint32 Creature::GetLeashTimeForLevel() const
 {
-    int32 clevel = GetLevel();
+    uint32 clevel = GetLevel();
 
-    if (clevel >= 1 && clevel <= 29)
+    if (clevel <= 29)
         return 11;
-    else if (clevel >= 30 && clevel <= 39)
+    else if (clevel <= 39)
         return 12;
-    else if (clevel >= 40 && clevel <= 44)
+    else if (clevel <= 44)
         return 13;
-    else if (clevel >= 45 && clevel <= 49)
+    else if (clevel <= 49)
         return 14;
     else // Blanket for all creature past level 50 or invalid GetLevel() values
         return 15;
