@@ -2949,8 +2949,11 @@ float Unit::GetUnitCriticalChanceTaken(Unit const* attacker, WeaponAttackType at
     int32 const attackerWeaponSkill = attacker->GetWeaponSkillValue(attackType, this);
     int32 const victimDefenseSkill = GetDefenseSkillValue(attacker);
     int32 const skillDiff = victimDefenseSkill - attackerWeaponSkill;
+    // In case we have bonus wep skill and we need to suppress crit against higher level NPCs
+    int32 const minSkillValue = attacker->GetMaxSkillValueForLevel(this) < attacker->GetWeaponSkillValue(attackType, this) ? attacker->GetMaxSkillValueForLevel(this) : attacker->GetWeaponSkillValue(attackType, this);
+    int32 const cappedSkillDiff = victimDefenseSkill - minSkillValue;
 
-    float skillBonus = 0.0f;
+    //float skillBonus = 0.0f;
     float chance = critDone;
 
     // flat aura mods
@@ -2967,16 +2970,34 @@ float Unit::GetUnitCriticalChanceTaken(Unit const* attacker, WeaponAttackType at
     chance += GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);
 
     // Apply crit chance from defense skill
-    if (GetTypeId() == TYPEID_PLAYER)
-        skillBonus = -skillDiff * 0.04f;
-    else
-    {
-        skillBonus = -skillDiff * 0.12f;
-        if (skillDiff >= 15)
-            skillBonus -= 3.0f;
-    }
+    // Skill difference can be both negative and positive.
+    // a) Positive means that attacker's level is higher or additional weapon +skill bonuses
+    // b) Negative means that victim's level is higher or additional +defense bonuses
+    int32 diff = -skillDiff;
 
-    chance += skillBonus;
+    // Both vMangos and cMangos, against higher leveled NPCs, have 0.2f factor of crit suppression
+    // If we over level the NPCs, we have 0.04f factor of crit addition in vMangos and 0.2f in cMangos
+    // Choose the former to "nerf" the power level?
+    const bool vsPlayerOrPet = HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+
+    // Weapon skill factor: for players and NPCs
+    float factor = 0.04f;
+    // Crit suppression against NPCs with higher level
+    if (!vsPlayerOrPet && diff < 0) {// decrease by 1% of crit per level of target
+        factor = 0.2f;
+        diff = -cappedSkillDiff;     // weapon skill does not benefit crit suppression% vs NPCs
+    }
+    chance += (diff * factor);
+
+    // if (GetTypeId() == TYPEID_PLAYER)
+    //     skillBonus = -skillDiff * 0.04f;
+    // else
+    // {
+    //     skillBonus = -skillDiff * 0.12f;
+    //     if (skillDiff >= 15)
+    //         skillBonus -= 3.0f;
+    // }
+
     // @tswow-begin
     FIRE(Unit,OnCalcMeleeCrit
         , TSUnit(const_cast<Unit*>(attacker))
