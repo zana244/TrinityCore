@@ -2296,6 +2296,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         
         // @epoch-start
         std::string GetAreaString() const;
+
+        bool CanSeeTransmog() const { return m_canSeeTransmog; }
+        void SetCanSeeTransmog(bool on);
         // @epoch-end
 
 // @tswow-begin (Using Rochet2/Transmog)
@@ -2612,6 +2615,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         // @epoch-begin
         bool m_canTeleport;
         bool m_canKnockback;
+        bool m_canSeeTransmog;
         // @epoch-end
 
         std::unique_ptr<PetStable> m_petStable;

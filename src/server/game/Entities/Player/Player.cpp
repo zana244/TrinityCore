@@ -18239,6 +18239,10 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     // @tswow-end
     /** @epoch-end */
 
+    // @epoch-start
+    m_canSeeTransmog = true;
+    // @epoch-end
+
     return true;
 }
 
@@ -28054,5 +28058,31 @@ uint32 Player::GetXPForDifficulty(uint8 difficulty)
         return 0;
 
     return Quest::RoundXPValue(xpentry->Difficulty[difficulty]);
+}
+
+void Player::SetCanSeeTransmog(bool on)
+{
+    if (m_canSeeTransmog == on)
+        return;
+
+    m_canSeeTransmog = on;
+
+    // update own item display
+    for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+        ForceValuesUpdateAtIndex(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2));
+
+    if (m_clientGUIDs.empty())
+        return;
+
+    for (auto itr = m_clientGUIDs.begin(); itr != m_clientGUIDs.end(); ++itr)
+    {
+        if (itr->GetTypeId() != TYPEID_PLAYER)
+            continue;
+
+        Player* pp = ObjectAccessor::FindPlayer(*itr);
+
+        for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+            pp->ForceValuesUpdateAtIndex(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2));
+    }
 }
 //@epoch-end

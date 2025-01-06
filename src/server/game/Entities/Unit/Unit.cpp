@@ -13998,6 +13998,19 @@ bool Unit::IsSplineEnabled() const
     return movespline->Initialized() && !movespline->Finalized();
 }
 
+bool IsItemDisplayIndex(uint32 index)
+{
+    return (index >= PLAYER_VISIBLE_ITEM_1_ENTRYID && index <= PLAYER_VISIBLE_ITEM_19_ENTRYID && (index % 2 == 1));
+}
+
+uint32 ItemDisplayIndexToItemSlot(uint32 index)
+{
+    if (index == PLAYER_VISIBLE_ITEM_1_ENTRYID)
+        return 0;
+
+    return (index - PLAYER_VISIBLE_ITEM_1_ENTRYID) / 2;
+}
+
 void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* target) const
 {
     if (!target)
@@ -14034,7 +14047,22 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* t
         {
             updateMask.SetBit(index);
 
-            if (index == UNIT_NPC_FLAGS)
+            // @epoch-start
+            if (plr && IsItemDisplayIndex(index))
+            {
+                uint32 displayId = m_uint32Values[index];
+
+                if (!target->CanSeeTransmog())
+                {
+                    // Display original items in visible slots
+                    if (Item const* item = plr->GetItemByPos(INVENTORY_SLOT_BAG_0, ItemDisplayIndexToItemSlot(index)))
+                        displayId = item->GetEntry();
+                }
+
+                fieldBuffer << uint32(displayId);
+            }
+            else if (index == UNIT_NPC_FLAGS)
+            // @epoch-end
             {
                 uint32 appendValue = m_uint32Values[UNIT_NPC_FLAGS];
 
