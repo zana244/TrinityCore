@@ -66,6 +66,7 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "Transport.h"
 
 SpellEffectHandlerFn SpellEffectHandlers[TOTAL_SPELL_EFFECTS] =
 {
@@ -3109,6 +3110,9 @@ void Spell::EffectSummonPet()
     std::string new_name = sObjectMgr->GeneratePetName(petentry);
     if (!new_name.empty())
         pet->SetName(new_name);
+    
+    if (Transport* transport = owner->GetTransport())
+        transport->AddFollowerToTransport(owner, pet);
 
     ExecuteLogEffectSummonObject(effectInfo->EffectIndex, pet);
 }
