@@ -44,8 +44,8 @@ class TC_GAME_API Transport : public GameObject, public TransportBase
 
         void AddPassenger(WorldObject* passenger);
         void RemovePassenger(WorldObject* passenger);
-        void AddFollowerToTransport(WorldObject* passenger, WorldObject* follower);
-        void RemoveFollowerToTransport(WorldObject* passenger, WorldObject* follower);
+        void AddFollowerToTransport(Unit* passenger, Unit* follower);
+        void RemoveFollowerFromTransport(Unit* passenger, Unit* follower);
 
         PassengerSet const& GetPassengers() const { return _passengers; }
 

@@ -32,6 +32,7 @@
 #include "Vehicle.h"
 #include "TSProfile.h"
 #include <G3D/Vector3.h>
+#include "Pet.h"
 
 Transport::Transport() : GameObject(),
     _transportInfo(nullptr), _isMoving(true), _pendingStop(false),
@@ -262,10 +263,12 @@ void Transport::AddPassenger(WorldObject* passenger)
         TC_LOG_DEBUG("entities.transport", "Object {} boarded transport {}.", passenger->GetName(), GetName());
 
         if (Player* plr = passenger->ToPlayer())
+        {
             sScriptMgr->OnAddPassenger(this, plr);
 
         if (Pet* pet = plr->GetPet())
-            AddFollowerToTransport(passenger, pet);
+            AddFollowerToTransport(plr, pet);
+        }
     }
 }
 
@@ -300,34 +303,32 @@ void Transport::RemovePassenger(WorldObject* passenger)
             plr->SetFallInformation(0, plr->GetPositionZ());
 
             if (Pet* pet = plr->GetPet())
-                RemoveFollowerToTransport(passenger, pet);
+                RemoveFollowerFromTransport(plr, pet);
         }
     }
 }
 
-void Transport::AddFollowerToTransport(WorldObject* passenger, WorldObject* follower)
+void Transport::AddFollowerToTransport(Unit* passenger, Unit* follower)
 {
     AddPassenger(follower);
-    float x, y, z, o;
-    passenger->m_movementInfo.transport.pos.GetPosition(x, y, z, o);
-    follower->m_movementInfo.transport.pos.Relocate(x, y, z, o);
+    follower->m_movementInfo.transport.pos.Relocate(passenger->GetTransOffset());
     if (follower->IsCreature())
-        follower->NearTeleportTo(passenger->m_movementInfo.pos.x, passenger->m_movementInfo.pos.y, passenger->m_movementInfo.pos.z, passenger->m_movementInfo.pos.o);
+        follower->NearTeleportTo(passenger->GetPosition());
     else
     {
-        follower->Relocate(passenger->m_movementInfo.pos.x, passenger->m_movementInfo.pos.y, passenger->m_movementInfo.pos.z, passenger->m_movementInfo.pos.o);
+        follower->Relocate(passenger->GetPosition());
         follower->SendMovementFlagUpdate();
     }
 }
 
-void Transport::RemoveFollowerFromTransport(WorldObject* passenger, WorldObject* follower)
+void Transport::RemoveFollowerFromTransport(Unit* passenger, Unit* follower)
 {
     RemovePassenger(follower);
     if (follower->IsCreature())
-        follower->NearTeleportTo(passenger->m_movementInfo.pos.x, passenger->m_movementInfo.pos.y, passenger->m_movementInfo.pos.z, passenger->m_movementInfo.pos.o);
+        follower->NearTeleportTo(passenger->GetPosition());
     else
     {
-        follower->Relocate(passenger->m_movementInfo.pos.x, passenger->m_movementInfo.pos.y, passenger->m_movementInfo.pos.z, passenger->m_movementInfo.pos.o);
+        follower->Relocate(passenger->GetPosition());
         follower->SendMovementFlagUpdate();
     }
 }
