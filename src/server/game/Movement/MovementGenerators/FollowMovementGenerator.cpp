@@ -26,6 +26,8 @@
 #include "Unit.h"
 #include "Util.h"
 #include "TSCreature.h"
+#include "Map.h"
+#include "Transport.h"
 
 static void DoMovementInform(Unit* owner, Unit* target)
 {
@@ -88,11 +90,11 @@ static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const
 
 static Position const PredictPosition(Unit* target)
 {
-    Position pos = target->GetPosition();
+    Position pos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
 
      // 0.5 - it's time (0.5 sec) between starting movement opcode (e.g. MSG_MOVE_START_FORWARD) and MSG_MOVE_HEARTBEAT sent by client
     float speed = target->GetSpeed(Movement::SelectSpeedType(target->GetUnitMovementFlags())) * 0.5f;
-    float orientation = target->GetOrientation();
+    float orientation = target->GetTransport() ? target->GetTransOffsetO() : target->GetOrientation();
 
     if (target->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_FORWARD))
     {
@@ -124,6 +126,7 @@ bool FollowMovementGenerator::PositionOkay(Unit* target, bool isPlayerPet, bool&
     if (!_lastTargetPosition)
         return false;
 
+    // Since we are only comparing the positions of the target (past + present), we can do it in global offsets
     float exactDistSq = target->GetExactDistSq(_lastTargetPosition->GetPositionX(), _lastTargetPosition->GetPositionY(), _lastTargetPosition->GetPositionZ());
     float distanceTolerance = 0.25f;
     // For creatures, increase tolerance
@@ -203,6 +206,22 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         return true;
     }
 
+    // // Can switch transports during follow movement.
+    // Transport* transport = target->GetTransport();
+    // if (transport != owner.GetTransport())
+    // {
+    //     if (owner.GetTransport())
+    //         owner.GetTransport()->RemoveFollowerFromTransport(target, &owner);
+
+    //      if (transport)
+    //         transport->AddFollowerToTransport(target, &owner);
+    // }
+
+    // Can't path to target if transports are still different.
+    Transport* transport = target->GetTransport();
+    if (owner.GetTransport() != transport)
+        return;
+
     bool followingMaster = false;
     Pet* oPet = owner->ToPet();
     if (oPet)
@@ -231,16 +250,18 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
                 _recheckPredictedDistanceTimer.Reset(1000);
             }
 
-            owner->SetFacingTo(target->GetOrientation());
+            // what's cleaner?
+            owner->SetFacingTo(transport ? target->GetTransOffsetO() : target->GetOrientation());
         }
     }
     else
     {
-        Position targetPosition = target->GetPosition();
+        // Try to do everything in transport offsets ?
+        Position targetPosition = transport ? target->GetTransOffset() : target->GetPosition();
         _lastTargetPosition = targetPosition;
 
-        // If player is moving and their position is not updated, we need to predict position
-        if (targetIsMoving)
+        // If player is moving and their position is not updated, we need to predict position or we are on a transport
+        if (targetIsMoving || transport)
         {
             Position predictedPosition = PredictPosition(target);
             if (_lastPredictedPosition && _lastPredictedPosition->GetExactDistSq(&predictedPosition) < 0.25f)
@@ -261,10 +282,15 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         else
             _path->Clear();
 
-        target->MovePositionToFirstCollision(targetPosition, owner->GetCombatReach() + _range, target->ToAbsoluteAngle(_angle.RelativeAngle) - target->GetOrientation());
+        float targetO = transport ? target->GetTransOffsetO() : target->GetOrientation();
+        target->MovePositionToFirstCollision(targetPosition, owner->GetCombatReach() + _range, target->ToAbsoluteAngle(_angle.RelativeAngle) - targetO);
 
         float x, y, z;
-        targetPosition.GetPosition(x, y, z);
+
+        if (transport)
+            transport->CalculatePassengerPosition(x, y, z)
+        else
+            targetPosition.GetPosition(x, y, z);
 
         if (owner->IsHovering())
             owner->UpdateAllowedPositionZ(x, y, z);
