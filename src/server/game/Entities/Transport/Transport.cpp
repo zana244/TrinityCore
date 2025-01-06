@@ -717,6 +717,9 @@ void Transport::DelayedTeleportTransport()
             case TYPEID_DYNAMICOBJECT:
                 obj->AddObjectToRemoveList();
                 break;
+            case TYPEID_UNIT:
+                if (obj->IsCreature() && !static_cast<Creature*>(obj)->IsPet())
+                    obj->AddObjectToRemoveList();
             default:
                 RemovePassenger(obj);
                 break;
