@@ -490,7 +490,7 @@ namespace MMAP
             return;
         }
         char fileName[255];
-        sprintf(fileName, "mmaps/go%4u.mmap", displayId);
+        sprintf(fileName, "mmaps/go%04u.mmap", displayId);
         FILE* file = fopen(fileName, "wb");
         if (!file)
         {
@@ -1431,10 +1431,11 @@ namespace MMAP
     //         {"walkableSlopeAngle", 60.0f},
     //         {"liquidFlagMergeThreshold", 0.0f},
     //     };
-        // cmangos defaults
+        // cmangos defaults, from_json()
         float baseUnitDim = 0.2666666f;
         int vertexPerTile = 80;
 
+        config.tileSize = vertexPerTile;
         config.maxVertsPerPoly = DT_VERTS_PER_POLYGON;
         config.cs = baseUnitDim;
         config.ch = baseUnitDim;
@@ -1450,8 +1451,8 @@ namespace MMAP
         // a value >= 3|6 allows npcs to walk over some fences
         // a value >= 4|8 allows npcs to walk over all fences
         config.walkableClimb = 4;
-        config.minRegionArea = 60;
-        config.mergeRegionArea = 50;
+        config.mergeRegionArea = rcSqr(50);
+        config.minRegionArea = rcSqr(60);
         config.maxSimplificationError = 1.8f;           // eliminates most jagged edges (tiny polygons)
         config.detailSampleDist = config.cs * 16;
         config.detailSampleMaxError = config.ch * 1;
