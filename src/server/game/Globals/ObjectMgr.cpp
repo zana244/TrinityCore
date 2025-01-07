@@ -8365,7 +8365,7 @@ std::vector<uint32> ObjectMgr::LoadGameObjectTemplate()
     if (!result)
     {
         TC_LOG_INFO("server.loading", ">> Loaded 0 gameobject definitions. DB table `gameobject_template` is empty.");
-        return;
+        return transportDisplayIds; // should be empty;
     }
 
     _gameObjectTemplateStore.reserve(result->GetRowCount());
