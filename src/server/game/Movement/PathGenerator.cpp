@@ -24,6 +24,7 @@
 #include "DisableMgr.h"
 #include "DetourCommon.h"
 #include "Metric.h"
+#include "Transport.h"
 
 ////////////////// PathGenerator //////////////////
 PathGenerator::PathGenerator(WorldObject const* owner) :
@@ -40,8 +41,15 @@ PathGenerator::PathGenerator(WorldObject const* owner) :
     if (DisableMgr::IsPathfindingEnabled(mapId))
     {
         MMAP::MMapManager* mmap = MMAP::MMapFactory::createOrGetMMapManager();
-        _navMeshQuery = mmap->GetNavMeshQuery(mapId, _source->GetInstanceId());
-        _navMesh = _navMeshQuery ? _navMeshQuery->getAttachedNavMesh() : mmap->GetNavMesh(mapId);
+        if (Transport* transport = owner->GetTransport())
+            _navMeshQuery = mmap->GetModelNavMeshQuery(transport->GetDisplayId());
+        else
+            _navMeshQuery = mmap->GetNavMeshQuery(mapId, _source->GetInstanceId());
+
+        if (_navMeshQuery)
+            _navMesh = _navMeshQuery->getAttachedNavMesh();
+        else  // if no _navMeshQuery do we need to set _navMesh = mmap->GetNavMesh(mapId) ?
+            _navMesh = mmap->GetNavMesh(mapId);
     }
 
     CreateFilter();

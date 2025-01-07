@@ -35,6 +35,7 @@
 #include "PointMovementGenerator.h"
 #include "RBAC.h"
 #include "Nav/DetourFilters.h"
+#include "Transport.h"
 
 #if TRINITY_COMPILER == TRINITY_COMPILER_GNU
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -65,18 +66,35 @@ public:
 
     static bool HandleMmapPathCommand(ChatHandler* handler, char const* args)
     {
-        if (!MMAP::MMapFactory::createOrGetMMapManager()->GetNavMesh(handler->GetSession()->GetPlayer()->GetMapId()))
+        Player* player = handler->GetSession()->GetPlayer();
+        if (!player)
         {
-            handler->PSendSysMessage("NavMesh not loaded for current map.");
+            handler->PSendSysMessage("Invalid target/source selection.");
             return true;
+        }
+
+        if (Transport* transport = player->GetTransport())
+        {
+            if (!MMAP::MMapFactory::createOrGetMMapManager()->GetGONavMesh(transport->GetDisplayId()))
+            {
+                handler->PSendSysMessage("NavMesh not loaded for current map.");
+                return true;
+            }
+        }
+        else
+        {
+            if (!MMAP::MMapFactory::createOrGetMMapManager()->GetNavMesh(handler->GetSession()->GetPlayer()->GetMapId()))
+            {
+                handler->PSendSysMessage("NavMesh not loaded for current map.");
+                return true;
+            }
         }
 
         handler->PSendSysMessage("mmap path:");
 
         // units
-        Player* player = handler->GetSession()->GetPlayer();
         Unit* target = handler->getSelectedUnit();
-        if (!player || !target)
+        if (!target)
         {
             handler->PSendSysMessage("Invalid target/source selection.");
             return true;
