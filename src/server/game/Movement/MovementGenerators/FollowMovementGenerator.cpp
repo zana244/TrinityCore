@@ -28,6 +28,7 @@
 #include "TSCreature.h"
 #include "Map.h"
 #include "Transport.h"
+#include "Log.h"
 
 static void DoMovementInform(Unit* owner, Unit* target)
 {
@@ -90,6 +91,10 @@ static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const
 
 static Position const PredictPosition(Unit* target)
 {
+    TC_LOG_ERROR("pos","PredictPosition {}", target->GetName());
+    TC_LOG_ERROR("pos", "Global X Y Z O {} {} {} {}", target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation());
+    TC_LOG_ERROR("pos", "Trans X Y Z O {} {} {} {}", target->GetTransOffsetX(), target->GetTransOffsetY(), target->GetTransOffsetZ(), target->GetTransOffsetO());
+
     Position pos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
 
      // 0.5 - it's time (0.5 sec) between starting movement opcode (e.g. MSG_MOVE_START_FORWARD) and MSG_MOVE_HEARTBEAT sent by client
@@ -118,6 +123,7 @@ static Position const PredictPosition(Unit* target)
         pos.m_positionY += std::sin(orientation - M_PI / 2.f) * speed;
     }
 
+    TC_LOG_ERROR("pos", "Predict X Y Z O {} {} {} {}", pos.GetPositionX(),  pos.GetPositionY(),  pos.GetPositionZ(),  pos.GetOrientation());
     return pos;
 }
 
@@ -126,8 +132,9 @@ bool FollowMovementGenerator::PositionOkay(Unit* target, bool isPlayerPet, bool&
     if (!_lastTargetPosition)
         return false;
 
-    // Since we are only comparing the positions of the target (past + present), we can do it in global offsets
-    float exactDistSq = target->GetExactDistSq(_lastTargetPosition->GetPositionX(), _lastTargetPosition->GetPositionY(), _lastTargetPosition->GetPositionZ());
+    Position currPos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
+    // target->GetExactDistSq calculates against target->GetPosition, but we care about transport, so calculate directly against the intended position.
+    float exactDistSq = currPos.GetExactDistSq(_lastTargetPosition->GetPositionX(), _lastTargetPosition->GetPositionY(), _lastTargetPosition->GetPositionZ());
     float distanceTolerance = 0.25f;
     // For creatures, increase tolerance
     if (target->GetTypeId() == TYPEID_UNIT)
@@ -145,7 +152,7 @@ bool FollowMovementGenerator::PositionOkay(Unit* target, bool isPlayerPet, bool&
 
     if (isPlayerPet)
     {
-        if (!targetIsMoving)
+        if (!targetIsMoving || !target->GetTransport())
         {
             if (_recheckPredictedDistanceTimer.GetExpiry() > 0ms)
             {
@@ -219,8 +226,6 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
 
     // Can't path to target if transports are still different.
     Transport* transport = target->GetTransport();
-    if (owner.GetTransport() != transport)
-        return;
 
     bool followingMaster = false;
     Pet* oPet = owner->ToPet();
@@ -228,6 +233,9 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
     {
         if (target->GetGUID() == oPet->GetOwnerGUID())
             followingMaster = true;
+
+        if (transport && oPet->GetTransport() != transport)
+            return false;
     }
 
     bool forceDest =
@@ -261,9 +269,9 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         _lastTargetPosition = targetPosition;
 
         // If player is moving and their position is not updated, we need to predict position or we are on a transport
-        if (targetIsMoving || transport)
+        if (targetIsMoving)
         {
-            Position predictedPosition = PredictPosition(target);
+            Position predictedPosition = PredictPosition(target); // Predicts position using movement flags, not transport movement
             if (_lastPredictedPosition && _lastPredictedPosition->GetExactDistSq(&predictedPosition) < 0.25f)
                 return true;
 
@@ -288,7 +296,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         float x, y, z;
 
         if (transport)
-            transport->CalculatePassengerPosition(x, y, z)
+            transport->CalculatePassengerPosition(x, y, z);
         else
             targetPosition.GetPosition(x, y, z);
 

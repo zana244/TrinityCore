@@ -254,7 +254,7 @@ void Transport::AddPassenger(WorldObject* passenger)
 {
     if (!IsInWorld())
         return;
-
+    TC_LOG_ERROR("tp","AddPassenger {} GetGOInfo()->type {}", passenger->GetName(), GetGOInfo()->type);
     if (_passengers.insert(passenger).second)
     {
         passenger->SetTransport(this);
@@ -292,6 +292,7 @@ void Transport::RemovePassenger(WorldObject* passenger)
 
     if (erased || _staticPassengers.erase(passenger)) // static passenger can remove itself in case of grid unload
     {
+        TC_LOG_ERROR("tp","RemovePassenger {}", passenger->GetName());
         passenger->SetTransport(nullptr);
         passenger->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
         passenger->m_movementInfo.transport.Reset();
