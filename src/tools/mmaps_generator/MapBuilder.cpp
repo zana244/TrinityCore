@@ -409,17 +409,15 @@ namespace MMAP
         iv.polyMeshDetail = tile.dmesh;
         for (int i = 0; i < iv.polyMesh->npolys; ++i)
         {
-            if (iv.polyMesh->areas[i] == RC_WALKABLE_AREA)
+            if (uint8 area = iv.polyMesh->areas[i] & NAV_AREA_ALL_MASK)
             {
-                iv.polyMesh->areas[i] = 0; // =SAMPLE_POLYAREA_GROUND in RecastDemo
-                iv.polyMesh->flags[i] = NAV_GROUND;
-            }
-            else
-            {
-                iv.polyMesh->areas[i] = 0;
-                iv.polyMesh->flags[i] = 0;
+                if (area >= NAV_AREA_MIN_VALUE)
+                    iv.polyMesh->flags[i] = 1 << (NAV_AREA_MAX_VALUE - area);
+                else
+                    iv.polyMesh->flags[i] = NAV_GROUND;
             }
         }
+
         // Will be deleted by IntermediateValues
         tile.pmesh = nullptr;
         tile.dmesh = nullptr;
