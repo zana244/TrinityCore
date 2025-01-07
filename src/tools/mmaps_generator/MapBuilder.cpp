@@ -332,6 +332,9 @@ namespace MMAP
         rcConfig config;
         memset(&config, 0, sizeof(rcConfig));
         config = getDefaultConfig();
+        config.detailSampleDist = config.cs * 6.0f;
+        config.minRegionArea = config.minRegionArea / 2;
+
         // this sets the dimensions of the heightfield - should maybe happen before border padding
         rcCalcBounds(verts, nverts, config.bmin, config.bmax);
         rcCalcGridSize(config.bmin, config.bmax, config.cs, &config.width, &config.height);
@@ -435,14 +438,17 @@ namespace MMAP
         params.detailVertsCount = iv.polyMeshDetail->nverts;
         params.detailTris = iv.polyMeshDetail->tris;
         params.detailTriCount = iv.polyMeshDetail->ntris;
-        params.walkableHeight = BASE_UNIT_DIM * config.walkableHeight;
-        params.walkableRadius = BASE_UNIT_DIM * config.walkableRadius;
-        params.walkableClimb = BASE_UNIT_DIM * config.walkableClimb;
+
+        params.walkableHeight = 0.2666666f * config.walkableHeight; // 0.2666666f is BASE_UNIT_DIM in cMangos
+        params.walkableRadius = 0.2666666f * config.walkableRadius;
+        params.walkableClimb = 0.2666666f * config.walkableClimb;
+
         rcVcopy(params.bmin, iv.polyMesh->bmin);
         rcVcopy(params.bmax, iv.polyMesh->bmax);
         params.cs = config.cs;
         params.ch = config.ch;
         params.buildBvTree = true;
+
         unsigned char* navData = nullptr;
         int navDataSize = 0;
         printf("* Building navmesh tile [%f %f %f to %f %f %f]\n",
@@ -502,7 +508,7 @@ namespace MMAP
         // write data
         fwrite(navData, sizeof(unsigned char), navDataSize, file);
         fclose(file);
-        if (m_debug)
+        if (m_debugOutput)
         {
             iv.generateObjFile(modelName, meshData);
             // Write navmesh data
@@ -1405,6 +1411,53 @@ namespace MMAP
         return config;
     }
 
+    rcConfig MapBuilder::getDefaultConfig() const
+    {
+        rcConfig config;
+        memset(&config, 0, sizeof(rcConfig));
+
+    // Data from cMangos --> Unsure if it needs to be different in TC...
+    // return {
+    //         {"borderSize", 5},
+    //         {"detailSampleDist", BASE_UNIT_DIM * 16.0f}, // BASE_UNIT_DIM = 0.2666666f
+    //         {"detailSampleMaxError", BASE_UNIT_DIM},
+    //         {"maxEdgeLen", VERTEX_PER_TILE + 1},     // VERTEX_PER_TILE = 80
+    //         {"maxSimplificationError", 1.8f},
+    //         {"mergeRegionArea", 50},
+    //         {"minRegionArea", 60},
+    //         {"walkableClimb", 4},
+    //         {"walkableHeight", 6},
+    //         {"walkableRadius", 2},
+    //         {"walkableSlopeAngle", 60.0f},
+    //         {"liquidFlagMergeThreshold", 0.0f},
+    //     };
+        // cmangos defaults
+        float baseUnitDim = 0.2666666f;
+        int vertexPerTile = 80;
+
+        config.maxVertsPerPoly = DT_VERTS_PER_POLYGON;
+        config.cs = baseUnitDim;
+        config.ch = baseUnitDim;
+        // Keeping these 2 slope angles the same reduces a lot the number of polys.
+        // 55 should be the minimum, maybe 70 is ok (keep in mind blink uses mmaps), 85 is too much for players
+        config.walkableSlopeAngle = 60;
+        config.walkableSlopeAngleNotSteep = 60;
+        config.tileSize = vertexPerTile;
+        config.walkableRadius = 2;
+        config.borderSize = 5;
+        config.maxEdgeLen = vertexPerTile + 1;        // anything bigger than tileSize
+        config.walkableHeight = 6;
+        // a value >= 3|6 allows npcs to walk over some fences
+        // a value >= 4|8 allows npcs to walk over all fences
+        config.walkableClimb = 4;
+        config.minRegionArea = 60;
+        config.mergeRegionArea = 50;
+        config.maxSimplificationError = 1.8f;           // eliminates most jagged edges (tiny polygons)
+        config.detailSampleDist = config.cs * 16;
+        config.detailSampleMaxError = config.ch * 1;
+
+        return config;
+    }
     /**************************************************************************/
     uint32 MapBuilder::percentageDone(uint32 totalTiles, uint32 totalTilesBuilt) const
     {

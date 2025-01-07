@@ -197,6 +197,7 @@ namespace MMAP
             bool isContinentMap(uint32 mapID) const;
 
             rcConfig GetMapSpecificConfig(uint32 mapID, float bmin[3], float bmax[3], const TileConfig &tileConfig) const;
+            rcConfig getDefaultConfig() const;
 
             uint32 percentageDone(uint32 totalTiles, uint32 totalTilesDone) const;
             uint32 currentPercentageDone() const;
