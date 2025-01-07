@@ -8349,10 +8349,11 @@ inline void CheckGOConsumable(GameObjectTemplate const* goInfo, uint32 dataN, ui
         goInfo->entry, goInfo->type, N, dataN);
 }
 
-void ObjectMgr::LoadGameObjectTemplate()
+std::vector<uint32> ObjectMgr::LoadGameObjectTemplate()
 {
     uint32 oldMSTime = getMSTime();
 
+    std::vector<uint32> transportDisplayIds;
     //                                                 0      1      2        3       4             5          6     7
     QueryResult result = WorldDatabase.Query("SELECT entry, type, displayId, name, IconName, castBarCaption, unk1, size, "
     //                                         8      9      10     11     12     13     14     15     16     17     18      19      20
@@ -8483,6 +8484,9 @@ void ObjectMgr::LoadGameObjectTemplate()
                     CheckGOLockId(&got, got.camera.lockId, 0);
                 break;
             }
+            case GAMEOBJECT_TYPE_TRANSPORT:
+                transportDisplayIds.push_back(got.displayId);
+                break;
             case GAMEOBJECT_TYPE_MO_TRANSPORT:              //15
             {
                 if (got.moTransport.taxiPathId)
@@ -8493,6 +8497,7 @@ void ObjectMgr::LoadGameObjectTemplate()
                 }
                 if (uint32 transportMap = got.moTransport.mapID)
                     _transportMaps.insert(transportMap);
+                transportDisplayIds.push_back(got.displayId);
                 break;
             }
             case GAMEOBJECT_TYPE_SUMMONING_RITUAL:          //18
@@ -8530,6 +8535,7 @@ void ObjectMgr::LoadGameObjectTemplate()
     } while (result->NextRow());
 
     TC_LOG_INFO("server.loading", ">> Loaded {} game object templates in {} ms", _gameObjectTemplateStore.size(), GetMSTimeDiffToNow(oldMSTime));
+    return transportDisplayIds;
 }
 
 void ObjectMgr::LoadGameObjectTemplateAddons()

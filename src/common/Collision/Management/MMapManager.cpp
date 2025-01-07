@@ -222,19 +222,25 @@ namespace MMAP
         return true;
     }
 
-    bool MMapManager::loadGameObject(uint32 displayId)
+    void MMapManager::loadAllGameObjectModels(std::string const& basePath, std::vector<uint32> const& displayIds)
+    {
+        for (uint32 displayId : displayIds)
+            loadGameObject(basePath, displayId);
+    }
+
+    bool MMapManager::loadGameObject(std::string const& basePath, uint32 displayId)
     {
         // we already have this map loaded?
         if (m_loadedModels.find(displayId) != m_loadedModels.end())
             return true;
         // load and init dtNavMesh - read parameters from file
-        uint32 pathLen = sWorld.GetDataPath().length() + strlen("mmaps/go%04i.mmap") + 1;
+        uint32 pathLen = basePath.length() + strlen("mmaps/go%04i.mmap") + 1;
         char* fileName = new char[pathLen];
-        snprintf(fileName, pathLen, (sWorld.GetDataPath() + "mmaps/go%04i.mmap").c_str(), displayId);
+        snprintf(fileName, pathLen, (basePath + "mmaps/go%04i.mmap").c_str(), displayId);
         FILE* file = fopen(fileName, "rb");
         if (!file)
         {
-            DEBUG_LOG("MMAP:loadGameObject: Error: Could not open mmap file %s", fileName);
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Error: Could not open mmap file %s", fileName);
             delete[] fileName;
             return false;
         }
@@ -242,38 +248,38 @@ namespace MMAP
         fread(&fileHeader, sizeof(MmapTileHeader), 1, file);
         if (fileHeader.mmapMagic != MMAP_MAGIC)
         {
-            sLog.outError("MMAP:loadGameObject: Bad header in mmap %s", fileName);
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Bad header in mmap %s", fileName);
             fclose(file);
             return false;
         }
         if (fileHeader.mmapVersion != MMAP_VERSION)
         {
-            sLog.outError("MMAP:loadGameObject: %s was built with generator v%i, expected v%i",
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: %s was built with generator v%i, expected v%i",
                 fileName, fileHeader.mmapVersion, MMAP_VERSION);
             fclose(file);
             return false;
         }
         unsigned char* data = (unsigned char*)dtAlloc(fileHeader.size, DT_ALLOC_PERM);
-        MANGOS_ASSERT(data);
+        ASSERT(data);
         size_t result = fread(data, fileHeader.size, 1, file);
         if (!result)
         {
-            sLog.outError("MMAP:loadGameObject: Bad header or data in mmap %s", fileName);
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Bad header or data in mmap %s", fileName);
             fclose(file);
             return false;
         }
         fclose(file);
         dtNavMesh* mesh = dtAllocNavMesh();
-        MANGOS_ASSERT(mesh);
+        ASSERT(mesh);
         dtStatus r = mesh->init(data, fileHeader.size, DT_TILE_FREE_DATA);
         if (dtStatusFailed(r))
         {
             dtFreeNavMesh(mesh);
-            sLog.outError("MMAP:loadGameObject: Failed to initialize dtNavMesh from file %s. Result 0x%x.", fileName, r);
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Failed to initialize dtNavMesh from file %s. Result 0x%x.", fileName, r);
             delete[] fileName;
             return false;
         }
-        DETAIL_LOG("MMAP:loadGameObject: Loaded file %s [size=%u]", fileName, fileHeader.size);
+        TC_LOG_INFO("maps", "MMAP:loadGameObject: Loaded file %s [size=%u]", fileName, fileHeader.size);
         delete[] fileName;
         MMapGOData* mmap_data = new MMapGOData(mesh);
         m_loadedModels.insert(std::pair<uint32, MMapGOData*>(displayId, mmap_data));
@@ -410,7 +416,7 @@ namespace MMAP
 
         return queryItr->second;
     }
-    
+
         dtNavMeshQuery const* MMapManager::GetModelNavMeshQuery(uint32 displayId)
     {
         if (m_loadedModels.find(displayId) == m_loadedModels.end())

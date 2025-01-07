@@ -24,6 +24,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <mutex>
 
 //  move map related classes
 namespace MMAP
@@ -80,7 +81,8 @@ namespace MMAP
             void InitializeThreadUnsafe(const std::vector<uint32>& mapIds);
             bool loadMap(std::string const& basePath, uint32 mapId, int32 x, int32 y);
             bool loadMapInstance(std::string const& basePath, uint32 mapId, uint32 instanceId);
-            bool loadGameObject(uint32 displayId);
+            void loadAllGameObjectModels(std::string const& basePath, std::vector<uint32> const& displayIds);
+            bool loadGameObject(std::string const& basePath, uint32 displayId);
             bool unloadMap(uint32 mapId, int32 x, int32 y);
             bool unloadMap(uint32 mapId);
             bool unloadMapInstance(uint32 mapId, uint32 instanceId);
