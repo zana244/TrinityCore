@@ -3096,8 +3096,20 @@ bool WorldObject::IsValidAttackTarget(WorldObject const* target, SpellInfo const
     // additional checks - only PvP case
     if (playerAffectingAttacker && playerAffectingTarget)
     {
-        if (playerAffectingTarget->IsPvP())
+        // @epoch-start
+        bool valid = playerAffectingTarget->IsPvP();
+
+        FIRE(
+            Player
+            , OnCheckPvPTarget
+            , TSPlayer(const_cast<Player*>(playerAffectingAttacker))
+            , TSPlayer(const_cast<Player*>(playerAffectingTarget))
+            , TSMutable<bool, bool>(&valid)
+        );
+
+        if (valid)
             return true;
+        // @epoch-end
 
         if (playerAffectingAttacker->IsFFAPvP() && playerAffectingTarget->IsFFAPvP())
             return true;

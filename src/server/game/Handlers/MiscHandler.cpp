@@ -560,6 +560,18 @@ void WorldSession::HandleLogoutCancelOpcode(WorldPackets::Character::LogoutCance
 
 void WorldSession::HandleTogglePvP(WorldPackets::Misc::TogglePvP& togglePvP)
 {
+    // @epoch-start
+    bool cancel = false;
+    FIRE(
+        Player
+        , OnBeforeTogglePvP
+        , TSPlayer(GetPlayer())
+        , TSMutable<bool, bool>(&cancel)
+    );
+    if (cancel)
+        return;
+    // @epoch-end
+
     // this opcode can be used in two ways: Either set explicit new status or toggle old status
     if (togglePvP.Enable)
     {
