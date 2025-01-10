@@ -1793,7 +1793,7 @@ void World::SetInitialWorldSettings()
 
     TC_LOG_INFO("server.loading", "Loading Game Object Templates...");         // must be after LoadPageTexts
     std::vector<uint32> transportDisplayIds = sObjectMgr->LoadGameObjectTemplate();
-    MMAP::MMapFactory::createOrGetMMapManager()->loadAllGameObjectModels(GetDataPath(), transportDisplayIds);
+    MMAP::MMapFactory::createOrGetMMapManager()->loadAllGameObjectModels(m_dataPath, transportDisplayIds);
 
     TC_LOG_INFO("server.loading", "Loading Game Object template addons...");
     sObjectMgr->LoadGameObjectTemplateAddons();
