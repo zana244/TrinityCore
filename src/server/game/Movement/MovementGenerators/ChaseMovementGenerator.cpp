@@ -26,6 +26,7 @@
 #include "Unit.h"
 #include "Util.h"
 #include "TSCreature.h"
+#include "Transport.h"
 
 static bool HasLostTarget(Unit* owner, Unit* target)
 {
@@ -141,6 +142,15 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
     Unit* const target = GetTarget();
     if (!target || !target->IsInWorld())
         return false;
+
+    if (owner->GetTransport() != target->GetTransport())
+    {
+        owner->StopMoving();
+        _lastTargetPosition.reset();
+        if (Creature* cOwner = owner->ToCreature())
+            cOwner->SetCannotReachTarget(false);
+        return true;
+    }
 
     // the owner might be unable to move (rooted or casting), or we have lost the target, pause movement
     if (owner->HasUnitState(UNIT_STATE_NOT_MOVE) || owner->IsMovementPreventedByCasting() || HasLostTarget(owner, target))

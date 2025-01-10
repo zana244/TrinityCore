@@ -283,6 +283,7 @@ namespace MMAP
         delete[] fileName;
         MMapGOData* mmap_data = new MMapGOData(mesh);
         m_loadedModels.insert(std::pair<uint32, MMapGOData*>(displayId, mmap_data));
+        TC_LOG_ERROR("nav","Loaded GO model {}", displayId);
         return true;
     }
 

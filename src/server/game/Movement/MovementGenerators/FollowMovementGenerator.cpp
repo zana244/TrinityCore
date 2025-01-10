@@ -72,7 +72,15 @@ static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const
         if (owner->IsCreature() && target->IsCreature())
             speed = target->GetSpeedInMotion();
 
-        float distance = owner->GetDistance2d(dest.x, dest.y) - target->GetObjectSize() - (*speed / 2.f);
+        // dest is in transport coords
+        // change to global and calculate distance to owner
+        Transport* transport = target->GetTransport();
+        float x = dest.x, y = dest.y, z = dest.z;
+        if (transport)
+            transport->CalculatePassengerPosition(x, y, z); // they hold global coordinates now
+
+        float distance = owner->GetDistance2d(x, y) - target->GetObjectSize() - (*speed / 2.f);
+        TC_LOG_ERROR("pos","velocity distance {}", distance);
         if (distance > 0.f)
         {
             float multiplier = 1.0f;
@@ -91,12 +99,12 @@ static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const
 
 static Position const PredictPosition(Unit* target)
 {
-    TC_LOG_ERROR("pos","PredictPosition {}", target->GetName());
-    TC_LOG_ERROR("pos", "Global X Y Z O {} {} {} {}", target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation());
-    TC_LOG_ERROR("pos", "Trans X Y Z O {} {} {} {}", target->GetTransOffsetX(), target->GetTransOffsetY(), target->GetTransOffsetZ(), target->GetTransOffsetO());
+    //TC_LOG_ERROR("pos","PredictPosition {}", target->GetName());
+    //TC_LOG_ERROR("pos", "Global X Y Z O {} {} {} {}", target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation());
+    //TC_LOG_ERROR("pos", "Trans X Y Z O {} {} {} {}", target->GetTransOffsetX(), target->GetTransOffsetY(), target->GetTransOffsetZ(), target->GetTransOffsetO());
 
-    Position pos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
-
+    //Position pos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
+    Position pos = target->GetPosition();
      // 0.5 - it's time (0.5 sec) between starting movement opcode (e.g. MSG_MOVE_START_FORWARD) and MSG_MOVE_HEARTBEAT sent by client
     float speed = target->GetSpeed(Movement::SelectSpeedType(target->GetUnitMovementFlags())) * 0.5f;
     float orientation = target->GetTransport() ? target->GetTransOffsetO() : target->GetOrientation();
@@ -132,7 +140,9 @@ bool FollowMovementGenerator::PositionOkay(Unit* target, bool isPlayerPet, bool&
     if (!_lastTargetPosition)
         return false;
 
-    Position currPos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
+    //Position currPos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
+    Position currPos = target->GetPosition();
+
     // target->GetExactDistSq calculates against target->GetPosition, but we care about transport, so calculate directly against the intended position.
     float exactDistSq = currPos.GetExactDistSq(_lastTargetPosition->GetPositionX(), _lastTargetPosition->GetPositionY(), _lastTargetPosition->GetPositionZ());
     float distanceTolerance = 0.25f;
@@ -259,13 +269,15 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
             }
 
             // what's cleaner?
-            owner->SetFacingTo(transport ? target->GetTransOffsetO() : target->GetOrientation());
+            TC_LOG_ERROR("pos","owner->SetFacingTo");
+            owner->SetFacingTo(target->GetOrientation());
         }
     }
     else
     {
         // Try to do everything in transport offsets ?
-        Position targetPosition = transport ? target->GetTransOffset() : target->GetPosition();
+        //Position targetPosition = transport ? target->GetTransOffset() : target->GetPosition();
+        Position targetPosition = target->GetPosition();
         _lastTargetPosition = targetPosition;
 
         // If player is moving and their position is not updated, we need to predict position or we are on a transport
@@ -290,31 +302,44 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         else
             _path->Clear();
 
-        float targetO = transport ? target->GetTransOffsetO() : target->GetOrientation();
+        //float targetO = transport ? target->GetTransOffsetO() : target->GetOrientation();
+        float targetO = target->GetOrientation();
         target->MovePositionToFirstCollision(targetPosition, owner->GetCombatReach() + _range, target->ToAbsoluteAngle(_angle.RelativeAngle) - targetO);
 
         float x, y, z;
 
-        if (transport)
-            transport->CalculatePassengerPosition(x, y, z);
-        else
+        // if (transport)
+        //     transport->CalculatePassengerPosition(x, y, z);
+        // else
             targetPosition.GetPosition(x, y, z);
 
         if (owner->IsHovering())
             owner->UpdateAllowedPositionZ(x, y, z);
 
+//        TC_LOG_ERROR("pos","PredictPosition {}", target->GetName());
+//        TC_LOG_ERROR("pos", "Global X Y Z O {} {} {} {}", target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation());
+//        TC_LOG_ERROR("pos", "Trans X Y Z O {} {} {} {}", target->GetTransOffsetX(), target->GetTransOffsetY(), target->GetTransOffsetZ(), target->GetTransOffsetO());
+
+        if (transport)
+        {
+        TC_LOG_ERROR("pos", "Global owner X Y Z O {} {} {} {}", owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation());
+        TC_LOG_ERROR("pos", "Global targetPosition X Y Z O {} {} {} {}", x, y, z, targetPosition.GetOrientation());
+        }
+        // Pass global coordinates
         bool success = _path->CalculatePath(x, y, z, forceDest);
         if (!success || (_path->GetPathType() & PATHFIND_NOPATH && !followingMaster))
         {
             if (!owner->IsStopped())
                 owner->StopMoving();
-
+            TC_LOG_ERROR("pos", "Fail Path");
             return true;
         }
-
+        TC_LOG_ERROR("pos","Past CalculatePath");
         owner->AddUnitState(UNIT_STATE_FOLLOW_MOVE);
 
         Movement::MoveSplineInit init(owner);
+        if (transport)
+            init.DisableTransportPathTransformations(); // We already use transport coords inside?
         init.MovebyPath(_path->GetPath());
         init.SetWalk(target->IsWalking() || target->IsWalking());
         if (Optional<float> velocity = GetVelocity(owner, target, _path->GetActualEndPosition(), owner->IsGuardian()))

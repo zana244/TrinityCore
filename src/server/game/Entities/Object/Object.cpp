@@ -3446,6 +3446,8 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
     desty = pos.m_positionY + dist * std::sin(angle);
     destz = pos.m_positionZ;
 
+    Transport* transport = GetTransport();
+
     // Prevent invalid coordinates here, position is unchanged
     if (!Trinity::IsValidMapCoord(destx, desty))
     {
@@ -3456,6 +3458,7 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
     // Use a detour raycast to get our first collision point
     PathGenerator path(this);
     path.SetUseRaycast(true);
+    // CalculatePath transforms src and dest into transport offsets within.
     path.CalculatePath(destx, desty, destz, false);
 
     // Check for valid path types before we proceed
@@ -3467,6 +3470,8 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
     destx = result.x;
     desty = result.y;
     destz = result.z;
+    if (transport) // transport produces offset, but we need global pos
+        transport->CalculatePassengerPosition(destx, desty, destz);
 
     // check static LOS
     float halfHeight = GetCollisionHeight() * 0.5f;

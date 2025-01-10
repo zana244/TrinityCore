@@ -194,6 +194,7 @@ namespace Movement
         args.splineId = splineIdGen.NewId();
         // Elevators also use MOVEMENTFLAG_ONTRANSPORT but we do not keep track of their position changes
         args.TransformForTransport = unit->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && unit->GetTransGUID();
+        TC_LOG_ERROR("pos","TransformForTransport {}", args.TransformForTransport);
         // mix existing state into new
         args.flags.canswim = unit->CanSwim();
         args.walk = unit->HasUnitMovementFlag(MOVEMENTFLAG_WALKING);
