@@ -488,7 +488,7 @@ namespace MMAP
             return;
         }
         char fileName[255];
-        sprintf(fileName, "mmaps/go%04u.mmap", displayId);
+        sprintf(fileName, "mmaps/go%04u.mmtile", displayId);
         FILE* file = fopen(fileName, "wb");
         if (!file)
         {

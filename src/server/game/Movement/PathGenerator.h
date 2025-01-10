@@ -62,6 +62,7 @@ class TC_GAME_API PathGenerator
         // Calculate the path from owner to given destination
         // return: true if new path was calculated, false otherwise (no change needed)
         bool CalculatePath(float destX, float destY, float destZ, bool forceDest = false);
+        bool CalculatePath(const G3D::Vector3& start, G3D::Vector3& dest, bool forceDest = false);
         bool IsInvalidDestinationZ(Unit const* target) const;
 
         // option setters - use optional
@@ -108,12 +109,17 @@ class TC_GAME_API PathGenerator
         dtNavMesh const* _navMesh;              // the nav mesh
         dtNavMeshQuery const* _navMeshQuery;    // the nav mesh query used to find the path
 
+        const dtNavMeshQuery*   _defaultNavMeshQuery;     // the nav mesh query used to find the path
+        uint32                  _defaultMapId;
+
         dtCustomCostQueryFilter _filter;  // use single filter for all movements, update it when needed
 
         void SetStartPosition(G3D::Vector3 const& point) { _startPosition = point; }
         void SetEndPosition(G3D::Vector3 const& point) { _actualEndPosition = point; _endPosition = point; }
         void SetActualEndPosition(G3D::Vector3 const& point) { _actualEndPosition = point; }
         void NormalizePath();
+        void SetCurrentNavMesh();
+
 
         bool InRange(G3D::Vector3 const& p1, G3D::Vector3 const& p2, float r, float h) const;
         float Dist3DSqr(G3D::Vector3 const& p1, G3D::Vector3 const& p2) const;

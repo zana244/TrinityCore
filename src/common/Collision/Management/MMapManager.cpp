@@ -234,9 +234,9 @@ namespace MMAP
         if (m_loadedModels.find(displayId) != m_loadedModels.end())
             return true;
         // load and init dtNavMesh - read parameters from file
-        uint32 pathLen = basePath.length() + strlen("mmaps/go%04i.mmap") + 1;
+        uint32 pathLen = basePath.length() + strlen("mmaps/go%04i.mmtile") + 1;
         char* fileName = new char[pathLen];
-        snprintf(fileName, pathLen, (basePath + "mmaps/go%04i.mmap").c_str(), displayId);
+        snprintf(fileName, pathLen, (basePath + "mmaps/go%04i.mmtile").c_str(), displayId);
         FILE* file = fopen(fileName, "rb");
         if (!file)
         {

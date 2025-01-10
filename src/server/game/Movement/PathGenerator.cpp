@@ -31,7 +31,7 @@ PathGenerator::PathGenerator(WorldObject const* owner) :
     _polyLength(0), _type(PATHFIND_BLANK), _useStraightPath(false),
     _forceDestination(false), _pointPathLimit(MAX_POINT_PATH_LENGTH), _useRaycast(false),
     _endPosition(G3D::Vector3::zero()), _source(owner), _navMesh(nullptr),
-    _navMeshQuery(nullptr)
+    _navMeshQuery(nullptr), _defaultMapId(_source->GetMapId())
 {
     memset(_pathPolyRefs, 0, sizeof(_pathPolyRefs));
 
@@ -41,15 +41,19 @@ PathGenerator::PathGenerator(WorldObject const* owner) :
     if (DisableMgr::IsPathfindingEnabled(mapId))
     {
         MMAP::MMapManager* mmap = MMAP::MMapFactory::createOrGetMMapManager();
-        if (Transport* transport = owner->GetTransport())
-            _navMeshQuery = mmap->GetModelNavMeshQuery(transport->GetDisplayId());
-        else
-            _navMeshQuery = mmap->GetNavMeshQuery(mapId, _source->GetInstanceId());
+        // Cache defaultNavMeshQuery
+        _defaultNavMeshQuery = mmap->GetNavMeshQuery(mapId, _source->GetInstanceId());
 
-        if (_navMeshQuery)
-            _navMesh = _navMeshQuery->getAttachedNavMesh();
-        else  // if no _navMeshQuery do we need to set _navMesh = mmap->GetNavMesh(mapId) ?
-            _navMesh = mmap->GetNavMesh(mapId);
+
+        // if (Transport* transport = owner->GetTransport())
+        //     _navMeshQuery = mmap->GetModelNavMeshQuery(transport->GetDisplayId());
+        // else
+        //     _navMeshQuery = mmap->GetNavMeshQuery(mapId, _source->GetInstanceId());
+
+        // if (_navMeshQuery)
+        //     _navMesh = _navMeshQuery->getAttachedNavMesh();
+        // else  // if no _navMeshQuery do we need to set _navMesh = mmap->GetNavMesh(mapId) ?
+        //     _navMesh = mmap->GetNavMesh(mapId);
     }
 
     CreateFilter();
@@ -60,23 +64,58 @@ PathGenerator::~PathGenerator()
     TC_LOG_DEBUG("maps.mmaps", "++ PathGenerator::~PathGenerator() for {}", _source->GetGUID().ToString());
 }
 
-bool PathGenerator::CalculatePath(float destX, float destY, float destZ, bool forceDest)
+void PathGenerator::SetCurrentNavMesh()
+{
+    Unit const* sourceUnit = _source->ToUnit();
+    if (sourceUnit && DisableMgr::IsPathfindingEnabled(sourceUnit->GetMapId()))
+    {
+        MMAP::MMapManager* mmap = MMAP::MMapFactory::createOrGetMMapManager();
+        if (Transport* transport = sourceUnit->GetTransport())
+            _navMeshQuery = mmap->GetModelNavMeshQuery(transport->GetDisplayId());
+        else
+        {
+            if (_defaultMapId != sourceUnit->GetMapId()) // Fetch NavMeshQuery again?
+                _defaultNavMeshQuery = mmap->GetNavMeshQuery(sourceUnit->GetMapId(), sourceUnit->GetInstanceId());
+
+            _navMeshQuery = _defaultNavMeshQuery;
+        }
+
+        if (_navMeshQuery)
+            _navMesh = _navMeshQuery->getAttachedNavMesh();
+    }
+}
+
+bool PathGenerator::CalculatePath(float destX, float destY, float destZ, bool forceDest/* = false*/)
 {
     float x, y, z;
     _source->GetPosition(x, y, z);
+    G3D::Vector3 dest(destX, destY, destZ);
 
-    if (!Trinity::IsValidMapCoord(destX, destY, destZ) || !Trinity::IsValidMapCoord(x, y, z))
+    // Modify both src and dest positions from global to transport offset.
+    if (Transport* transport = _source->GetTransport())
+    {
+        transport->CalculatePassengerOffset(x, y, z);
+        transport->CalculatePassengerOffset(dest.x, dest.y, dest.z);
+    }
+
+    return CalculatePath(G3D::Vector3(x, y, z), dest, forceDest);
+}
+
+bool PathGenerator::CalculatePath(const G3D::Vector3& start, G3D::Vector3& dest, bool forceDest/* = false*/)
+{
+    if (!Trinity::IsValidMapCoord(dest.x, dest.y, dest.z) || !Trinity::IsValidMapCoord(start.x, start.y, start.z))
         return false;
 
     TC_METRIC_DETAILED_EVENT("mmap_events", "CalculatePath", "");
 
-    G3D::Vector3 dest(destX, destY, destZ);
     SetEndPosition(dest);
 
-    G3D::Vector3 start(x, y, z);
     SetStartPosition(start);
 
     _forceDestination = forceDest;
+
+    // Choose between map or transport
+    SetCurrentNavMesh();
 
     TC_LOG_DEBUG("maps.mmaps", "++ PathGenerator::CalculatePath() for {}", _source->GetGUID().ToString());
 
@@ -722,6 +761,9 @@ NavTerrainFlag PathGenerator::GetNavTerrain(float x, float y, float z)
 
 bool PathGenerator::HaveTile(const G3D::Vector3& p) const
 {
+    if (_source->GetTransport())
+        return true;
+
     int tx = -1, ty = -1;
     float point[VERTEX_SIZE] = {p.y, p.z, p.x};
 
