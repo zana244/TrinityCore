@@ -317,8 +317,6 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         float targetO = target->GetOrientation();
         target->MovePositionToFirstCollision(targetPosition, owner->GetCombatReach() + _range, target->ToAbsoluteAngle(_angle.RelativeAngle) - targetO);
 
-        float x, y, z;
-
         // if (transport)
         //     transport->CalculatePassengerPosition(x, y, z);
         // else
