@@ -2139,7 +2139,11 @@ float Creature::GetAttackDistance(Unit const* target) const
     if (float(GetLevel() + 5) <= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
     {
         aggroRadius += GetTotalAuraModifier(SPELL_AURA_MOD_DETECT_RANGE);
-        aggroRadius += player->GetTotalAuraModifier(SPELL_AURA_MOD_DETECTED_RANGE);
+
+        if (player)
+            aggroRadius += player->GetTotalAuraModifier(SPELL_AURA_MOD_DETECTED_RANGE);
+        else
+            aggroRadius += target->GetTotalAuraModifier(SPELL_AURA_MOD_DETECTED_RANGE);
     }
 
     // The aggro range of creatures with higher levels than the total player level for the expansion should get the maxlevel treatment
