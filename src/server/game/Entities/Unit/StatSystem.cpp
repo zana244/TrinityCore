@@ -1493,18 +1493,18 @@ void Creature::UpdateAttackPowerAndDamage(bool ranged)
     float attackPowerModNegative = GetAttackPowerModifierValue(unitMod, AP_MOD_NEGATIVE_FLAT);
     float attackPowerMultiplier = GetAttackPowerModifierValue(unitMod, AP_MOD_PCT) - 1.0f;
 
-    // Commenting out until hook is changed to accept both AP Mods
     // @tswow-begin
-    // FIRE_ID(
-    //     GetCreatureTemplate()->events.id
-    //     , Creature,OnUpdateAttackPowerDamage
-    //     , TSCreature(this)
-    //     , TSMutableNumber<float>(&baseAttackPower)
-    //     , TSMutableNumber<float>(&attackPowerMod)
-    //     , TSMutableNumber<float>(&attackPowerMultiplier)
-    //     , false
-    //     , ranged
-    // );
+    FIRE_ID(
+        GetCreatureTemplate()->events.id
+        , Creature,OnUpdateAttackPowerDamage
+        , TSCreature(this)
+        , TSMutableNumber<float>(&baseAttackPower)
+        , TSMutableNumber<float>(&attackPowerModPositive)
+        , TSMutableNumber<float>(&attackPowerModNegative)
+        , TSMutableNumber<float>(&attackPowerMultiplier)
+        , false
+        , ranged
+    );
     // @tswow-end
 
     if (ranged)
@@ -1980,21 +1980,21 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
     // attack power mods are split into positive and negative field
     float attackPowerModPositive = GetAttackPowerModifierValue(unitMod, AP_MOD_POSITIVE_FLAT);
     float attackPowerModNegative = GetAttackPowerModifierValue(unitMod, AP_MOD_NEGATIVE_FLAT);
-
     float attackPowerMultiplier = GetAttackPowerModifierValue(unitMod, AP_MOD_PCT) - 1.0f;
 
-    // Commenting out until hook is changed to accept both AP Mods
+
     // @tswow-begin
-    // FIRE_ID(
-    //     GetCreatureTemplate()->events.id
-    //     , Creature,OnUpdateAttackPowerDamage
-    //     , TSCreature(this)
-    //     , TSMutableNumber<float>(&baseAttackPower)
-    //     , TSMutableNumber<float>(&attPowerMod)
-    //     , TSMutableNumber<float>(&attackPowerMultiplier)
-    //     , true
-    //     , ranged
-    // );
+    FIRE_ID(
+        GetCreatureTemplate()->events.id
+        , Creature,OnUpdateAttackPowerDamage
+        , TSCreature(this)
+        , TSMutableNumber<float>(&baseAttackPower)
+        , TSMutableNumber<float>(&attackPowerModPositive)
+        , TSMutableNumber<float>(&attackPowerModNegative)
+        , TSMutableNumber<float>(&attackPowerMultiplier)
+        , true
+        , ranged
+    );
     // @tswow-end
 
     SetAttackPower(int32(baseAttackPower));
