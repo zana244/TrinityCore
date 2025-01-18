@@ -109,8 +109,8 @@ bool PathGenerator::CalculatePath(const G3D::Vector3& start, G3D::Vector3& dest,
 
     TC_METRIC_DETAILED_EVENT("mmap_events", "CalculatePath", "");
 
-    TC_LOG_ERROR("pos", "src X Y Z {} {} {}", start.x, start.y, start.z);
-    TC_LOG_ERROR("pos", "dest X Y Z {} {} {}", dest.x, dest.y, dest.z);
+    //TC_LOG_ERROR("pos", "src X Y Z {} {} {}", start.x, start.y, start.z);
+    //TC_LOG_ERROR("pos", "dest X Y Z {} {} {}", dest.x, dest.y, dest.z);
     SetEndPosition(dest);
 
     SetStartPosition(start);

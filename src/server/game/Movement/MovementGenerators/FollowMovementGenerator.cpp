@@ -80,7 +80,7 @@ static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const
             transport->CalculatePassengerPosition(x, y, z); // they hold global coordinates now
 
         float distance = owner->GetDistance2d(x, y) - target->GetObjectSize() - (*speed / 2.f);
-        TC_LOG_ERROR("pos","velocity distance {}", distance);
+        //TC_LOG_ERROR("pos","velocity distance {}", distance);
         if (distance > 0.f)
         {
             float multiplier = 1.0f;
@@ -331,8 +331,8 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
 
         if (transport)
         {
-        TC_LOG_ERROR("pos", "Global owner X Y Z O {} {} {} {}", owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation());
-        TC_LOG_ERROR("pos", "Global targetPosition X Y Z O {} {} {} {}", x, y, z, targetPosition.GetOrientation());
+        //TC_LOG_ERROR("pos", "Global owner X Y Z O {} {} {} {}", owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation());
+        //TC_LOG_ERROR("pos", "Global targetPosition X Y Z O {} {} {} {}", x, y, z, targetPosition.GetOrientation());
         }
         // Pass global coordinates
         bool success = _path->CalculatePath(x, y, z, forceDest);
@@ -343,7 +343,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
             TC_LOG_ERROR("pos", "Fail Path");
             return true;
         }
-        TC_LOG_ERROR("pos","Past CalculatePath");
+        //TC_LOG_ERROR("pos","Past CalculatePath");
         owner->AddUnitState(UNIT_STATE_FOLLOW_MOVE);
 
         Movement::MoveSplineInit init(owner);
