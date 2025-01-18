@@ -297,7 +297,7 @@ namespace MMAP
         for (int i = 0; i < allTris.size() / 3; i++)
             fprintf(objFile, "f %i %i %i\n", tris[i * 3] + 1, tris[i * 3 + 1] + 1, tris[i * 3 + 2] + 1);
         fclose(objFile);
-#if 1
+#if 0
         printf("%sWriting debug output...                       \r", filename.c_str());
         realFileName = "meshes/" + filename + ".map";
         objFile = fopen(realFileName.c_str(), "wb");

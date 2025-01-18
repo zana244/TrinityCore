@@ -82,12 +82,6 @@ class TC_GAME_API Transport : public GameObject, public TransportBase
             TransportBase::CalculatePassengerOffset(x, y, z, o, GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation());
         }
 
-        /// This method transforms supplied global orientation into transport orientation
-        void CalculatePassengerOrientation(float& o) const override
-        {
-            TransportBase::CalculatePassengerOrientation(o, GetOrientation());
-        }
-
         uint32 GetTransportPeriod() const override { return GetUInt32Value(GAMEOBJECT_LEVEL); }
         void SetPeriod(uint32 period) { SetLevel(period); }
         uint32 GetTimer() const { return GetGOValue()->Transport.PathProgress; }

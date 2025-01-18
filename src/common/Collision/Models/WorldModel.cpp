@@ -623,8 +623,7 @@ namespace VMAP
         uint32 chunkSize = 0;
         uint32 count = 0;
         char chunk[8];                          // Ignore the added magic header
-        if (!readChunk(rf, chunk, VMAP_MAGIC, 8)) //result = false;
-            printf("failed readchunk\n");
+        if (!readChunk(rf, chunk, VMAP_MAGIC, 8)) result = false;
 
         if (result && !readChunk(rf, chunk, "WMOD", 4)) result = false;
         if (result && fread(&chunkSize, sizeof(uint32), 1, rf) != 1) result = false;

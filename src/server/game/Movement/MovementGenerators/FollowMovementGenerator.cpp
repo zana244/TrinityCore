@@ -80,7 +80,7 @@ static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const
             transport->CalculatePassengerPosition(x, y, z); // they hold global coordinates now
 
         float distance = owner->GetDistance2d(x, y) - target->GetObjectSize() - (*speed / 2.f);
-        //TC_LOG_ERROR("pos","velocity distance {}", distance);
+        TC_LOG_ERROR("pos","velocity distance {}", distance);
         if (distance > 0.f)
         {
             float multiplier = 1.0f;
@@ -145,7 +145,6 @@ bool FollowMovementGenerator::PositionOkay(Unit* target, bool isPlayerPet, bool&
 
     // target->GetExactDistSq calculates against target->GetPosition, but we care about transport, so calculate directly against the intended position.
     float exactDistSq = currPos.GetExactDistSq(_lastTargetPosition->GetPositionX(), _lastTargetPosition->GetPositionY(), _lastTargetPosition->GetPositionZ());
-    //TC_LOG_ERROR("pos", "exactDistSq {}", exactDistSq);
     float distanceTolerance = 0.25f;
     // For creatures, increase tolerance
     if (target->GetTypeId() == TYPEID_UNIT)
@@ -170,7 +169,6 @@ bool FollowMovementGenerator::PositionOkay(Unit* target, bool isPlayerPet, bool&
                 _recheckPredictedDistanceTimer.Update(diff);
                 if (_recheckPredictedDistanceTimer.Passed())
                 {
-                    TC_LOG_ERROR("pos","!targetisMoving passed");
                     _recheckPredictedDistanceTimer = 0;
                     return false;
                 }
@@ -271,7 +269,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
             }
 
             // what's cleaner?
-            //TC_LOG_ERROR("pos","owner->SetFacingTo");
+            TC_LOG_ERROR("pos","owner->SetFacingTo");
             owner->SetFacingTo(target->GetOrientation());
         }
     }
@@ -314,20 +312,12 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
             transport->CalculatePassengerPosition(x, y, z);
             targetPosition.Relocate(x, y, z);
         }
-        //float targetO = transport ? target->GetTransOffsetO() : target->GetOrientation();
-        //TC_LOG_ERROR("pos", "targetPos before MovePosition X Y Z O {} {} {} {}", x, y, z, targetPosition.GetOrientation());
 
-        // on land GetOrientation() + PI/2 = ToAbsoluteAngle(_angle.RelativeAngle)
+        //float targetO = transport ? target->GetTransOffsetO() : target->GetOrientation();
         float targetO = target->GetOrientation();
-        TC_LOG_ERROR("pos","target->TransOffsetO {}", target->GetTransOffsetO());
-        TC_LOG_ERROR("pos","target->GetOrientation {}", targetO);
-        TC_LOG_ERROR("pos","target->ToAbsoluteAngle(_angle.RelativeAngle) {}", target->ToAbsoluteAngle(_angle.RelativeAngle));
-        TC_LOG_ERROR("pos", "angle diff {}", target->ToAbsoluteAngle(_angle.RelativeAngle) - targetO);
-        // This one sets targetPosition to the left of the character -- IDEALLY
-        // Need to make it work on transport
         target->MovePositionToFirstCollision(targetPosition, owner->GetCombatReach() + _range, target->ToAbsoluteAngle(_angle.RelativeAngle) - targetO);
 
-        // targetPosition is still in global coordinates
+        float x, y, z;
 
         // if (transport)
         //     transport->CalculatePassengerPosition(x, y, z);
@@ -341,7 +331,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
 //        TC_LOG_ERROR("pos", "Global X Y Z O {} {} {} {}", target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation());
 //        TC_LOG_ERROR("pos", "Trans X Y Z O {} {} {} {}", target->GetTransOffsetX(), target->GetTransOffsetY(), target->GetTransOffsetZ(), target->GetTransOffsetO());
 
-        if (transport || true)
+        if (transport)
         {
         TC_LOG_ERROR("pos", "Global owner X Y Z O {} {} {} {}", owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation());
         TC_LOG_ERROR("pos", "Global targetPosition X Y Z O {} {} {} {}", x, y, z, targetPosition.GetOrientation());
@@ -355,7 +345,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
             TC_LOG_ERROR("pos", "Fail Path");
             return true;
         }
-        //TC_LOG_ERROR("pos","Past CalculatePath");
+        TC_LOG_ERROR("pos","Past CalculatePath");
         owner->AddUnitState(UNIT_STATE_FOLLOW_MOVE);
 
         Movement::MoveSplineInit init(owner);

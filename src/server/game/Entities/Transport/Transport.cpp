@@ -585,8 +585,8 @@ void Transport::LoadStaticPassengers()
             CreateGOPassenger(spawnId, sObjectMgr->GetGameObjectData(spawnId));
 
         // Creatures on transport
-        //for (ObjectGuid::LowType spawnId : guids.creatures)
-        //    CreateNPCPassenger(spawnId, sObjectMgr->GetCreatureData(spawnId));
+        for (ObjectGuid::LowType spawnId : guids.creatures)
+            CreateNPCPassenger(spawnId, sObjectMgr->GetCreatureData(spawnId));
     }
 }
 

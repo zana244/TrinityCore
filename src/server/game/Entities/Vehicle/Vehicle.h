@@ -103,12 +103,6 @@ class TC_GAME_API Vehicle : public TransportBase
                 GetBase()->GetPositionZ(), GetBase()->GetOrientation());
         }
 
-        /// This method transforms supplied global orientation into transport orientation
-        void CalculatePassengerOrientation(float& o) const override
-        {
-            TransportBase::CalculatePassengerOrientation(o, GetBase()->GetOrientation());
-        }
-
         void RemovePendingEvent(VehicleJoinEvent* e);
         void RemovePendingEventsForSeat(int8 seatId);
 

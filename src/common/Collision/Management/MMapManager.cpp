@@ -91,7 +91,6 @@ namespace MMAP
 
         dtNavMesh* mesh = dtAllocNavMesh();
         ASSERT(mesh);
-        TC_LOG_ERROR("pos","LoadMapData mesh->init mapId {}", mapId);
         if (dtStatusFailed(mesh->init(&params)))
         {
             dtFreeNavMesh(mesh);
@@ -250,15 +249,15 @@ namespace MMAP
         if (fileHeader.mmapMagic != MMAP_MAGIC)
         {
             TC_LOG_ERROR("maps", "MMAP:loadGameObject: Bad header in mmap %s", fileName);
-            //fclose(file);
-            //return false;
+            fclose(file);
+            return false;
         }
         if (fileHeader.mmapVersion != MMAP_VERSION)
         {
             TC_LOG_ERROR("maps", "MMAP:loadGameObject: %s was built with generator v%i, expected v%i",
                 fileName, fileHeader.mmapVersion, MMAP_VERSION);
-            //fclose(file);
-            //return false;
+            fclose(file);
+            return false;
         }
         unsigned char* data = (unsigned char*)dtAlloc(fileHeader.size, DT_ALLOC_PERM);
         ASSERT(data);
@@ -272,7 +271,6 @@ namespace MMAP
         fclose(file);
         dtNavMesh* mesh = dtAllocNavMesh();
         ASSERT(mesh);
-        TC_LOG_ERROR("pos","LoadGameObject mesh->init displayId {}", displayId);
         dtStatus r = mesh->init(data, fileHeader.size, DT_TILE_FREE_DATA);
         if (dtStatusFailed(r))
         {

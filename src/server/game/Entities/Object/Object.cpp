@@ -3441,12 +3441,10 @@ void WorldObject::MovePosition(Position &pos, float dist, float angle)
 void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float angle)
 {
     angle += GetOrientation();
-    TC_LOG_ERROR("pos","MovePosition");
     float destx, desty, destz;
     destx = pos.m_positionX + dist * std::cos(angle);
     desty = pos.m_positionY + dist * std::sin(angle);
     destz = pos.m_positionZ;
-    TC_LOG_ERROR("pos", "angle {} X {} Y {} Z {}", angle, destx, desty, destz);
 
     Transport* transport = GetTransport();
 
@@ -3463,19 +3461,15 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
     // CalculatePath transforms src and dest into transport offsets within.
     path.CalculatePath(destx, desty, destz, false);
 
-    // PROBABLY FAILS HERE !!!!!!!!!!!!!!!!!!!!
     // Check for valid path types before we proceed
     if (!(path.GetPathType() & PATHFIND_NOT_USING_PATH))
-    {
-        TC_LOG_ERROR("pos", "path.GetPathType {}", path.GetPathType());
         if (path.GetPathType() & ~(PATHFIND_NORMAL | PATHFIND_SHORTCUT | PATHFIND_INCOMPLETE | PATHFIND_FARFROMPOLY_END))
             return;
-    }
+
     G3D::Vector3 result = path.GetPath().back();
     destx = result.x;
     desty = result.y;
     destz = result.z;
-    TC_LOG_ERROR("pos", "result X {} Y {} Z {}", destx, desty, destz);
     if (transport) // transport produces offset, but we need global pos
         transport->CalculatePassengerPosition(destx, desty, destz);
 
