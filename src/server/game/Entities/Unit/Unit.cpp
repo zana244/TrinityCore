@@ -2280,7 +2280,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         , TSMutableNumber<float>(&block_chance_f)
         , TSMutableNumber<float>(&parry_chance_f)
         , attType
-        );
+    );
 
     int32 miss_chance = int32(miss_chance_f*100.0f);
     int32 crit_chance = int32(crit_chance_f*100.0f);
@@ -2551,15 +2551,38 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     uint32 roll = urand(0, 9999);
 
-    uint32 missChance = uint32(MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id) * 100.0f);
+    // @epoch-start
+    float miss_chance_f = MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id);
+    float resist_chance_f = victim->GetMechanicResistChance(spellInfo);
+    float dodge_chance_f = GetUnitDodgeChance(attType, victim);
+    float block_chance_f = GetUnitBlockChance(attType, victim);
+    float parry_chance_f = GetUnitParryChance(attType, victim);
+
+    FIRE(Unit,OnCalcMeleeSpellOutcome
+        , TSUnit(const_cast<Unit*>(this))
+        , TSUnit(const_cast<Unit*>(victim))
+        , TSMutableNumber<float>(&miss_chance_f)
+        , TSMutableNumber<float>(&resist_chance_f)
+        , TSMutableNumber<float>(&dodge_chance_f)
+        , TSMutableNumber<float>(&block_chance_f)
+        , TSMutableNumber<float>(&parry_chance_f)
+        , attType
+    );
+
+    uint32 missChance = uint32(miss_chance_f*100.0f);
+    int32 resistChance = int32(resist_chance_f*100.0f);
+    int32 dodgeChance = int32(dodge_chance_f*100.0f);
+    int32 blockChance = int32(block_chance_f*100.0f);
+    int32 parryChance = int32(parry_chance_f*100.0f);
+    // @epoch-end
+
     // Roll miss
     uint32 tmp = missChance;
     if (roll < tmp)
         return SPELL_MISS_MISS;
 
     // Chance resist mechanic
-    int32 resist_chance = victim->GetMechanicResistChance(spellInfo) * 100;
-    tmp += resist_chance;
+    tmp += resistChance;
     if (roll < tmp)
         return SPELL_MISS_RESIST;
 
@@ -2641,7 +2664,6 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     if (canDodge)
     {
         // Roll dodge
-        int32 dodgeChance = int32(GetUnitDodgeChance(attType, victim) * 100.0f);
         if (dodgeChance < 0)
             dodgeChance = 0;
 
@@ -2652,7 +2674,6 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     if (canParry)
     {
         // Roll parry
-        int32 parryChance = int32(GetUnitParryChance(attType, victim) * 100.0f);
         if (parryChance < 0)
             parryChance = 0;
 
@@ -2663,7 +2684,6 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     if (canBlock)
     {
-        int32 blockChance = int32(GetUnitBlockChance(attType, victim) * 100.0f);
         if (blockChance < 0)
             blockChance = 0;
         tmp += blockChance;
