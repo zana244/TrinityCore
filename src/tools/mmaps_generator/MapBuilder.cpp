@@ -346,12 +346,23 @@ namespace MMAP
             return;
         }
         unsigned char* m_triareas = new unsigned char[ntris];
-        memset(m_triareas, 0, ntris * sizeof(unsigned char));
-        rcMarkWalkableTriangles(m_rcContext, config.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas);
+        memset(m_triareas, NAV_AREA_GROUND, ntris * sizeof(unsigned char));
+        rcClearUnwalkableTriangles(m_rcContext, config.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas);
+
+        // mark almost unwalkable triangles with steep flag
+        //rcModAlmostUnwalkableTriangles(m_rcContext, 50.0f, verts, nverts, tris, ntris, m_triareas);
+        
+        // try with NAV_AREA_GROUND and without
+        // no rcModAlmostUnwalkableTriangles in TC, take rcMarkWalkableTriangles from buildMoveMapTile
+        rcMarkWalkableTriangles(m_rcContext, config.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas, NAV_AREA_GROUND);
+
         rcRasterizeTriangles(m_rcContext, verts, nverts, tris, m_triareas, ntris, *tile.solid, config.walkableClimb);
+        delete[] m_triareas;
+
         rcFilterLowHangingWalkableObstacles(m_rcContext, config.walkableClimb, *tile.solid);
         rcFilterLedgeSpans(m_rcContext, config.walkableHeight, config.walkableClimb, *tile.solid);
         rcFilterWalkableLowHeightSpans(m_rcContext, config.walkableHeight, *tile.solid);
+
         tile.chf = rcAllocCompactHeightfield();
         if (!tile.chf || !rcBuildCompactHeightfield(m_rcContext, config.walkableHeight, config.walkableClimb, *tile.solid, *tile.chf))
         {
@@ -374,7 +385,7 @@ namespace MMAP
             printf("Failed building distance field!         \n");
             return;
         }
-        if (!rcBuildRegions(m_rcContext, *tile.chf, 0, config.minRegionArea, config.mergeRegionArea))
+        if (!rcBuildRegions(m_rcContext, *tile.chf, config.borderSize, config.minRegionArea, config.mergeRegionArea))
         {
             printf("Failed building regions!                \n");
             return;
@@ -404,6 +415,7 @@ namespace MMAP
         tile.chf = nullptr;
         rcFreeContourSet(tile.cset);
         tile.cset = nullptr;
+
         IntermediateValues iv;
         iv.polyMesh = tile.pmesh;
         iv.polyMeshDetail = tile.dmesh;
