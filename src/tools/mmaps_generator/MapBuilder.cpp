@@ -335,9 +335,39 @@ namespace MMAP
         config.detailSampleDist = config.cs * 6.0f;
         config.minRegionArea = config.minRegionArea / 2;
 
+        printf("width %d\n", config.width);
+        printf("height %d\n", config.height);
+        printf("tileSize %d\n", config.tileSize);
+        printf("borderSize %d\n", config.borderSize);
+        printf("cs %f\n", config.cs);
+        printf("ch %f\n", config.ch);
+        printf("bmin %f %f %f\n", config.bmin[0], config.bmin[1], config.bmin[2]);
+        printf("bmax %f %f %f\n", config.bmax[0], config.bmax[1], config.bmax[2]);
+        printf("walkableSlopeAngle %d\n", config.walkableSlopeAngle);
+        printf("walkableHeight %d\n", config.walkableHeight);
+        printf("walkableClimb %d\n", config.walkableClimb);
+        printf("maxEdgeLen %d\n", config.maxEdgeLen);
+        printf("maxSimplificationError %f\n", config.maxSimplificationError);
+        printf("minRegionArea %d\n", config.minRegionArea);
+        printf("mergeRegionArea %d\n", config.mergeRegionArea);
+        printf("maxVertsPerPoly %d\n", config.maxVertsPerPoly);
+        printf("detailSampleDist %f\n", config.detailSampleDist);
+        printf("detailSampleMaxError %f\n", config.detailSampleMaxError);
+//        printf("liquidFlagMergeThreshold %f\n", config.liquidFlagMergeThreshold);
+
         // this sets the dimensions of the heightfield - should maybe happen before border padding
         rcCalcBounds(verts, nverts, config.bmin, config.bmax);
         rcCalcGridSize(config.bmin, config.bmax, config.cs, &config.width, &config.height);
+        printf("CALCULATED GRID SIZE\n");
+        printf("cs %f\n", config.cs);
+        printf("ch %f\n", config.ch);
+        printf("bmin %f %f %f\n", config.bmin[0], config.bmin[1], config.bmin[2]);
+        printf("bmax %f %f %f\n", config.bmax[0], config.bmax[1], config.bmax[2]);
+
+        // tverts = verts
+        // tvertcount = nverts
+        // ttris = tris
+        // ttricount = ntris
         Tile tile;
         tile.solid = rcAllocHeightfield();
         if (!tile.solid || !rcCreateHeightfield(m_rcContext, *tile.solid, config.width, config.height, config.bmin, config.bmax, config.cs, config.ch))
@@ -461,6 +491,26 @@ namespace MMAP
         params.ch = config.ch;
         params.buildBvTree = true;
 
+        printf("PARAMS **************************\n");
+        //printf("params.verts %d\n",  params.verts);
+        printf("params.vertCount %d\n", params.vertCount);
+        //printf("params.polys %d\n", params.polys);
+        //printf("params.polyAreas %d\n", params.polyAreas);
+        //("params.polyFlags %f\n", params.polyFlags);
+        printf("params.polyCount %d\n", params.polyCount);
+        printf("params.nvp %d\n", params.nvp);
+        //printf("params.detailMeshes %f\n", params.detailMeshes);
+        //printf("params.detailVerts %d\n", params.detailVerts);
+        printf("params.detailVertsCount %d\n", params.detailVertsCount);
+        printf("params.detailTriCount %d\n", params.detailTriCount);
+        printf("params.walkableHeight %f\n", params.walkableHeight);
+        printf("params.walkableRadius %f\n", params.walkableRadius);
+        printf("params.walkableClimb %f\n", params.walkableClimb);
+        printf("params.cs %f\n", params.cs);
+        printf("params.ch %f\n", params.ch);
+        printf("bmin %f %f %f\n", params.bmin[0], params.bmin[1], params.bmin[2]);
+        printf("bmax %f %f %f\n", params.bmax[0], params.bmax[1], params.bmax[2]);
+
         unsigned char* navData = nullptr;
         int navDataSize = 0;
         printf("* Building navmesh tile [%f %f %f to %f %f %f]\n",
@@ -501,9 +551,44 @@ namespace MMAP
             printf("Failed building navmesh tile!           \n");
             return;
         }
+        printf(" tileX %d tileY %d", params.tileX, params.tileY);
         char fileName[255];
+#if 0
+        //TODO: extract additional data that will enable RecastDemo viewing of transport mmaps
+        //navmesh creation params
+        dtNavMeshParams navMeshParams;
+        memset(&navMeshParams, 0, sizeof(dtNavMeshParams));
+        navMeshParams.tileWidth = GRID_SIZE;
+        navMeshParams.tileHeight = GRID_SIZE;
+        rcVcopy(navMeshParams.orig, config.bmin);
+        navMeshParams.maxTiles = 1;
+        navMeshParams.maxPolys = 1 << DT_POLY_BITS;
+        dtNavMesh* navMesh = nullptr;
+        navMesh = dtAllocNavMesh();
+        printf("[Map %03i] Creating navMesh...                        \r", displayId);
+        if (!navMesh->init(&navMeshParams))
+        {
+           printf("[Map %03i] Failed creating navmesh!                   \n", displayId);
+           return;
+        }
+        sprintf(fileName, "mmaps/%03u.mmap", displayId);
+        FILE* file = fopen(fileName, "wb");
+        if (!file)
+        {
+           dtFreeNavMesh(navMesh);
+           char message[1024];
+           sprintf(message, "[Map %03i] Failed to open %s for writing!             \n", displayId, fileName);
+           perror(message);
+           return;
+        }
+        // now that we know navMesh params are valid, we can write them to file
+        fwrite(&navMeshParams, sizeof(dtNavMeshParams), 1, file);
+        fclose(file);
+
+#endif
         sprintf(fileName, "mmaps/go%04u.mmtile", displayId);
         FILE* file = fopen(fileName, "wb");
+        //file = fopen(fileName, "wb");
         if (!file)
         {
             char message[1024];
@@ -1456,8 +1541,8 @@ namespace MMAP
         config.walkableSlopeAngle = 60;
         config.walkableSlopeAngleNotSteep = 60;
         config.tileSize = vertexPerTile;
-        config.walkableRadius = 2;
-        config.borderSize = 5;
+        config.walkableRadius = 2; //2;
+        config.borderSize = 5; // 5
         config.maxEdgeLen = vertexPerTile + 1;        // anything bigger than tileSize
         config.walkableHeight = 6;
         // a value >= 3|6 allows npcs to walk over some fences
@@ -1466,7 +1551,7 @@ namespace MMAP
         config.mergeRegionArea = rcSqr(50);
         config.minRegionArea = rcSqr(60);
         config.maxSimplificationError = 1.8f;           // eliminates most jagged edges (tiny polygons)
-        config.detailSampleDist = config.cs * 16;
+        config.detailSampleDist = 2; //config.cs * 16;
         config.detailSampleMaxError = config.ch * 1;
 
         return config;

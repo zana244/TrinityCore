@@ -14030,10 +14030,16 @@ void Unit::SetFacingTo(float ori, bool force)
     if (!force && (!IsStopped() || !movespline->Finalized()))
         return;
 
+    TC_LOG_ERROR("pos","SetFacingTo ori {}", ori);
     Movement::MoveSplineInit init(this);
     init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
 //    if (HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && GetTransGUID())
 //        init.DisableTransportPathTransformations(); // It makes no sense to target global orientation
+
+//    if (Transport* transport = GetTransport())
+//        transport->CalculatePassengerOrientation(ori);
+    TC_LOG_ERROR("pos","SetFacingTo ori pass {}", ori);
+
     init.SetFacing(ori);
 
     //GetMotionMaster()->LaunchMoveSpline(std::move(init), EVENT_FACE, MOTION_PRIORITY_HIGHEST);

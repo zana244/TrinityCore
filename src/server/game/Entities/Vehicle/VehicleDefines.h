@@ -136,6 +136,9 @@ public:
     /// This method transforms supplied global coordinates into local offsets
     virtual void CalculatePassengerOffset(float& x, float& y, float& z, float* o = nullptr) const = 0;
 
+    /// This method transforms supplied global orientation into transport orientation
+    virtual void CalculatePassengerOrientation(float& o) const = 0;
+
 protected:
     static void CalculatePassengerPosition(float& x, float& y, float& z, float* o, float transX, float transY, float transZ, float transO)
     {
@@ -159,6 +162,11 @@ protected:
         float inx = x, iny = y;
         y = (iny - inx * std::tan(transO)) / (std::cos(transO) + std::sin(transO) * std::tan(transO));
         x = (inx + iny * std::tan(transO)) / (std::cos(transO) + std::sin(transO) * std::tan(transO));
+    }
+
+    static void CalculatePassengerOrientation(float& o, float transO)
+    {
+            o = Position::NormalizeOrientation(transO + o);
     }
 };
 

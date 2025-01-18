@@ -225,9 +225,11 @@ dtStatus dtNavMesh::init(const dtNavMeshParams* params)
 {
 	memcpy(&m_params, params, sizeof(dtNavMeshParams));
 	dtVcopy(m_orig, params->orig);
+	printf("dtNavMesh::init %f %f %f\n", m_orig[0], m_orig[1], m_orig[2]);
 	m_tileWidth = params->tileWidth;
 	m_tileHeight = params->tileHeight;
-	
+	printf("dtNavMesh::init width height %f %f\n", m_tileWidth, m_tileHeight);
+
 	// Init tiles
 	m_maxTiles = params->maxTiles;
 	m_tileLutSize = dtNextPow2(params->maxTiles/4);
@@ -275,10 +277,15 @@ dtStatus dtNavMesh::init(unsigned char* data, const int dataSize, const int flag
 
 	dtNavMeshParams params;
 	dtVcopy(params.orig, header->bmin);
+
+	printf("dtNavMesh::init char %f %f %f", params.orig[0], params.orig[1], params.orig[2]);
+
 	params.tileWidth = header->bmax[0] - header->bmin[0];
 	params.tileHeight = header->bmax[2] - header->bmin[2];
 	params.maxTiles = 1;
 	params.maxPolys = header->polyCount;
+	printf("dtNavMesh::init char %d \n", params.maxPolys);
+
 	
 	dtStatus status = init(&params);
 	if (dtStatusFailed(status))
@@ -1185,6 +1192,8 @@ void dtNavMesh::calcTileLoc(const float* pos, int* tx, int* ty) const
 {
 	*tx = (int)floorf((pos[0]-m_orig[0]) / m_tileWidth);
 	*ty = (int)floorf((pos[2]-m_orig[2]) / m_tileHeight);
+	printf("calcTileLoc pos[0] %f m_orig[0] %f m_tileWidth %f tx %d \n", pos[0], m_orig[0], m_tileWidth, *tx);
+	printf("calcTileLoc pos[2] %f m_orig[2] %f m_tileHeight %f ty %d \n", pos[2], m_orig[2], m_tileHeight, *ty);
 }
 
 dtStatus dtNavMesh::getTileAndPolyByRef(const dtPolyRef ref, const dtMeshTile** tile, const dtPoly** poly) const

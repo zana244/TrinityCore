@@ -26,6 +26,7 @@
 #include "DetourAlloc.h"
 #include "DetourAssert.h"
 #include <new>
+#include <stdio.h>
 
 /// @class dtQueryFilter
 ///
@@ -688,23 +689,32 @@ dtStatus dtNavMeshQuery::findNearestPoly(const float* center, const float* halfE
 										 dtPolyRef* nearestRef, float* nearestPt) const
 {
 	dtAssert(m_nav);
-
+	printf("findNearestPoly\n");
 	if (!nearestRef)
 		return DT_FAILURE | DT_INVALID_PARAM;
+	printf("nearestRef\n");
 
 	// queryPolygons below will check rest of params
 	
 	dtFindNearestPolyQuery query(this, center);
-
+	if (center[0] < 20 && center[0] > -20)
+	{
+	printf("nearestRef before %u \n", query.nearestRef());
+	}
 	dtStatus status = queryPolygons(center, halfExtents, filter, &query);
 	if (dtStatusFailed(status))
 		return status;
-
 	*nearestRef = query.nearestRef();
 	// Only override nearestPt if we actually found a poly so the nearest point
 	// is valid.
 	if (nearestPt && *nearestRef)
+	{	
+		if (center[0] < 20 && center[0] > -20)
+		{
+		printf("nearestRef after %u \n", *nearestRef);
+		}
 		dtVcopy(nearestPt, query.nearestPoint());
+	}
 	
 	return DT_SUCCESS;
 }
@@ -904,11 +914,16 @@ dtStatus dtNavMeshQuery::queryPolygons(const float* center, const float* halfExt
 	{
 		return DT_FAILURE | DT_INVALID_PARAM;
 	}
-
 	float bmin[3], bmax[3];
 	dtVsub(bmin, center, halfExtents);
 	dtVadd(bmax, center, halfExtents);
-	
+
+	if (center[0] < 30 && center[0] > -30)
+	{
+	printf("bmin[0] %f center[0] %f halfExtents[0] %f \n",bmin[0],center[0], halfExtents[0]);
+	printf("bmin[1] %f center[1] %f halfExtents[1] %f \n",bmin[1],center[1], halfExtents[1]);
+	printf("bmin[2] %f center[2] %f halfExtents[2] %f \n",bmin[2],center[2], halfExtents[2]);
+	}
 	// Find tiles the query touches.
 	int minx, miny, maxx, maxy;
 	m_nav->calcTileLoc(bmin, &minx, &miny);
@@ -916,7 +931,7 @@ dtStatus dtNavMeshQuery::queryPolygons(const float* center, const float* halfExt
 
 	static const int MAX_NEIS = 32;
 	const dtMeshTile* neis[MAX_NEIS];
-	
+	printf("minx %d miny %d maxx %d maxy %d", minx, miny, maxx, maxy);
 	for (int y = miny; y <= maxy; ++y)
 	{
 		for (int x = minx; x <= maxx; ++x)

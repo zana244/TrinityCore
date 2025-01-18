@@ -439,6 +439,7 @@ int main(int argc, char** argv)
             return 0;
     }
 
+    debugOutput = true;
     if (!checkDirectories(debugOutput))
         return silent ? -3 : finish("Press ENTER to close...", -3);
 
@@ -457,7 +458,7 @@ int main(int argc, char** argv)
     // @tswow-begin
     else
     {
-        builder.buildMaps(generated_maps, generated_tiles);
+        //builder.buildMaps(generated_maps, generated_tiles);
         builder.buildTransports();
     }
     // @tswow-end
