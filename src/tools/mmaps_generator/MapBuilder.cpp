@@ -345,6 +345,8 @@ namespace MMAP
             printf("* Failed building heightfield!            \n");
             return;
         }
+
+        // mark all walkable tiles, both liquids and solids
         unsigned char* m_triareas = new unsigned char[ntris];
         memset(m_triareas, NAV_AREA_GROUND, ntris * sizeof(unsigned char));
         rcClearUnwalkableTriangles(m_rcContext, config.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas);

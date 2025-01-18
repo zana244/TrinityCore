@@ -103,8 +103,8 @@ static Position const PredictPosition(Unit* target)
     //TC_LOG_ERROR("pos", "Global X Y Z O {} {} {} {}", target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation());
     //TC_LOG_ERROR("pos", "Trans X Y Z O {} {} {} {}", target->GetTransOffsetX(), target->GetTransOffsetY(), target->GetTransOffsetZ(), target->GetTransOffsetO());
 
-    //Position pos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
-    Position pos = target->GetPosition();
+    Position pos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
+    //Position pos = target->GetPosition();
      // 0.5 - it's time (0.5 sec) between starting movement opcode (e.g. MSG_MOVE_START_FORWARD) and MSG_MOVE_HEARTBEAT sent by client
     float speed = target->GetSpeed(Movement::SelectSpeedType(target->GetUnitMovementFlags())) * 0.5f;
     float orientation = target->GetTransport() ? target->GetTransOffsetO() : target->GetOrientation();
@@ -162,7 +162,7 @@ bool FollowMovementGenerator::PositionOkay(Unit* target, bool isPlayerPet, bool&
 
     if (isPlayerPet)
     {
-        if (!targetIsMoving || !target->GetTransport())
+        if (!targetIsMoving)
         {
             if (_recheckPredictedDistanceTimer.GetExpiry() > 0ms)
             {
@@ -275,9 +275,10 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
     }
     else
     {
-        // Try to do everything in transport offsets ?
-        //Position targetPosition = transport ? target->GetTransOffset() : target->GetPosition();
-        Position targetPosition = target->GetPosition();
+        // Try to do everything in transport offsets?
+        // Before we .CalculatePath we transform back to global
+        Position targetPosition = transport ? target->GetTransOffset() : target->GetPosition();
+        //Position targetPosition = target->GetPosition();
         _lastTargetPosition = targetPosition;
 
         // If player is moving and their position is not updated, we need to predict position or we are on a transport
@@ -302,6 +303,16 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         else
             _path->Clear();
 
+        float x, y, z;
+        targetPosition.GetPosition(x, y, z);
+
+        // Transform back to global coordinates if we are on transport
+        if (transport)
+        {
+            transport->CalculatePassengerPosition(x, y, z);
+            targetPosition.Relocate(x, y, z);
+        }
+
         //float targetO = transport ? target->GetTransOffsetO() : target->GetOrientation();
         float targetO = target->GetOrientation();
         target->MovePositionToFirstCollision(targetPosition, owner->GetCombatReach() + _range, target->ToAbsoluteAngle(_angle.RelativeAngle) - targetO);
@@ -311,7 +322,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         // if (transport)
         //     transport->CalculatePassengerPosition(x, y, z);
         // else
-            targetPosition.GetPosition(x, y, z);
+            targetPosition.GetPosition(x, y, z); // Still global coordinates
 
         if (owner->IsHovering())
             owner->UpdateAllowedPositionZ(x, y, z);
