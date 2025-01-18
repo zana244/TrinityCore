@@ -263,7 +263,8 @@ Creature::Creature(bool isWorldObject): Unit(isWorldObject), MapObject(), m_grou
     m_defaultMovementType(IDLE_MOTION_TYPE), m_spawnId(0), m_equipmentId(0), m_originalEquipmentId(0), m_AlreadyCallAssistance(false), m_AlreadySearchedAssistance(false), m_cannotReachTarget(false), m_cannotReachTimer(0),
     m_meleeDamageSchoolMask(SPELL_SCHOOL_MASK_NORMAL), m_originalEntry(0), m_homePosition(), m_transportHomePosition(), m_creatureInfo(nullptr), m_creatureData(nullptr), m_detectionDistance(20.0f), _waypointPathId(0),
     m_formation(nullptr), m_triggerJustAppeared(true), m_respawnCompatibilityMode(false), _lastDamagedTime(0),
-    _currentWaypointNodeInfo(0, 0), _regenerateHealth(true), _regenerateHealthLock(false), _isMissingCanSwimFlagOutOfCombat(false), m_assistanceTimer(0), m_forcePowerRegen(false)
+    _currentWaypointNodeInfo(0, 0), _regenerateHealth(true), _regenerateHealthLock(false), _isMissingCanSwimFlagOutOfCombat(false), m_assistanceTimer(0), m_forcePowerRegen(false),
+    m_BaseAttackPower(0), m_BaseRangedAttackPower(0)
 {
     m_valuesCount = UNIT_END;
 
@@ -1649,9 +1650,10 @@ void Creature::UpdateLevelDependantStats()
         , TSMutableNumber<uint32>(&attackPower)
         , TSMutableNumber<uint32>(&rangedAttackPower)
     );
-    SetStatFlatModifier(UNIT_MOD_ATTACK_POWER, BASE_VALUE, attackPower);
-    SetStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE, rangedAttackPower);
     // @tswow-end
+    // Save the variables to be called in UpdateAttackPowerAndDamage -- same as obsolete SetStatFlatModifier(UNIT_MOD_ATTACK_POWER)
+    m_BaseAttackPower = attackPower;
+    m_BaseRangedAttackPower = rangedAttackPower;
 
     float armor = (float)stats->GenerateArmor(cInfo); /// @todo Why is this treated as uint32 when it's a float?
     // @tswow-begin

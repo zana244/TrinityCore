@@ -502,6 +502,10 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool _isMissingCanSwimFlagOutOfCombat;
 
         uint32 m_assistanceTimer;
+
+        // set in Creature::UpdateLevelDependantStats, called in UpdateAttackPowerAndDamage
+        uint16 m_BaseAttackPower;
+        uint16 m_BaseRangedAttackPower;
 };
 
 class TC_GAME_API AssistDelayEvent : public BasicEvent
