@@ -347,8 +347,6 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         owner->AddUnitState(UNIT_STATE_FOLLOW_MOVE);
 
         Movement::MoveSplineInit init(owner);
-        if (transport)
-            init.DisableTransportPathTransformations(); // We already use transport coords inside?
         init.MovebyPath(_path->GetPath());
         init.SetWalk(target->IsWalking() || target->IsWalking());
         if (Optional<float> velocity = GetVelocity(owner, target, _path->GetActualEndPosition(), owner->IsGuardian()))
