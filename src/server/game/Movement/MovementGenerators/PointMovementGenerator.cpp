@@ -63,7 +63,7 @@ void PointMovementGenerator<T>::DoInitialize(T* owner)
     }
 
     owner->AddUnitState(UNIT_STATE_ROAMING_MOVE);
-
+    TC_LOG_ERROR("pos","PointMovement MoveTo {}", owner->GetName());
     Movement::MoveSplineInit init(owner);
     init.MoveTo(_x, _y, _z , _generatePath);
     if (_speed > 0.0f)

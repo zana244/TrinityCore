@@ -115,6 +115,7 @@ bool RotateMovementGenerator::Update(Unit* owner, uint32 diff)
     }
 
     Movement::MoveSplineInit init(owner);
+    TC_LOG_ERROR("pos","Idle CalculatePath {}", owner->GetName());
     init.MoveTo(PositionToVector3(*owner), false);
     if (owner->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && owner->GetTransGUID())
         init.DisableTransportPathTransformations();

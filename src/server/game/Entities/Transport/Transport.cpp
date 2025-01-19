@@ -34,7 +34,7 @@
 #include <G3D/Vector3.h>
 #include "Pet.h"
 
-Transport::Transport() : GameObject(),
+Transport::Transport() : GenericTransport(),
     _transportInfo(nullptr), _isMoving(true), _pendingStop(false),
     _triggeredArrivalEvent(false), _triggeredDepartureEvent(false),
     _passengerTeleportItr(_passengers.begin()), _delayedAddModel(false), _delayedTeleport(false)
@@ -135,6 +135,7 @@ void Transport::Update(uint32 diff)
     if (IsMoving() || !_pendingStop)
         m_goValue.Transport.PathProgress += diff;
 
+    TC_LOG_ERROR("pos","GetGOInfo->Type {} GetTransportPeriod() {}",GetGOInfo()->type, GetTransportPeriod());
     uint32 timer = m_goValue.Transport.PathProgress % GetTransportPeriod();
     bool justStopped = false;
 
@@ -250,7 +251,7 @@ void Transport::DelayedUpdate(uint32 /*diff*/)
     DelayedTeleportTransport();
 }
 
-void Transport::AddPassenger(WorldObject* passenger)
+void GenericTransport::AddPassenger(WorldObject* passenger)
 {
     if (!IsInWorld())
         return;
@@ -260,7 +261,7 @@ void Transport::AddPassenger(WorldObject* passenger)
         passenger->SetTransport(this);
         passenger->m_movementInfo.AddMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
         passenger->m_movementInfo.transport.guid = GetGUID();
-        TC_LOG_DEBUG("entities.transport", "Object {} boarded transport {}.", passenger->GetName(), GetName());
+        TC_LOG_ERROR("entities.transport", "Object {} boarded transport {}.", passenger->GetName(), GetName());
 
         if (Player* plr = passenger->ToPlayer())
         {
@@ -272,7 +273,7 @@ void Transport::AddPassenger(WorldObject* passenger)
     }
 }
 
-void Transport::RemovePassenger(WorldObject* passenger)
+void GenericTransport::RemovePassenger(WorldObject* passenger)
 {
     bool erased = false;
     if (_passengerTeleportItr != _passengers.end())
@@ -309,7 +310,7 @@ void Transport::RemovePassenger(WorldObject* passenger)
     }
 }
 
-void Transport::AddFollowerToTransport(Unit* passenger, Unit* follower)
+void GenericTransport::AddFollowerToTransport(Unit* passenger, Unit* follower)
 {
     AddPassenger(follower);
     follower->m_movementInfo.transport.pos.Relocate(passenger->GetTransOffset());
@@ -322,7 +323,7 @@ void Transport::AddFollowerToTransport(Unit* passenger, Unit* follower)
     }
 }
 
-void Transport::RemoveFollowerFromTransport(Unit* passenger, Unit* follower)
+void GenericTransport::RemoveFollowerFromTransport(Unit* passenger, Unit* follower)
 {
     RemovePassenger(follower);
     if (follower->IsCreature())
@@ -731,7 +732,19 @@ void Transport::DelayedTeleportTransport()
     GetMap()->AddToMap<Transport>(this);
 }
 
-void Transport::UpdatePassengerPositions(PassengerSet& passengers)
+bool ElevatorTransport::Create(uint32 dbGuid, uint32 guidlow, uint32 name_id, Map* map, Position const& pos, float ang, const QuaternionData& rotation, uint32 animprogress, GOState go_state)
+{
+    if (GenericTransport::Create(dbGuid, guidlow, name_id, map, pos, rotation, animprogress, go_state))
+    {
+        m_pathProgress = 0;
+        m_animationInfo = sTransportMgr.GetTransportAnimInfo(GetGOInfo()->id);
+        m_currentSeg = 0;
+        return true;
+    }
+    return false;
+}
+
+void GenericTransport::UpdatePassengerPositions(PassengerSet& passengers)
 {
     for (PassengerSet::iterator itr = passengers.begin(); itr != passengers.end(); ++itr)
     {

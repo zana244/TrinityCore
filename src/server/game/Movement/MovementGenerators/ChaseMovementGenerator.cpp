@@ -268,6 +268,7 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
             if (owner->IsHovering())
                 owner->UpdateAllowedPositionZ(x, y, z);
 
+            TC_LOG_ERROR("pos","Chase CalculatePath {}", owner->GetName());
             bool success = _path->CalculatePath(x, y, z, forceDest);
             if (!success || (_path->GetPathType() & (PATHFIND_NOPATH /* | PATHFIND_INCOMPLETE*/)))
             {

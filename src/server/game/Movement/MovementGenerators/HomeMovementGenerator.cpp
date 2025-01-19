@@ -75,7 +75,7 @@ void HomeMovementGenerator<Creature>::SetTargetLocation(Creature* owner)
      *     init.SetFacing(o);
      * }
      */
-
+    TC_LOG_ERROR("pos","Home MoveTo {}", owner->GetName());
     owner->UpdateAllowedPositionZ(destination.m_positionX, destination.m_positionY, destination.m_positionZ);
     init.MoveTo(PositionToVector3(destination), true, true);
     init.SetFacing(destination.GetOrientation());

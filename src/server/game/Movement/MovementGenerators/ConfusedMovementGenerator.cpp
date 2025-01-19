@@ -106,6 +106,7 @@ bool ConfusedMovementGenerator<T>::DoUpdate(T* owner, uint32 diff)
             _path->SetPathLengthLimit(30.0f);
         }
 
+        TC_LOG_ERROR("pos","Confused CalculatePath {}", owner->GetName());
         bool result = _path->CalculatePath(destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
         if (!result || (_path->GetPathType() & PATHFIND_NOPATH)
                     || (_path->GetPathType() & PATHFIND_SHORTCUT)
