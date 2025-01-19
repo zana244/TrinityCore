@@ -113,7 +113,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         void InitializeMovementFlags();
         void UpdateMovementFlags();
 
-        CreatureMovementData const& GetMovementTemplate() const;
+        virtual CreatureMovementData const& GetMovementTemplate() const;
         bool CanWalk() const { return GetMovementTemplate().IsGroundAllowed(); }
         bool CanSwim() const override;
         bool CanEnterWater() const override;
