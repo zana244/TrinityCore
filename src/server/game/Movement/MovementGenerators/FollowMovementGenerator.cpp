@@ -74,7 +74,7 @@ static Optional<float> GetVelocity(Unit* owner, Unit* target, G3D::Vector3 const
 
         // dest is in transport coords
         // change to global and calculate distance to owner
-        Transport* transport = target->GetTransport();
+        GenericTransport* transport = target->GetTransport();
         float x = dest.x, y = dest.y, z = dest.z;
         if (transport)
             transport->CalculatePassengerPosition(x, y, z); // they hold global coordinates now
@@ -224,7 +224,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
     }
 
     // // Can switch transports during follow movement.
-    // Transport* transport = target->GetTransport();
+    // GenericTransport* transport = target->GetTransport();
     // if (transport != owner.GetTransport())
     // {
     //     if (owner.GetTransport())
@@ -235,7 +235,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
     // }
 
     // Can't path to target if transports are still different.
-    Transport* transport = target->GetTransport();
+    GenericTransport* transport = target->GetTransport();
 
     bool followingMaster = false;
     Pet* oPet = owner->ToPet();

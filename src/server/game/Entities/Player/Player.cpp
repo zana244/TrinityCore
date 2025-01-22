@@ -1707,7 +1707,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
         TC_LOG_DEBUG("maps", "Player '{}' ({}) using client without required expansion tried teleport to non accessible map (MapID: {})",
             GetName(), GetGUID().ToString(), mapid);
 
-        if (Transport* transport = GetTransport())
+        if (GenericTransport* transport = GetTransport())
         {
             transport->RemovePassenger(this);
             RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
@@ -1728,7 +1728,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     DisableSpline();
     GetMotionMaster()->Remove(EFFECT_MOTION_TYPE);
 
-    if (Transport* transport = GetTransport())
+    if (GenericTransport* transport = GetTransport())
     {
         if (options & TELE_TO_NOT_LEAVE_TRANSPORT)
             AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
@@ -1869,7 +1869,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
                 // send transfer packets
                 WorldPacket data(SMSG_TRANSFER_PENDING, 4 + 4 + 4);
                 data << uint32(mapid);
-                if (Transport* transport = GetTransport())
+                if (GenericTransport* transport = GetTransport())
                     data << transport->GetEntry() << GetMapId();
 
                 SendDirectMessage(&data);
@@ -17776,7 +17776,7 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     {
         ObjectGuid transGUID(HighGuid::Mo_Transport, transLowGUID);
 
-        Transport* transport = nullptr;
+        GenericTransport* transport = nullptr;
         if (Transport* go = HashMapHolder<Transport>::Find(transGUID))
             transport = go;
 
@@ -27857,7 +27857,7 @@ bool Player::TeleportToInstanceId(uint32 mapid, float x, float y, float z, float
         TC_LOG_DEBUG("maps", "Player '{}' ({}) using client without required expansion tried teleport to non accessible map (MapID: {})",
             GetName(), GetGUID().ToString(), mapid);
 
-        if (Transport* transport = GetTransport())
+        if (GenericTransport* transport = GetTransport())
         {
             transport->RemovePassenger(this);
             RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
@@ -27878,7 +27878,7 @@ bool Player::TeleportToInstanceId(uint32 mapid, float x, float y, float z, float
     DisableSpline();
     GetMotionMaster()->Remove(EFFECT_MOTION_TYPE);
 
-    if (Transport* transport = GetTransport())
+    if (GenericTransport* transport = GetTransport())
     {
         if (options & TELE_TO_NOT_LEAVE_TRANSPORT)
             AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
@@ -28020,7 +28020,7 @@ bool Player::TeleportToInstanceId(uint32 mapid, float x, float y, float z, float
                 // send transfer packets
                 WorldPacket data(SMSG_TRANSFER_PENDING, 4 + 4 + 4);
                 data << uint32(mapid);
-                if (Transport* transport = GetTransport())
+                if (GenericTransport* transport = GetTransport())
                     data << transport->GetEntry() << GetMapId();
 
                 SendDirectMessage(&data);

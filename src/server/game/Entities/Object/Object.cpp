@@ -343,7 +343,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, uint16 flags) const
         if (flags & UPDATEFLAG_POSITION)
         {
             ASSERT(object);
-            Transport* transport = object->GetTransport();
+            GenericTransport* transport = object->GetTransport();
 
             if (transport)
                 *data << transport->GetPackGUID();
@@ -1047,7 +1047,7 @@ void WorldObject::CleanupsBeforeDelete(bool /*finalCleanup*/)
     if (IsInWorld())
         RemoveFromWorld();
 
-    if (Transport* transport = GetTransport())
+    if (GenericTransport* transport = GetTransport())
         transport->RemovePassenger(this);
 }
 
@@ -3446,7 +3446,7 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
     desty = pos.m_positionY + dist * std::sin(angle);
     destz = pos.m_positionZ;
 
-    Transport* transport = GetTransport();
+    GenericTransport* transport = GetTransport();
 
     // Prevent invalid coordinates here, position is unchanged
     if (!Trinity::IsValidMapCoord(destx, desty))

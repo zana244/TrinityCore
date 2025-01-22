@@ -315,7 +315,7 @@ void WaypointMovementGenerator<Creature>::StartMove(Creature* owner, bool relaun
                 owner->SetHomePosition(x, y, z, o);
             else
             {
-                if (Transport* trans = owner->GetTransport())
+                if (GenericTransport* trans = owner->GetTransport())
                 {
                     o -= trans->GetOrientation();
                     owner->SetTransportHomePosition(x, y, z, o);
@@ -364,7 +364,7 @@ void WaypointMovementGenerator<Creature>::StartMove(Creature* owner, bool relaun
     float o = owner->GetOrientation();
     //! If creature is on transport, we assume waypoints set in DB are already transport offsets
     // We now pass global coordinates to MoveTo / pathfinder calculate()
-    if (Transport* trans = owner->GetTransport())
+    if (GenericTransport* trans = owner->GetTransport())
         trans->CalculatePassengerPosition(x, y, z, &o);
 
     //! Do not use formationDest here, MoveTo requires transport offsets due to DisableTransportPathTransformations() call

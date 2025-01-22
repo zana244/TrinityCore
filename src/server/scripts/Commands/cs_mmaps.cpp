@@ -73,7 +73,7 @@ public:
             return true;
         }
 
-        if (Transport* transport = player->GetTransport())
+        if (GenericTransport* transport = player->GetTransport())
         {
             if (!MMAP::MMapFactory::createOrGetMMapManager()->GetGONavMesh(transport->GetDisplayId()))
             {

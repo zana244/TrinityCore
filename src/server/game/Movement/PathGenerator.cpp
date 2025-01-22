@@ -45,7 +45,7 @@ PathGenerator::PathGenerator(WorldObject const* owner) :
         _defaultNavMeshQuery = mmap->GetNavMeshQuery(mapId, _source->GetInstanceId());
 
 
-        // if (Transport* transport = owner->GetTransport())
+        // if (GenericTransport* transport = owner->GetTransport())
         //     _navMeshQuery = mmap->GetModelNavMeshQuery(transport->GetDisplayId());
         // else
         //     _navMeshQuery = mmap->GetNavMeshQuery(mapId, _source->GetInstanceId());
@@ -70,7 +70,7 @@ void PathGenerator::SetCurrentNavMesh()
     if (sourceUnit && DisableMgr::IsPathfindingEnabled(sourceUnit->GetMapId()))
     {
         MMAP::MMapManager* mmap = MMAP::MMapFactory::createOrGetMMapManager();
-        if (Transport* transport = sourceUnit->GetTransport())
+        if (GenericTransport* transport = sourceUnit->GetTransport())
             _navMeshQuery = mmap->GetModelNavMeshQuery(transport->GetDisplayId());
         else
         {
@@ -93,7 +93,7 @@ bool PathGenerator::CalculatePath(float destX, float destY, float destZ, bool fo
     G3D::Vector3 dest(destX, destY, destZ);
 
     // Modify both src and dest positions from global to transport offset.
-    if (Transport* transport = _source->GetTransport())
+    if (GenericTransport* transport = _source->GetTransport())
     {
         transport->CalculatePassengerOffset(x, y, z);
         transport->CalculatePassengerOffset(dest.x, dest.y, dest.z);

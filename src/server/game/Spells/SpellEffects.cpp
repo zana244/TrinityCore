@@ -3111,7 +3111,7 @@ void Spell::EffectSummonPet()
     if (!new_name.empty())
         pet->SetName(new_name);
     
-    if (Transport* transport = owner->GetTransport())
+    if (GenericTransport* transport = owner->GetTransport())
         transport->AddFollowerToTransport(owner, pet);
 
     ExecuteLogEffectSummonObject(effectInfo->EffectIndex, pet);

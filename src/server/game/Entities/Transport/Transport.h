@@ -27,13 +27,12 @@ struct CreatureData;
 // Transport is MO Transport
 // Elevator is Type 11 Transport
 // GenericTransport is 
-typedef std::set<WorldObject*> PassengerSet;
 
 class TC_GAME_API GenericTransport : public GameObject, public TransportBase
 {
     public:
-    
-        GenericTransport() : m_passengerTeleportIterator(m_passengers.end()), m_pathProgress(0), m_movementStarted(0) {}
+    typedef std::set<WorldObject*> PassengerSet;
+
         void AddPassenger(WorldObject* passenger);
         void RemovePassenger(WorldObject* passenger);
         void AddFollowerToTransport(Unit* passenger, Unit* follower);
@@ -60,8 +59,10 @@ class TC_GAME_API GenericTransport : public GameObject, public TransportBase
 
         PassengerSet _passengers;
         PassengerSet::iterator _passengerTeleportItr;
+        PassengerSet _staticPassengers; // Used only for Transport, easier to port ...
 
-}
+
+};
 
 class TC_GAME_API ElevatorTransport : public GenericTransport
 {
@@ -70,10 +71,6 @@ class TC_GAME_API ElevatorTransport : public GenericTransport
         //bool Create(uint32 dbGuid, uint32 guidlow, uint32 name_id, Map* map, uint32 phaseMask, Position const& pos, 
         //    const QuaternionData& rotation = QuaternionData(), uint32 animprogress = 255, GOState go_state = GO_STATE_READY) override;
         void Update(const uint32 diff) override;
-
-    private:
-        TransportAnimation const* m_animationInfo;
-        uint32 m_currentSeg;
 };
 
 class TC_GAME_API Transport : public GenericTransport
@@ -156,8 +153,6 @@ class TC_GAME_API Transport : public GenericTransport
         //! These are needed to properly control events triggering only once for each frame
         bool _triggeredArrivalEvent;
         bool _triggeredDepartureEvent;
-
-        PassengerSet _staticPassengers;
 
         bool _delayedAddModel;
         bool _delayedTeleport;

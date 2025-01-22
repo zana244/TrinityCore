@@ -341,13 +341,13 @@ void WorldSession::HandleMovementOpcodes(WorldPacket& recvData)
         {
             if (!plrMover->GetTransport())
             {
-                if (Transport* transport = plrMover->GetMap()->GetTransport(movementInfo.transport.guid))
+                if (GenericTransport* transport = plrMover->GetMap()->GetTransport(movementInfo.transport.guid))
                     transport->AddPassenger(plrMover);
             }
             else if (plrMover->GetTransport()->GetGUID() != movementInfo.transport.guid)
             {
                 plrMover->GetTransport()->RemovePassenger(plrMover);
-                if (Transport* transport = plrMover->GetMap()->GetTransport(movementInfo.transport.guid))
+                if (GenericTransport* transport = plrMover->GetMap()->GetTransport(movementInfo.transport.guid))
                     transport->AddPassenger(plrMover);
                 else
                     movementInfo.transport.Reset();

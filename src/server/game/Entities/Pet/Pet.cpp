@@ -438,7 +438,7 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
         // must be after SetMinion (owner guid check)
         LoadTemplateImmunities();
 
-        if (Transport* transport = owner->GetTransport())
+        if (GenericTransport* transport = owner->GetTransport())
             transport->AddFollowerToTransport(owner, this);
 
         m_loading = false;

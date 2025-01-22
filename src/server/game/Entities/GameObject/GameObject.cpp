@@ -2450,7 +2450,7 @@ void GameObject::SetLocalRotationAngles(float z_rot, float y_rot, float x_rot)
 QuaternionData GameObject::GetWorldRotation() const
 {
     QuaternionData localRotation = GetLocalRotation();
-    if (Transport* transport = GetTransport())
+    if (GenericTransport* transport = GetTransport())
     {
         QuaternionData worldRotation = transport->GetWorldRotation();
 

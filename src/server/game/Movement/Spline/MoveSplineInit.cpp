@@ -232,7 +232,7 @@ namespace Movement
         {
             if (Unit* vehicle = unit->GetVehicleBase())
                 angle -= vehicle->GetOrientation();
-            else if (Transport* transport = unit->GetTransport())
+            else if (GenericTransport* transport = unit->GetTransport())
                 angle -= transport->GetOrientation();
         }
 

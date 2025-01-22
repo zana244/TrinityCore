@@ -3057,7 +3057,7 @@ void Map::SendInitSelf(Player* player)
     UpdateData data;
 
     // attach to player data current transport data
-    if (Transport* transport = player->GetTransport())
+    if (GenericTransport* transport = player->GetTransport())
     {
         transport->BuildCreateUpdateBlockForPlayer(&data, player);
     }
@@ -3077,8 +3077,8 @@ void Map::SendInitSelf(Player* player)
     data.Clear();
 
     // build other passengers at transport also (they always visible and marked as visible and will not send at visibility update at add to map
-    if (Transport* transport = player->GetTransport())
-        for (Transport::PassengerSet::const_iterator itr = transport->GetPassengers().begin(); itr != transport->GetPassengers().end(); ++itr)
+    if (GenericTransport* transport = player->GetTransport())
+        for (GenericTransport::PassengerSet::const_iterator itr = transport->GetPassengers().begin(); itr != transport->GetPassengers().end(); ++itr)
             if (player != (*itr) && player->HaveAtClient(*itr))
                 (*itr)->BuildCreateUpdateBlockForPlayer(&data, player);
 

@@ -37,9 +37,10 @@
 Transport::Transport() : GenericTransport(),
     _transportInfo(nullptr), _isMoving(true), _pendingStop(false),
     _triggeredArrivalEvent(false), _triggeredDepartureEvent(false),
-    _passengerTeleportItr(_passengers.begin()), _delayedAddModel(false), _delayedTeleport(false)
+    _delayedAddModel(false), _delayedTeleport(false)
 {
     m_updateFlag = UPDATEFLAG_TRANSPORT | UPDATEFLAG_LOWGUID | UPDATEFLAG_STATIONARY_POSITION | UPDATEFLAG_ROTATION;
+    _passengerTeleportItr = _passengers.begin();
 }
 
 Transport::~Transport()
@@ -135,7 +136,7 @@ void Transport::Update(uint32 diff)
     if (IsMoving() || !_pendingStop)
         m_goValue.Transport.PathProgress += diff;
 
-    TC_LOG_ERROR("pos","GetGOInfo->Type {} GetTransportPeriod() {}",GetGOInfo()->type, GetTransportPeriod());
+    //TC_LOG_ERROR("pos","GetGOInfo->Type {} GetTransportPeriod() {}",GetGOInfo()->type, GetTransportPeriod());
     uint32 timer = m_goValue.Transport.PathProgress % GetTransportPeriod();
     bool justStopped = false;
 
@@ -291,7 +292,8 @@ void GenericTransport::RemovePassenger(WorldObject* passenger)
     else
         erased = _passengers.erase(passenger) > 0;
 
-    if (erased || _staticPassengers.erase(passenger)) // static passenger can remove itself in case of grid unload
+    // TODO _staticPassengers
+    if (erased /* || _staticPassengers.erase(passenger) */) // static passenger can remove itself in case of grid unload
     {
         TC_LOG_ERROR("tp","RemovePassenger {}", passenger->GetName());
         passenger->SetTransport(nullptr);
@@ -544,7 +546,7 @@ TempSummon* Transport::SummonPassenger(uint32 entry, Position const& pos, TempSu
     return summon;
 }
 
-void Transport::UpdatePosition(float x, float y, float z, float o)
+void GenericTransport::UpdatePosition(float x, float y, float z, float o)
 {
     bool newActive = GetMap()->IsGridLoaded(x, y);
     Cell oldCell(GetPositionX(), GetPositionY());
@@ -560,12 +562,13 @@ void Transport::UpdatePosition(float x, float y, float z, float o)
       3. transport moves from active to inactive grid
       4. the grid that transport is currently in unloads
     */
-    if (_staticPassengers.empty() && newActive) // 1.
-        LoadStaticPassengers();
-    else if (!_staticPassengers.empty() && !newActive && oldCell.DiffGrid(Cell(GetPositionX(), GetPositionY()))) // 3.
-        UnloadStaticPassengers();
-    else
-        UpdatePassengerPositions(_staticPassengers);
+   // TODO
+    // if (_staticPassengers.empty() && newActive) // 1.
+    //     LoadStaticPassengers();
+    // else if (!_staticPassengers.empty() && !newActive && oldCell.DiffGrid(Cell(GetPositionX(), GetPositionY()))) // 3.
+    //     UnloadStaticPassengers();
+    // else
+    //     UpdatePassengerPositions(_staticPassengers);
     // 4. is handed by grid unload
 }
 
@@ -732,18 +735,22 @@ void Transport::DelayedTeleportTransport()
     GetMap()->AddToMap<Transport>(this);
 }
 
-bool ElevatorTransport::Create(uint32 dbGuid, uint32 guidlow, uint32 name_id, Map* map, Position const& pos, float ang, const QuaternionData& rotation, uint32 animprogress, GOState go_state)
-{
-    if (GenericTransport::Create(dbGuid, guidlow, name_id, map, pos, rotation, animprogress, go_state))
-    {
-        m_pathProgress = 0;
-        m_animationInfo = sTransportMgr.GetTransportAnimInfo(GetGOInfo()->id);
-        m_currentSeg = 0;
-        return true;
-    }
-    return false;
-}
+// bool ElevatorTransport::Create(uint32 dbGuid, uint32 guidlow, uint32 name_id, Map* map, Position const& pos, float ang, const QuaternionData& rotation, uint32 animprogress, GOState go_state)
+// {
+//     if (GenericTransport::Create(dbGuid, guidlow, name_id, map, pos, rotation, animprogress, go_state))
+//     {
+//         m_pathProgress = 0;
+//         m_animationInfo = sTransportMgr.GetTransportAnimInfo(GetGOInfo()->id);
+//         m_currentSeg = 0;
+//         return true;
+//     }
+//     return false;
+// }
 
+void ElevatorTransport::Update(const uint32 /*diff*/)
+{
+    return;
+}
 void GenericTransport::UpdatePassengerPositions(PassengerSet& passengers)
 {
     for (PassengerSet::iterator itr = passengers.begin(); itr != passengers.end(); ++itr)
