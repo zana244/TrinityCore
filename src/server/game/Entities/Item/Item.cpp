@@ -38,6 +38,7 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "Transmogrification.h"
 
 void AddItemsSetItem(Player* player, Item* item)
 {
@@ -1288,3 +1289,12 @@ std::string Item::GetDebugInfo() const
         << " BagSlot: " << std::to_string(GetBagSlot()) << " Slot: " << std::to_string(GetSlot()) << " Equipped: " << IsEquipped();
     return sstr.str();
 }
+
+// @epoch-start
+void Item::SetTransmog(uint32 entry)
+{
+    transmog = entry;
+    SetState(ITEM_CHANGED, GetOwner());
+    sTransmogrification->UpdateItem(GetOwner(), this);
+}
+// @epoch-end

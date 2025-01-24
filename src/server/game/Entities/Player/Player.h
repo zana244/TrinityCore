@@ -1715,7 +1715,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         WorldSession* GetSession() const { return m_session; }
         GameClient* GetGameClient() const;
 
-        void BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) const override;
+        void BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) override;
         void DestroyForPlayer(Player* target, bool onDeath = false) const override;
         void SendLogXPGain(uint32 GivenXP, Unit* victim, uint32 BonusXP, bool recruitAFriend = false, float group_rate=1.0f) const;
 
@@ -2296,6 +2296,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         
         // @epoch-start
         std::string GetAreaString() const;
+
+        bool CanSeeTransmog() const { return m_canSeeTransmog; }
+        void SetCanSeeTransmog(bool on);
         // @epoch-end
 
 // @tswow-begin (Using Rochet2/Transmog)
@@ -2612,6 +2615,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         // @epoch-begin
         bool m_canTeleport;
         bool m_canKnockback;
+        bool m_canSeeTransmog;
         // @epoch-end
 
         std::unique_ptr<PetStable> m_petStable;

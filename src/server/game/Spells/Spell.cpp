@@ -2712,6 +2712,20 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
             }
         }
 
+        // Do it after we apply effects, otherwise HasBreakableByDamageCrowdControlAura returns false
+        if ((spell->m_spellInfo->AuraInterruptFlags & AURA_INTERRUPT_FLAG_TAKE_DAMAGE) &&
+            _spellHitTarget->HasBreakableByDamageCrowdControlAura(spell->m_caster->ToUnit()))
+        {
+            // Tell any pets to stop attacking the target on application of breakable crowd control spells
+            // For QoL, do the same for Guardians -- shadowfiend / druid treants etc.
+            Unit::AttackerSet attackers = _spellHitTarget->getAttackers();
+            for (const auto attacker : attackers)
+            {
+                if (attacker->IsPet() || attacker->IsGuardian())
+                    attacker->AttackStop();
+            }
+        }
+
         // Needs to be called after dealing damage/healing to not remove breaking on damage auras
         spell->DoTriggersOnSpellHit(_spellHitTarget, EffectMask);
 

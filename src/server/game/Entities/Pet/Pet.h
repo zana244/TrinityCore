@@ -157,6 +157,11 @@ class TC_GAME_API Pet : public Guardian
 
         std::string GetDebugInfo() const override;
 
+        // @epoch-start
+        CreatureMovementData ForcedMovement;
+        CreatureMovementData const& GetMovementTemplate() const override;
+        // @epoch-end
+
     protected:
         uint32  m_happinessTimer;
         uint32  m_focusTimer;

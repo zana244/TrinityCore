@@ -204,6 +204,11 @@ class TC_GAME_API Item : public Object
         uint32 transmog = 0;
         // @tswow-end
 
+        // @epoch-start
+        uint32 GetTransmog() const { return transmog; }
+        void SetTransmog(uint32 entry);
+        // @epoch-end
+
         void BuildUpdate(UpdateDataMapType&) override;
 
         bool AddToObjectUpdate() override;

@@ -4008,7 +4008,7 @@ Mail* Player::GetMail(uint32 id)
     return nullptr;
 }
 
-void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) const
+void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target)
 {
     if (target == this)
     {
@@ -7601,11 +7601,11 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 ApplyRatingMod(CR_EXPERTISE, int32(val), apply);
                 break;
             case ITEM_MOD_ATTACK_POWER:
-                HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(val), apply);
-                HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);
+                HandleAttackPowerModifier(MELEE_AP_MODS, (val > 0) ? AP_MOD_POSITIVE_FLAT : AP_MOD_NEGATIVE_FLAT, float(val), apply);
+                HandleAttackPowerModifier(RANGED_AP_MODS, (val > 0) ? AP_MOD_POSITIVE_FLAT : AP_MOD_NEGATIVE_FLAT, float(val), apply);
                 break;
             case ITEM_MOD_RANGED_ATTACK_POWER:
-                HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);
+                HandleAttackPowerModifier(RANGED_AP_MODS, (val > 0) ? AP_MOD_POSITIVE_FLAT : AP_MOD_NEGATIVE_FLAT, float(val), apply);
                 break;
 //            case ITEM_MOD_FERAL_ATTACK_POWER:
 //                ApplyFeralAPBonus(int32(val), apply);
@@ -14247,12 +14247,12 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                             TC_LOG_DEBUG("entities.player.items", "+ {} EXPERTISE", enchant_amount);
                             break;
                         case ITEM_MOD_ATTACK_POWER:
-                            HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(enchant_amount), apply);
-                            HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(enchant_amount), apply);
+                            HandleAttackPowerModifier(MELEE_AP_MODS, (enchant_amount > 0) ? AP_MOD_POSITIVE_FLAT : AP_MOD_NEGATIVE_FLAT, float(enchant_amount), apply);
+                            HandleAttackPowerModifier(RANGED_AP_MODS, (enchant_amount > 0) ? AP_MOD_POSITIVE_FLAT : AP_MOD_NEGATIVE_FLAT, float(enchant_amount), apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} ATTACK_POWER", enchant_amount);
                             break;
                         case ITEM_MOD_RANGED_ATTACK_POWER:
-                            HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(enchant_amount), apply);
+                            HandleAttackPowerModifier(RANGED_AP_MODS, (enchant_amount > 0) ? AP_MOD_POSITIVE_FLAT : AP_MOD_NEGATIVE_FLAT, float(enchant_amount), apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} RANGED_ATTACK_POWER", enchant_amount);
                             break;
 //                        case ITEM_MOD_FERAL_ATTACK_POWER:
@@ -18239,6 +18239,10 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     // @tswow-end
     /** @epoch-end */
 
+    // @epoch-start
+    m_canSeeTransmog = true;
+    // @epoch-end
+
     return true;
 }
 
@@ -20936,7 +20940,9 @@ void Player::UpdatePvPFlag(time_t currTime)
     if (!IsPvP())
         return;
 
-    if (!pvpInfo.EndTimer || (currTime < pvpInfo.EndTimer +300) || pvpInfo.IsHostile)
+    // @epoch-start
+    if (!pvpInfo.EndTimer || (currTime < pvpInfo.EndTimer +900) || pvpInfo.IsHostile)
+    // @epoch-end
         return;
 
     if (pvpInfo.EndTimer <= currTime)
@@ -28054,5 +28060,31 @@ uint32 Player::GetXPForDifficulty(uint8 difficulty)
         return 0;
 
     return Quest::RoundXPValue(xpentry->Difficulty[difficulty]);
+}
+
+void Player::SetCanSeeTransmog(bool on)
+{
+    if (m_canSeeTransmog == on)
+        return;
+
+    m_canSeeTransmog = on;
+
+    // update own item display
+    for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+        ForceValuesUpdateAtIndex(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2));
+
+    if (m_clientGUIDs.empty())
+        return;
+
+    for (auto itr = m_clientGUIDs.begin(); itr != m_clientGUIDs.end(); ++itr)
+    {
+        if (itr->GetTypeId() != TYPEID_PLAYER)
+            continue;
+
+        Player* pp = ObjectAccessor::FindPlayer(*itr);
+
+        for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+            pp->ForceValuesUpdateAtIndex(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2));
+    }
 }
 //@epoch-end

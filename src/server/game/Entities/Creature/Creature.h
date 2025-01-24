@@ -113,7 +113,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         void InitializeMovementFlags();
         void UpdateMovementFlags();
 
-        CreatureMovementData const& GetMovementTemplate() const;
+        virtual CreatureMovementData const& GetMovementTemplate() const;
         bool CanWalk() const { return GetMovementTemplate().IsGroundAllowed(); }
         bool CanSwim() const override;
         bool CanEnterWater() const override;
@@ -250,7 +250,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         uint32 m_spells[MAX_CREATURE_SPELLS];
 
         bool CanStartAttack(Unit const* u, bool force) const;
-        float GetAttackDistance(Unit const* player) const;
+        float GetAttackDistance(Unit const* target) const;
         float GetDetectionRange() const { return m_detectionDistance; }
 
         float GetAggroRange(Unit const* target) const;
@@ -511,6 +511,10 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool _isMissingCanSwimFlagOutOfCombat;
 
         uint32 m_assistanceTimer;
+
+        // set in Creature::UpdateLevelDependantStats, called in UpdateAttackPowerAndDamage
+        uint16 m_BaseAttackPower;
+        uint16 m_BaseRangedAttackPower;
 };
 
 class TC_GAME_API AssistDelayEvent : public BasicEvent

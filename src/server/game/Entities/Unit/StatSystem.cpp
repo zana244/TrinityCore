@@ -585,7 +585,7 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
     float val2 = 0.0f;
     float level = float(GetLevel());
 
-    UnitMods unitMod = ranged ? UNIT_MOD_ATTACK_POWER_RANGED : UNIT_MOD_ATTACK_POWER;
+    AttackPowerModIndex unitMod = ranged ? RANGED_AP_MODS : MELEE_AP_MODS;
 
     if (ranged)
     {
@@ -703,11 +703,16 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
         );
     }
 
-    SetStatFlatModifier(unitMod, BASE_VALUE, val2);
 
-    float base_attPower  = GetFlatModifierValue(unitMod, BASE_VALUE) * GetPctModifierValue(unitMod, BASE_PCT);
-    float attPowerMod = GetFlatModifierValue(unitMod, TOTAL_VALUE);
+    float baseAttackPower  = val2;
+    // attack power mods are split into positive and negative field
+    float attackPowerModPositive = GetAttackPowerModifierValue(unitMod, AP_MOD_POSITIVE_FLAT);
+    float attackPowerModNegative = GetAttackPowerModifierValue(unitMod, AP_MOD_NEGATIVE_FLAT);
 
+    float attackPowerMultiplier = GetAttackPowerModifierValue(unitMod, AP_MOD_PCT) - 1.0f;
+
+    // Until we rip the bandaid and properly implement these auras, we just modify positive and negative mods accordingly
+    float temp_val = 0.0f;
     //add dynamic flat mods
     if (ranged)
     {
@@ -715,38 +720,48 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
         {
             AuraEffectList const& mRAPbyStat = GetAuraEffectsByType(SPELL_AURA_MOD_RANGED_ATTACK_POWER_OF_STAT_PERCENT);
             for (AuraEffect const* aurEff : mRAPbyStat)
-                attPowerMod += CalculatePct(GetStat(Stats(aurEff->GetMiscValue())), aurEff->GetAmount());
+            {
+                temp_val = CalculatePct(GetStat(Stats(aurEff->GetMiscValue())), aurEff->GetAmount());
+                if (temp_val > 0.0f)
+                    attackPowerModPositive += temp_val;
+                else
+                    attackPowerModNegative += temp_val;
+            }
         }
     }
     else
     {
         AuraEffectList const& mAPbyStat = GetAuraEffectsByType(SPELL_AURA_MOD_ATTACK_POWER_OF_STAT_PERCENT);
         for (AuraEffect const* aurEff : mAPbyStat)
-            attPowerMod += CalculatePct(GetStat(Stats(aurEff->GetMiscValue())), aurEff->GetAmount());
+        {
+            temp_val = CalculatePct(GetStat(Stats(aurEff->GetMiscValue())), aurEff->GetAmount());
+            if (temp_val > 0.0f)
+                attackPowerModPositive += temp_val;
+            else
+                attackPowerModNegative += temp_val;
+        }
     }
 
     // applies to both, amount updated in PeriodicTick each 30 seconds
-    attPowerMod += GetTotalAuraModifier(SPELL_AURA_MOD_ATTACK_POWER_OF_ARMOR);
-
-    float attPowerMultiplier = GetPctModifierValue(unitMod, TOTAL_PCT) - 1.0f;
+    temp_val =  GetTotalAuraModifier(SPELL_AURA_MOD_ATTACK_POWER_OF_ARMOR);
+    if (temp_val > 0.0f)
+        attackPowerModPositive += temp_val;
+    else
+        attackPowerModNegative += temp_val;
 
     if (ranged)
     {
-        SetRangedAttackPower(int32(base_attPower));
-        if (attPowerMod >= 0)
-            SetRangedAttackPowerModPos(int32(attPowerMod));
-        if (attPowerMod <= 0)
-            SetRangedAttackPowerModNeg(int32(attPowerMod));
-        SetRangedAttackPowerMultiplier(attPowerMultiplier);
+        SetRangedAttackPower(int32(baseAttackPower));
+        SetRangedAttackPowerModPos(int32(attackPowerModPositive));
+        SetRangedAttackPowerModNeg(int32(attackPowerModNegative));
+        SetRangedAttackPowerMultiplier(attackPowerMultiplier);
     }
     else
     {
-        SetAttackPower(int32(base_attPower));
-        if (attPowerMod >= 0)
-            SetAttackPowerModPos(int32(attPowerMod));
-        if (attPowerMod <= 0)
-            SetAttackPowerModNeg(int32(attPowerMod));
-        SetAttackPowerMultiplier(attPowerMultiplier);
+        SetAttackPower(int32(baseAttackPower));
+        SetAttackPowerModPos(int32(attackPowerModPositive));
+        SetAttackPowerModNeg(int32(attackPowerModNegative));
+        SetAttackPowerMultiplier(attackPowerMultiplier);
     }
 
     Pet* pet = GetPet();                                //update pet's AP
@@ -1470,11 +1485,13 @@ void Creature::UpdateMaxPower(Powers power)
 
 void Creature::UpdateAttackPowerAndDamage(bool ranged)
 {
-    UnitMods unitMod = ranged ? UNIT_MOD_ATTACK_POWER_RANGED : UNIT_MOD_ATTACK_POWER;
+    AttackPowerModIndex unitMod = ranged ? RANGED_AP_MODS : MELEE_AP_MODS;
 
-    float baseAttackPower       = GetFlatModifierValue(unitMod, BASE_VALUE) * GetPctModifierValue(unitMod, BASE_PCT);
-    float attackPowerMod        = GetFlatModifierValue(unitMod, TOTAL_VALUE);
-    float attackPowerMultiplier = GetPctModifierValue(unitMod, TOTAL_PCT) - 1.0f;
+    float baseAttackPower = ranged ? m_BaseRangedAttackPower : m_BaseAttackPower;
+
+    float attackPowerModPositive = GetAttackPowerModifierValue(unitMod, AP_MOD_POSITIVE_FLAT);
+    float attackPowerModNegative = GetAttackPowerModifierValue(unitMod, AP_MOD_NEGATIVE_FLAT);
+    float attackPowerMultiplier = GetAttackPowerModifierValue(unitMod, AP_MOD_PCT) - 1.0f;
 
     // @tswow-begin
     FIRE_ID(
@@ -1482,7 +1499,8 @@ void Creature::UpdateAttackPowerAndDamage(bool ranged)
         , Creature,OnUpdateAttackPowerDamage
         , TSCreature(this)
         , TSMutableNumber<float>(&baseAttackPower)
-        , TSMutableNumber<float>(&attackPowerMod)
+        , TSMutableNumber<float>(&attackPowerModPositive)
+        , TSMutableNumber<float>(&attackPowerModNegative)
         , TSMutableNumber<float>(&attackPowerMultiplier)
         , false
         , ranged
@@ -1492,19 +1510,15 @@ void Creature::UpdateAttackPowerAndDamage(bool ranged)
     if (ranged)
     {
         SetRangedAttackPower(int32(baseAttackPower));
-        if (attackPowerMod >= 0)
-            SetRangedAttackPowerModPos(int32(attackPowerMod));
-        if (attackPowerMod <= 0)
-            SetRangedAttackPowerModNeg(int32(attackPowerMod));
+        SetRangedAttackPowerModPos(int32(attackPowerModPositive));
+        SetRangedAttackPowerModNeg(int32(attackPowerModNegative));
         SetRangedAttackPowerMultiplier(attackPowerMultiplier);
     }
     else
     {
         SetAttackPower(int32(baseAttackPower));
-        if (attackPowerMod >= 0)
-            SetAttackPowerModPos(int32(attackPowerMod));
-        if (attackPowerMod <= 0)
-            SetAttackPowerModNeg(int32(attackPowerMod));
+        SetAttackPowerModPos(int32(attackPowerModPositive));
+        SetAttackPowerModNeg(int32(attackPowerModNegative));
         SetAttackPowerMultiplier(attackPowerMultiplier);
     }
 
@@ -1890,7 +1904,7 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
 
     float val = 0.0f;
     float bonusAP = 0.0f;
-    UnitMods unitMod = UNIT_MOD_ATTACK_POWER;
+    AttackPowerModIndex unitMod = MELEE_AP_MODS;
 
     if (GetEntry() == ENTRY_IMP)                                   // imp's attack power
         val = GetStat(STAT_STRENGTH) - 10.0f;
@@ -1960,29 +1974,33 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
         }
     }
 
-    SetStatFlatModifier(UNIT_MOD_ATTACK_POWER, BASE_VALUE, val + bonusAP);
-
     //in BASE_VALUE of UNIT_MOD_ATTACK_POWER for creatures we store data of meleeattackpower field in DB
-    float base_attPower  = GetFlatModifierValue(unitMod, BASE_VALUE) * GetPctModifierValue(unitMod, BASE_PCT);
-    float attPowerMod = GetFlatModifierValue(unitMod, TOTAL_VALUE);
-    float attPowerMultiplier = GetPctModifierValue(unitMod, TOTAL_PCT) - 1.0f;
+    float baseAttackPower  = val + bonusAP;
+
+    // attack power mods are split into positive and negative field
+    float attackPowerModPositive = GetAttackPowerModifierValue(unitMod, AP_MOD_POSITIVE_FLAT);
+    float attackPowerModNegative = GetAttackPowerModifierValue(unitMod, AP_MOD_NEGATIVE_FLAT);
+    float attackPowerMultiplier = GetAttackPowerModifierValue(unitMod, AP_MOD_PCT) - 1.0f;
+
 
     // @tswow-begin
     FIRE_ID(
         GetCreatureTemplate()->events.id
         , Creature,OnUpdateAttackPowerDamage
         , TSCreature(this)
-        , TSMutableNumber<float>(&base_attPower)
-        , TSMutableNumber<float>(&attPowerMod)
-        , TSMutableNumber<float>(&attPowerMultiplier)
+        , TSMutableNumber<float>(&baseAttackPower)
+        , TSMutableNumber<float>(&attackPowerModPositive)
+        , TSMutableNumber<float>(&attackPowerModNegative)
+        , TSMutableNumber<float>(&attackPowerMultiplier)
         , true
         , ranged
     );
     // @tswow-end
 
-    SetAttackPower(int32(base_attPower));
-    SetAttackPowerModPos(int32(attPowerMod));
-    SetAttackPowerMultiplier(attPowerMultiplier);
+    SetAttackPower(int32(baseAttackPower));
+    SetAttackPowerModPos(int32(attackPowerModPositive));
+    SetAttackPowerModNeg(int32(attackPowerModNegative));
+    SetAttackPowerMultiplier(attackPowerMultiplier);
 
     //automatically update weapon damage after attack power modification
     UpdateDamagePhysical(BASE_ATTACK);

@@ -174,8 +174,6 @@ enum UnitMods
     UNIT_MOD_RESISTANCE_FROST,
     UNIT_MOD_RESISTANCE_SHADOW,
     UNIT_MOD_RESISTANCE_ARCANE,
-    UNIT_MOD_ATTACK_POWER,
-    UNIT_MOD_ATTACK_POWER_RANGED,
     UNIT_MOD_DAMAGE_MAINHAND,
     UNIT_MOD_DAMAGE_OFFHAND,
     UNIT_MOD_DAMAGE_RANGED,
@@ -600,6 +598,26 @@ struct SpellPeriodicAuraLogInfo
     bool   critical;
 };
 
+struct AttackPowerModInfo
+{
+    float positiveMods = 0; // int16 in client
+    float negativeMods = 0; // int16 in client
+    float multiplier = 1.0f;
+};
+enum AttackPowerModType
+{
+    AP_MOD_POSITIVE_FLAT,
+    AP_MOD_NEGATIVE_FLAT,
+    AP_MOD_PCT,
+    AP_MOD_TYPE_COUNT,
+};
+enum AttackPowerModIndex
+{
+    MELEE_AP_MODS,
+    RANGED_AP_MODS,
+    AP_MODS_COUNT,
+};
+
 uint32 createProcHitMask(SpellNonMeleeDamage* damageInfo, SpellMissInfo missCondition);
 
 enum CurrentSpellTypes : uint8
@@ -760,6 +778,65 @@ struct PositionUpdateInfo
 
     bool Relocated = false;
     bool Turned = false;
+};
+
+// BuildValuesCachePosPointers marks of the position of some data inside of BuildValue cache.
+struct BuildValuesCachePosPointers
+{
+    BuildValuesCachePosPointers() :
+        UnitNPCFlagsPos(-1), UnitFieldAuraStatePos(-1), UnitFieldFlagsPos(-1), UnitFieldDisplayPos(-1),
+        UnitDynamicFlagsPos(-1), UnitFieldBytes2Pos(-1), UnitFieldFactionTemplatePos(-1) {}
+
+    void ApplyOffset(uint32 offset)
+    {
+        if (UnitNPCFlagsPos >= 0)
+            UnitNPCFlagsPos += offset;
+
+        if (UnitFieldAuraStatePos >= 0)
+            UnitFieldAuraStatePos += offset;
+
+        if (UnitFieldFlagsPos >= 0)
+            UnitFieldFlagsPos += offset;
+
+        if (UnitFieldDisplayPos >= 0)
+            UnitFieldDisplayPos += offset;
+
+        if (UnitDynamicFlagsPos >= 0)
+            UnitDynamicFlagsPos += offset;
+
+        if (UnitFieldBytes2Pos >= 0)
+            UnitFieldBytes2Pos += offset;
+
+        if (UnitFieldFactionTemplatePos >= 0)
+            UnitFieldFactionTemplatePos += offset;
+
+        // @epoch-start
+        for (auto it = itemDisplayIds.begin(); it != itemDisplayIds.end(); ++it)
+            it->second += offset;
+        // @epoch-end
+    }
+
+    int32 UnitNPCFlagsPos;
+    int32 UnitFieldAuraStatePos;
+    int32 UnitFieldFlagsPos;
+    int32 UnitFieldDisplayPos;
+    int32 UnitDynamicFlagsPos;
+    int32 UnitFieldBytes2Pos;
+    int32 UnitFieldFactionTemplatePos;
+    // @epoch-start
+    std::unordered_map<uint16 /*index*/, uint32 /*pos*/> itemDisplayIds;
+    // @epoch-end
+};
+
+// BuildValuesCachedBuffer cache for calculated BuildValue.
+struct BuildValuesCachedBuffer
+{
+    BuildValuesCachedBuffer(uint32 bufferSize) :
+        buffer(bufferSize), posPointers() {}
+
+    ByteBuffer buffer;
+
+    BuildValuesCachePosPointers posPointers;
 };
 
 // delay time next attack to prevent client attack animation problems
@@ -962,6 +1039,8 @@ class TC_GAME_API Unit : public WorldObject
         void ApplyCastTimePercentMod(float val, bool apply);
 
         void SetModCastingSpeed(float castingSpeed) { SetFloatValue(UNIT_MOD_CAST_SPEED, castingSpeed); }
+
+        void SetUInt32Value(uint16 index, uint32 value);
 
         UnitFlags GetUnitFlags() const { return UnitFlags(GetUInt32Value(UNIT_FIELD_FLAGS)); }
         bool HasUnitFlag(UnitFlags flags) const { return HasFlag(UNIT_FIELD_FLAGS, flags); }
@@ -1531,6 +1610,9 @@ class TC_GAME_API Unit : public WorldObject
         float GetFlatModifierValue(UnitMods unitMod, UnitModifierFlatType modifierType) const;
         float GetPctModifierValue(UnitMods unitMod, UnitModifierPctType modifierType) const;
 
+        bool HandleAttackPowerModifier(AttackPowerModIndex index, AttackPowerModType modifierType, float amount, bool apply);
+        float GetAttackPowerModifierValue(AttackPowerModIndex index, AttackPowerModType modifierType) const;
+
         void UpdateUnitMod(UnitMods unitMod);
 
         // only players have item requirements
@@ -1858,7 +1940,7 @@ class TC_GAME_API Unit : public WorldObject
     protected:
         explicit Unit (bool isWorldObject);
 
-        void BuildValuesUpdate(uint8 updatetype, ByteBuffer* data, Player const* target) const override;
+        void BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* target) override;
 
         void _UpdateSpells(uint32 time);
         void _DeleteRemovedAuras();
@@ -1902,6 +1984,7 @@ class TC_GAME_API Unit : public WorldObject
 
         float m_auraFlatModifiersGroup[UNIT_MOD_END][MODIFIER_TYPE_FLAT_END];
         float m_auraPctModifiersGroup[UNIT_MOD_END][MODIFIER_TYPE_PCT_END];
+        AttackPowerModInfo m_attackPowerMods[AP_MODS_COUNT]; // Handle both flat + pct
         float m_weaponDamage[MAX_ATTACK][2][2];
         bool m_canModifyStats;
 
@@ -1953,6 +2036,9 @@ class TC_GAME_API Unit : public WorldObject
         uint32 GetCombatRatingDamageReduction(CombatRating cr, float rate, float cap, uint32 damage) const;
 
         void ProcSkillsAndReactives(bool isVictim, Unit* procTarget, uint32 typeMask, uint32 hitMask, WeaponAttackType attType);
+
+        void PatchValuesUpdate(ByteBuffer& valuesUpdateBuf, BuildValuesCachePosPointers& posPointers, Player* target);
+        void InvalidateValuesUpdateCache() { _valuesUpdateCache.clear(); }
 
     protected:
         void SetFeared(bool apply);
@@ -2013,6 +2099,9 @@ class TC_GAME_API Unit : public WorldObject
         std::deque<PlayerMovementPendingChange> m_pendingMovementChanges;
 
         /* Player Movement fields END*/
+
+        typedef std::unordered_map<uint64 /*visibleFlag(uint32) + updateType(uint8)*/, BuildValuesCachedBuffer>  ValuesUpdateCache;
+        ValuesUpdateCache _valuesUpdateCache;
 };
 
 namespace Trinity

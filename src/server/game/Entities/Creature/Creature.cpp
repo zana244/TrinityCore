@@ -1671,9 +1671,10 @@ void Creature::UpdateLevelDependantStats()
         , TSMutableNumber<uint32>(&attackPower)
         , TSMutableNumber<uint32>(&rangedAttackPower)
     );
-    SetStatFlatModifier(UNIT_MOD_ATTACK_POWER, BASE_VALUE, attackPower);
-    SetStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE, rangedAttackPower);
     // @tswow-end
+    // Save the variables to be called in UpdateAttackPowerAndDamage -- same as obsolete SetStatFlatModifier(UNIT_MOD_ATTACK_POWER)
+    m_BaseAttackPower = attackPower;
+    m_BaseRangedAttackPower = rangedAttackPower;
 
     float armor = (float)stats->GenerateArmor(cInfo); /// @todo Why is this treated as uint32 when it's a float?
     // @tswow-begin
@@ -2126,18 +2127,27 @@ bool Creature::CheckNoGrayAggroConfig(Player* player, uint32 playerLevel, uint32
     return false;
 }
 
-float Creature::GetAttackDistance(Unit const* player) const
+float Creature::GetAttackDistance(Unit const* target) const
 {
     float aggroRate = sWorld->getRate(RATE_CREATURE_AGGRO);
     if (aggroRate == 0)
         return 0.0f;
 
+    // proximity aggro does not target disabled pets (owner is mounted)
+    if (target->IsPet() || target->IsGuardian())
+        if (target->HasUnitFlag(UNIT_FLAG_STUNNED) && !target->HasUnitState(UNIT_STATE_STUNNED)) // HACK, found in Unit::Mount and Unit::Dismount
+            return 0.0f;
+
     // WoW Wiki: the minimum radius seems to be 5 yards, while the maximum range is 45 yards
     float maxRadius = (45.0f * sWorld->getRate(RATE_CREATURE_AGGRO));
     float minRadius = (5.0f * sWorld->getRate(RATE_CREATURE_AGGRO));
 
+    // pets and charmed mobs use owner level
+    Player* player = target->GetCharmerOrOwnerPlayerOrPlayerItself();
+    uint32 const targetLevel = player ? player->GetLevel() : target->GetLevel();
+
     uint8 expansionMaxLevel = uint8(GetMaxLevelForExpansion(GetCreatureTemplate()->expansion));
-    int32 levelDifference = GetLevel() - player->GetLevel();
+    int32 levelDifference = GetLevel() - targetLevel;
 
     // The aggro radius for creatures with equal level as the player is 20 yards.
     // The combatreach should not get taken into account for the distance so we drop it from the range (see Supremus as expample)
@@ -2150,14 +2160,18 @@ float Creature::GetAttackDistance(Unit const* player) const
     if (float(GetLevel() + 5) <= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
     {
         aggroRadius += GetTotalAuraModifier(SPELL_AURA_MOD_DETECT_RANGE);
-        aggroRadius += player->GetTotalAuraModifier(SPELL_AURA_MOD_DETECTED_RANGE);
+
+        if (player)
+            aggroRadius += player->GetTotalAuraModifier(SPELL_AURA_MOD_DETECTED_RANGE);
+        else
+            aggroRadius += target->GetTotalAuraModifier(SPELL_AURA_MOD_DETECTED_RANGE);
     }
 
     // The aggro range of creatures with higher levels than the total player level for the expansion should get the maxlevel treatment
     // This makes sure that creatures such as bosses wont have a bigger aggro range than the rest of the npc's
     // The following code is used for blizzlike behaivior such as skippable bosses
     if (GetLevel() > expansionMaxLevel)
-        aggroRadius = baseAggroDistance + float(expansionMaxLevel - player->GetLevel());
+        aggroRadius = baseAggroDistance + float(expansionMaxLevel - targetLevel);
 
     // Make sure that we wont go over the total range limits
     if (aggroRadius > maxRadius)

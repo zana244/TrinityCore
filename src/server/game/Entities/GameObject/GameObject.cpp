@@ -2174,12 +2174,14 @@ void GameObject::Use(Unit* user)
                 return;
 
             //required lvl checks!
+            // @epoch-start
             uint8 level = player->GetLevel();
-            if (level < info->meetingstone.minLevel)
+            if (level < info->meetingstone.minLevel || level > info->meetingstone.maxLevel)
                 return;
             level = targetPlayer->GetLevel();
-            if (level < info->meetingstone.minLevel)
+            if (level < info->meetingstone.minLevel || level > info->meetingstone.maxLevel)
                 return;
+            // @epoch-end
 
             if (info->entry == 194097)
                 spellId = 61994;                            // Ritual of Summoning
@@ -2802,7 +2804,7 @@ GameObject* GameObject::GetLinkedTrap()
     return ObjectAccessor::GetGameObject(*this, m_linkedTrap);
 }
 
-void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* target) const
+void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* target)
 {
     if (!target)
         return;
@@ -2812,7 +2814,8 @@ void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player co
 
     ByteBuffer fieldBuffer;
 
-    UpdateMaskPacketBuilder updateMask(m_valuesCount);
+    UpdateMask updateMask;
+    updateMask.SetCount(m_valuesCount);
 
     uint32* flags = GameObjectUpdateFieldFlags;
     uint32 visibleFlag = UF_FLAG_PUBLIC;
@@ -2879,6 +2882,7 @@ void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player co
         }
     }
 
+    *data << uint8(updateMask.GetBlockCount());
     updateMask.AppendToPacket(data);
     data->append(fieldBuffer);
 }

@@ -512,6 +512,8 @@ void Unit::Update(uint32 p_time)
     if (HasScheduledAIChange() && (GetTypeId() != TYPEID_PLAYER || (IsCharmed() && GetCharmerGUID().IsCreature())))
         UpdateCharmAI();
     RefreshAI();
+
+    InvalidateValuesUpdateCache();
 }
 
 bool Unit::haveOffhandWeapon() const
@@ -2280,7 +2282,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         , TSMutableNumber<float>(&block_chance_f)
         , TSMutableNumber<float>(&parry_chance_f)
         , attType
-        );
+    );
 
     int32 miss_chance = int32(miss_chance_f*100.0f);
     int32 crit_chance = int32(crit_chance_f*100.0f);
@@ -2551,15 +2553,38 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     uint32 roll = urand(0, 9999);
 
-    uint32 missChance = uint32(MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id) * 100.0f);
+    // @epoch-start
+    float miss_chance_f = MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id);
+    float resist_chance_f = victim->GetMechanicResistChance(spellInfo);
+    float dodge_chance_f = GetUnitDodgeChance(attType, victim);
+    float block_chance_f = GetUnitBlockChance(attType, victim);
+    float parry_chance_f = GetUnitParryChance(attType, victim);
+
+    FIRE(Unit,OnCalcMeleeSpellOutcome
+        , TSUnit(const_cast<Unit*>(this))
+        , TSUnit(const_cast<Unit*>(victim))
+        , TSMutableNumber<float>(&miss_chance_f)
+        , TSMutableNumber<float>(&resist_chance_f)
+        , TSMutableNumber<float>(&dodge_chance_f)
+        , TSMutableNumber<float>(&block_chance_f)
+        , TSMutableNumber<float>(&parry_chance_f)
+        , attType
+    );
+
+    uint32 missChance = uint32(miss_chance_f*100.0f);
+    int32 resistChance = int32(resist_chance_f*100.0f);
+    int32 dodgeChance = int32(dodge_chance_f*100.0f);
+    int32 blockChance = int32(block_chance_f*100.0f);
+    int32 parryChance = int32(parry_chance_f*100.0f);
+    // @epoch-end
+
     // Roll miss
     uint32 tmp = missChance;
     if (roll < tmp)
         return SPELL_MISS_MISS;
 
     // Chance resist mechanic
-    int32 resist_chance = victim->GetMechanicResistChance(spellInfo) * 100;
-    tmp += resist_chance;
+    tmp += resistChance;
     if (roll < tmp)
         return SPELL_MISS_RESIST;
 
@@ -2641,7 +2666,6 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     if (canDodge)
     {
         // Roll dodge
-        int32 dodgeChance = int32(GetUnitDodgeChance(attType, victim) * 100.0f);
         if (dodgeChance < 0)
             dodgeChance = 0;
 
@@ -2652,7 +2676,6 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     if (canParry)
     {
         // Roll parry
-        int32 parryChance = int32(GetUnitParryChance(attType, victim) * 100.0f);
         if (parryChance < 0)
             parryChance = 0;
 
@@ -2663,7 +2686,6 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     if (canBlock)
     {
-        int32 blockChance = int32(GetUnitBlockChance(attType, victim) * 100.0f);
         if (blockChance < 0)
             blockChance = 0;
         tmp += blockChance;
@@ -2712,11 +2734,13 @@ float Unit::GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) con
     int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
 
     float chance = 0.0f;
-    float skillBonus = 0.0f;
+    //float skillBonus = 0.0f;
+
+    // Base chance
     if (victim->GetTypeId() == TYPEID_PLAYER)
     {
         chance = victim->GetFloatValue(PLAYER_DODGE_PERCENTAGE);
-        skillBonus = 0.04f * skillDiff;
+        //skillBonus = 0.04f * skillDiff;
     }
     else
     {
@@ -2725,14 +2749,27 @@ float Unit::GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) con
             chance = 5.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
 
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
+            // if (skillDiff <= 10)
+            //     skillBonus = skillDiff * 0.1f;
+            // else
+            //     skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
         }
     }
 
-    chance += skillBonus;
+    // Own chance appears to be zero / below zero / unmeaningful for some reason (debuffs?): skip calculation, unit is incapable
+    if (chance < 0.005f)
+        return 0.0f;
+
+    // Skill difference can be negative (and reduce our chance to mitigate an attack), which means:
+    // a) Attacker's level is higher
+    // b) Attacker has +skill bonuses
+    bool const isPlayerOrPet = victim->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+    // Defense/weapon skill factor: for players and NPCs
+    float factor = 0.04f;
+    // NPCs gain additional bonus dodge chance based on positive skill difference
+    if (!isPlayerOrPet && skillDiff > 0)
+        factor = 0.1f;
+    chance += (skillDiff * factor);
 
     // Reduce enemy dodge chance by SPELL_AURA_MOD_COMBAT_RESULT_CHANCE
     chance += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_COMBAT_RESULT_CHANCE, VICTIMSTATE_DODGE);
@@ -2755,7 +2792,9 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
     int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
 
     float chance = 0.0f;
-    float skillBonus = 0.0f;
+    //float skillBonus = 0.0f;
+
+    // Base chance
     if (Player const* playerVictim = victim->ToPlayer())
     {
         if (playerVictim->CanParry())
@@ -2767,7 +2806,7 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
             if (tmpitem)
                 chance = playerVictim->GetFloatValue(PLAYER_PARRY_PERCENTAGE);
 
-            skillBonus = 0.04f * skillDiff;
+            //skillBonus = 0.04f * skillDiff;
         }
     }
     else
@@ -2777,14 +2816,36 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
             chance = 5.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
 
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 1.6f;
+            // if (skillDiff <= 10)
+            //     skillBonus = skillDiff * 0.1f;
+            // else
+            //     skillBonus = 1.0f + (skillDiff - 10) * 1.6f;
         }
     }
 
-    chance += skillBonus;
+    // Own chance appears to be zero / below zero / unmeaningful for some reason (debuffs?): skip calculation, unit is incapable
+    if (chance < 0.005f)
+        return 0.0f;
+
+    // Skill difference can be negative (and reduce our chance to mitigate an attack), which means:
+    // a) Attacker's level is higher
+    // b) Attacker has +skill bonuses
+    bool const isPlayerOrPet = victim->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+    // Defense/weapon skill factor: for players and NPCs
+    float factor = 0.04f;
+    // NPCs gain additional bonus parry chance based on positive skill difference (same value as bonus miss rate)
+    if (!isPlayerOrPet && skillDiff > 0)
+    {
+        if (skillDiff > 10)
+            factor = 0.6f; // Pre-WotLK: 0.2 additional factor for each level above 2
+        else
+            factor = 0.1f;
+    }
+    chance += (skillDiff * factor);
+
+    // None present in 3.3.5 as far as I can see but added for visibility
+    // Reduce enemy parry chance by SPELL_AURA_MOD_COMBAT_RESULT_CHANCE
+    chance += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_COMBAT_RESULT_CHANCE, VICTIMSTATE_PARRY);
 
     // Reduce parry chance by attacker expertise rating
     if (GetTypeId() == TYPEID_PLAYER)
@@ -2797,6 +2858,10 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
 float Unit::GetUnitMissChance() const
 {
     float miss_chance = 5.0f;
+
+    // Totems have no inherit miss chance
+    if (IsTotem())
+        miss_chance = 0.0f;
 
     if (Player const* player = ToPlayer())
         miss_chance += player->GetMissPercentageFromDefense();
@@ -2817,7 +2882,8 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
     int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
 
     float chance = 0.0f;
-    float skillBonus = 0.0f;
+    //float skillBonus = 0.0f;
+    // Base chance
     if (Player const* playerVictim = victim->ToPlayer())
     {
         if (playerVictim->CanBlock())
@@ -2826,7 +2892,7 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
             if (tmpitem && !tmpitem->IsBroken() && tmpitem->GetTemplate()->Block)
             {
                 chance = playerVictim->GetFloatValue(PLAYER_BLOCK_PERCENTAGE);
-                skillBonus = 0.04f * skillDiff;
+                //skillBonus = 0.04f * skillDiff;
             }
         }
     }
@@ -2837,14 +2903,31 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
             chance = 5.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
 
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
+            // if (skillDiff <= 10)
+            //     skillBonus = skillDiff * 0.1f;
+            // else
+            //     skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
         }
     }
 
-    chance += skillBonus;
+    // Own chance appears to be zero / below zero / unmeaningful for some reason (debuffs?): skip calculation, unit is incapable
+    if (chance < 0.005f)
+        return 0.0f;
+
+    // Skill difference can be negative (and reduce our chance to mitigate an attack), which means:
+    // a) Attacker's level is higher
+    // b) Attacker has +skill bonuses
+    bool const isPlayerOrPet = victim->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+    // Defense/weapon skill factor: for players and NPCs
+    float factor = 0.04f;
+    // NPCs cannot gain bonus block chance based on positive skill difference
+    if (!isPlayerOrPet && skillDiff > 0)
+        factor = 0.0f;
+    chance += (skillDiff * factor);
+
+    // None present in 3.3.5 as far as I can see but added for visibility
+    // Reduce enemy block chance by SPELL_AURA_MOD_COMBAT_RESULT_CHANCE
+    chance += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_COMBAT_RESULT_CHANCE, VICTIMSTATE_BLOCKS);
     return std::max(chance, 0.0f);
 }
 
@@ -2888,8 +2971,11 @@ float Unit::GetUnitCriticalChanceTaken(Unit const* attacker, WeaponAttackType at
     int32 const attackerWeaponSkill = attacker->GetWeaponSkillValue(attackType, this);
     int32 const victimDefenseSkill = GetDefenseSkillValue(attacker);
     int32 const skillDiff = victimDefenseSkill - attackerWeaponSkill;
+    // In case we have bonus wep skill and we need to suppress crit against higher level NPCs
+    int32 const minSkillValue = attacker->GetMaxSkillValueForLevel(this) < attacker->GetWeaponSkillValue(attackType, this) ? attacker->GetMaxSkillValueForLevel(this) : attacker->GetWeaponSkillValue(attackType, this);
+    int32 const cappedSkillDiff = victimDefenseSkill - minSkillValue;
 
-    float skillBonus = 0.0f;
+    //float skillBonus = 0.0f;
     float chance = critDone;
 
     // flat aura mods
@@ -2906,16 +2992,34 @@ float Unit::GetUnitCriticalChanceTaken(Unit const* attacker, WeaponAttackType at
     chance += GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);
 
     // Apply crit chance from defense skill
-    if (GetTypeId() == TYPEID_PLAYER)
-        skillBonus = -skillDiff * 0.04f;
-    else
-    {
-        skillBonus = -skillDiff * 0.12f;
-        if (skillDiff >= 15)
-            skillBonus -= 3.0f;
-    }
+    // Skill difference can be both negative and positive.
+    // a) Positive means that attacker's level is higher or additional weapon +skill bonuses
+    // b) Negative means that victim's level is higher or additional +defense bonuses
+    int32 diff = -skillDiff;
 
-    chance += skillBonus;
+    // Both vMangos and cMangos, against higher leveled NPCs, have 0.2f factor of crit suppression
+    // If we over level the NPCs, we have 0.04f factor of crit addition in vMangos and 0.2f in cMangos
+    // Choose the former to "nerf" the power level?
+    const bool vsPlayerOrPet = HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+
+    // Weapon skill factor: for players and NPCs
+    float factor = 0.04f;
+    // Crit suppression against NPCs with higher level
+    if (!vsPlayerOrPet && diff < 0) {// decrease by 1% of crit per level of target
+        factor = 0.2f;
+        diff = -cappedSkillDiff;     // weapon skill does not benefit crit suppression% vs NPCs
+    }
+    chance += (diff * factor);
+
+    // if (GetTypeId() == TYPEID_PLAYER)
+    //     skillBonus = -skillDiff * 0.04f;
+    // else
+    // {
+    //     skillBonus = -skillDiff * 0.12f;
+    //     if (skillDiff >= 15)
+    //         skillBonus -= 3.0f;
+    // }
+
     // @tswow-begin
     FIRE(Unit,OnCalcMeleeCrit
         , TSUnit(const_cast<Unit*>(attacker))
@@ -9393,12 +9497,59 @@ bool Unit::IsInDisallowedMountForm() const
     return false;
 }
 
+void ApplyPercentModFloatVar(float& var, float val, bool apply)
+{
+    var *= (apply ? (100.0f + val) / 100.0f : 100.0f / (100.0f + val));
+}
+
 /*#######################################
 ########                         ########
 ########       STAT SYSTEM       ########
 ########                         ########
 #######################################*/
 
+// attack power needs special handling because positive and negative mods are set in separate update fields
+bool Unit::HandleAttackPowerModifier(AttackPowerModIndex index, AttackPowerModType modifierType, float amount, bool apply)
+{
+    if (index >= AP_MODS_COUNT || modifierType >= AP_MOD_TYPE_COUNT)
+    {
+        TC_LOG_ERROR("entities.unit", "ERROR in HandleAttackPowerModifier(): non-existing AttackPowerModIndex or wrong AttackPowerModType!");
+        return false;
+    }
+    switch (modifierType)
+    {
+        case AP_MOD_POSITIVE_FLAT:
+            m_attackPowerMods[index].positiveMods += apply ? amount : -amount;
+            break;
+        case AP_MOD_NEGATIVE_FLAT:
+            m_attackPowerMods[index].negativeMods += apply ? amount : -amount;
+            break;
+        case AP_MOD_PCT:
+            ApplyPercentModFloatVar(m_attackPowerMods[index].multiplier, amount, apply);
+            break;
+    }
+    if (!CanModifyStats())
+        return false;
+    UpdateAttackPowerAndDamage(index == RANGED_AP_MODS);
+}
+float Unit::GetAttackPowerModifierValue(AttackPowerModIndex index, AttackPowerModType modifierType) const
+{
+    if (index >= AP_MODS_COUNT || modifierType >= AP_MOD_TYPE_COUNT)
+    {
+        TC_LOG_ERROR("entities.unit", "ERROR in GetAttackPowerModifierValue(): non-existing AttackPowerModIndex or wrong AttackPowerModType!");
+        return 0.0f;
+    }
+    switch (modifierType)
+    {
+        case AP_MOD_POSITIVE_FLAT:
+            return m_attackPowerMods[index].positiveMods;
+        case AP_MOD_NEGATIVE_FLAT:
+            return m_attackPowerMods[index].negativeMods;
+        case AP_MOD_PCT:
+            return std::max(0.0f, m_attackPowerMods[index].multiplier);
+    }
+    return 0;
+}
 void Unit::HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float amount, bool apply)
 {
     if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_FLAT_END)
@@ -9517,9 +9668,6 @@ void Unit::UpdateUnitMod(UnitMods unitMod)
         case UNIT_MOD_RESISTANCE_FROST:
         case UNIT_MOD_RESISTANCE_SHADOW:
         case UNIT_MOD_RESISTANCE_ARCANE:   UpdateResistances(GetSpellSchoolByAuraGroup(unitMod));      break;
-
-        case UNIT_MOD_ATTACK_POWER:        UpdateAttackPowerAndDamage();         break;
-        case UNIT_MOD_ATTACK_POWER_RANGED: UpdateAttackPowerAndDamage(true);     break;
 
         case UNIT_MOD_DAMAGE_MAINHAND:     UpdateDamagePhysical(BASE_ATTACK);    break;
         case UNIT_MOD_DAMAGE_OFFHAND:      UpdateDamagePhysical(OFF_ATTACK);     break;
@@ -11043,11 +11191,6 @@ Unit* Unit::SelectNearbyTarget(Unit* exclude, float dist) const
 
     // select random
     return Trinity::Containers::SelectRandomContainerElement(targets);
-}
-
-void ApplyPercentModFloatVar(float& var, float val, bool apply)
-{
-    var *= (apply ? (100.0f + val) / 100.0f : 100.0f / (100.0f + val));
 }
 
 void Unit::ApplyAttackTimePercentMod(WeaponAttackType att, float val, bool apply)
@@ -12654,15 +12797,39 @@ float Unit::MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, i
     // bonus from skills is 0.04%
     //miss_chance -= skillDiff * 0.04f;
     int32 diff = -skillDiff;
-    if (victim->GetTypeId() == TYPEID_PLAYER)
-        missChance += diff > 0 ? diff * 0.04f : diff * 0.02f;
-    else
+    // Skill difference can be both negative and positive. Positive difference means that:
+    // a) Victim's level is higher
+    // b) Victim has additional defense skill bonuses
+    const bool vsPlayerOrPet = victim->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+
+    // if (victim->GetTypeId() == TYPEID_PLAYER)
+    //     missChance += diff > 0 ? diff * 0.04f : diff * 0.02f;
+    // else
+    // {
+    //     missChance += diff > 10 ? 1 + (diff - 10) * 0.4f : diff * 0.1f;
+    //     float levelFactor = victim->GetLevelForTarget(this);
+    //     if (levelFactor < 10.f)
+    //         missChance *= (levelFactor / 10.f);
+    // }
+
+    // Defense/weapon skill factor: for players and NPCs
+    float factor = 0.04f;
+    // NPCs gain additional bonus to incoming hit chance reduction based on positive skill difference (same value as bonus parry rate)
+    if (!vsPlayerOrPet && diff > 0)
     {
-        missChance += diff > 10 ? 1 + (diff - 10) * 0.4f : diff * 0.1f;
-        float levelFactor = victim->GetLevelForTarget(this);
-        if (levelFactor < 10.f)
-            missChance *= (levelFactor / 10.f);
+        if (diff > 10)
+        {
+            // First 10 points of difference (2 levels): usual decrease
+            missChance += (10 * 0.1f);
+            diff -= 10;
+            // Each additional point of difference:
+            factor = 0.4f;
+            missChance += (diff * 0.2f); // Pre-WotLK: Additional 1% miss chance for each level (final @ 3% per level)
+        }
+        else
+            factor = 0.1f;
     }
+    missChance += (diff * factor);
 
     // Spellmod from SPELLMOD_RESIST_MISS_CHANCE
     float resistMissChance = 100.0f;
@@ -14007,14 +14174,23 @@ bool Unit::IsSplineEnabled() const
     return movespline->Initialized() && !movespline->Finalized();
 }
 
-void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* target) const
+bool IsItemDisplayIndex(uint32 index)
+{
+    return (index >= PLAYER_VISIBLE_ITEM_1_ENTRYID && index <= PLAYER_VISIBLE_ITEM_19_ENTRYID && (index % 2 == 1));
+}
+
+uint32 ItemDisplayIndexToItemSlot(uint32 index)
+{
+    if (index == PLAYER_VISIBLE_ITEM_1_ENTRYID)
+        return 0;
+
+    return (index - PLAYER_VISIBLE_ITEM_1_ENTRYID) / 2;
+}
+
+void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* target)
 {
     if (!target)
         return;
-
-    ByteBuffer fieldBuffer;
-
-    UpdateMaskPacketBuilder updateMask(m_valuesCount);
 
     uint32* flags = UnitUpdateFieldFlags;
     uint32 visibleFlag = UF_FLAG_PUBLIC;
@@ -14033,7 +14209,30 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* t
     if (plr && plr->IsInSameRaidWith(target))
         visibleFlag |= UF_FLAG_PARTY_MEMBER;
 
-    Creature const* creature = ToCreature();
+    uint64 cacheKey = static_cast<uint64>(visibleFlag) << 8 | updateType;
+
+    auto cacheIt = _valuesUpdateCache.find(cacheKey);
+    if (cacheIt != _valuesUpdateCache.end())
+    {
+        int32 cachePos = static_cast<int32>(data->wpos());
+        data->append(cacheIt->second.buffer);
+
+        BuildValuesCachePosPointers dataAdjustedPos = cacheIt->second.posPointers;
+        if (cachePos)
+            dataAdjustedPos.ApplyOffset(cachePos);
+
+        PatchValuesUpdate(*data, dataAdjustedPos, target);
+
+        return;
+    }
+
+    BuildValuesCachedBuffer cacheValue(500);
+
+    ByteBuffer fieldBuffer(400);
+
+    UpdateMask updateMask;
+    updateMask.SetCount(m_valuesCount);
+
     for (uint16 index = 0; index < m_valuesCount; ++index)
     {
         if (_fieldNotifyFlags & flags[index] ||
@@ -14043,20 +14242,22 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* t
         {
             updateMask.SetBit(index);
 
-            if (index == UNIT_NPC_FLAGS)
+            // @epoch-start
+            if (plr && IsItemDisplayIndex(index))
             {
-                uint32 appendValue = m_uint32Values[UNIT_NPC_FLAGS];
-
-                if (creature)
-                    if (!target->CanSeeSpellClickOn(creature))
-                        appendValue &= ~UNIT_NPC_FLAG_SPELLCLICK;
-
-                fieldBuffer << uint32(appendValue);
+                cacheValue.posPointers.itemDisplayIds[index] = static_cast<uint32>(fieldBuffer.wpos());
+                fieldBuffer << uint32(0); // Fill in later.
+            }
+            else if (index == UNIT_NPC_FLAGS)
+            // @epoch-end
+            {
+                cacheValue.posPointers.UnitNPCFlagsPos = int32(fieldBuffer.wpos());
+                fieldBuffer << m_uint32Values[UNIT_NPC_FLAGS];
             }
             else if (index == UNIT_FIELD_AURASTATE)
             {
-                // Check per caster aura states to not enable using a spell in client if specified aura is not by target
-                fieldBuffer << BuildAuraStateUpdateForTarget(target);
+                cacheValue.posPointers.UnitFieldAuraStatePos = int32(fieldBuffer.wpos());
+                fieldBuffer << uint32(0); // Fill in later.
             }
             // FIXME: Some values at server stored in float format but must be sent to client in uint32 format
             else if (index >= UNIT_FIELD_BASEATTACKTIME && index <= UNIT_FIELD_RANGEDATTACKTIME)
@@ -14072,92 +14273,31 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* t
             {
                 fieldBuffer << uint32(m_floatValues[index]);
             }
-            // Gamemasters should be always able to interact with units - remove uninteractible flag
             else if (index == UNIT_FIELD_FLAGS)
             {
-                uint32 appendValue = m_uint32Values[UNIT_FIELD_FLAGS];
-                if (target->IsGameMaster())
-                    appendValue &= ~UNIT_FLAG_UNINTERACTIBLE;
-
-                fieldBuffer << uint32(appendValue);
+                cacheValue.posPointers.UnitFieldFlagsPos = int32(fieldBuffer.wpos());
+                fieldBuffer << m_uint32Values[UNIT_FIELD_FLAGS];
             }
-            // use modelid_a if not gm, _h if gm for CREATURE_FLAG_EXTRA_TRIGGER creatures
             else if (index == UNIT_FIELD_DISPLAYID)
             {
-                uint32 displayId = m_uint32Values[UNIT_FIELD_DISPLAYID];
-                if (creature)
-                {
-                    CreatureTemplate const* cinfo = creature->GetCreatureTemplate();
-
-                    // this also applies for transform auras
-                    if (SpellInfo const* transform = sSpellMgr->GetSpellInfo(GetTransformSpell()))
-                    {
-                        for (SpellEffectInfo const& spellEffectInfo : transform->GetEffects())
-                        {
-                            if (spellEffectInfo.IsAura(SPELL_AURA_TRANSFORM))
-                            {
-                                if (CreatureTemplate const* transformInfo = sObjectMgr->GetCreatureTemplate(spellEffectInfo.MiscValue))
-                                {
-                                    cinfo = transformInfo;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (cinfo->flags_extra & CREATURE_FLAG_EXTRA_TRIGGER)
-                        if (target->IsGameMaster())
-                            displayId = cinfo->GetFirstVisibleModel();
-                }
-
-                fieldBuffer << uint32(displayId);
+                cacheValue.posPointers.UnitFieldDisplayPos = int32(fieldBuffer.wpos());
+                fieldBuffer << m_uint32Values[UNIT_FIELD_DISPLAYID];
             }
-            // hide lootable animation for unallowed players
             else if (index == UNIT_DYNAMIC_FLAGS)
             {
+                cacheValue.posPointers.UnitDynamicFlagsPos = int32(fieldBuffer.wpos());
                 uint32 dynamicFlags = m_uint32Values[UNIT_DYNAMIC_FLAGS] & ~(UNIT_DYNFLAG_TAPPED | UNIT_DYNFLAG_TAPPED_BY_PLAYER);
-
-                if (creature)
-                {
-                    if (creature->hasLootRecipient())
-                    {
-                        dynamicFlags |= UNIT_DYNFLAG_TAPPED;
-                        if (creature->isTappedBy(target))
-                            dynamicFlags |= UNIT_DYNFLAG_TAPPED_BY_PLAYER;
-                    }
-
-                    if (!target->isAllowedToLoot(creature))
-                        dynamicFlags &= ~UNIT_DYNFLAG_LOOTABLE;
-                }
-
-                // unit UNIT_DYNFLAG_TRACK_UNIT should only be sent to caster of SPELL_AURA_MOD_STALKED auras
-                if (dynamicFlags & UNIT_DYNFLAG_TRACK_UNIT)
-                    if (!HasAuraTypeWithCaster(SPELL_AURA_MOD_STALKED, target->GetGUID()))
-                        dynamicFlags &= ~UNIT_DYNFLAG_TRACK_UNIT;
-
                 fieldBuffer << dynamicFlags;
             }
-            // FG: pretend that OTHER players in own group are friendly ("blue")
-            else if (index == UNIT_FIELD_BYTES_2 || index == UNIT_FIELD_FACTIONTEMPLATE)
+            else if (index == UNIT_FIELD_BYTES_2)
             {
-                if (IsControlledByPlayer() && target != this && sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP) && IsInRaidWith(target))
-                {
-                    FactionTemplateEntry const* ft1 = GetFactionTemplateEntry();
-                    FactionTemplateEntry const* ft2 = target->GetFactionTemplateEntry();
-                    if (!ft1->IsFriendlyTo(*ft2))
-                    {
-                        if (index == UNIT_FIELD_BYTES_2)
-                            // Allow targetting opposite faction in party when enabled in config
-                            fieldBuffer << (m_uint32Values[UNIT_FIELD_BYTES_2] & ((UNIT_BYTE2_FLAG_SANCTUARY /*| UNIT_BYTE2_FLAG_AURAS | UNIT_BYTE2_FLAG_UNK5*/) << 8)); // this flag is at uint8 offset 1 !!
-                        else
-                            // pretend that all other HOSTILE players have own faction, to allow follow, heal, rezz (trade wont work)
-                            fieldBuffer << uint32(target->GetFaction());
-                    }
-                    else
-                        fieldBuffer << m_uint32Values[index];
-                }
-                else
-                    fieldBuffer << m_uint32Values[index];
+                cacheValue.posPointers.UnitFieldBytes2Pos = int32(fieldBuffer.wpos());
+                fieldBuffer << m_uint32Values[index];
+            }
+            else if (index == UNIT_FIELD_FACTIONTEMPLATE)
+            {
+                cacheValue.posPointers.UnitFieldFactionTemplatePos = int32(fieldBuffer.wpos());
+                fieldBuffer << m_uint32Values[index];
             }
             else
             {
@@ -14167,8 +14307,170 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* t
         }
     }
 
-    updateMask.AppendToPacket(data);
-    data->append(fieldBuffer);
+    cacheValue.buffer << uint8(updateMask.GetBlockCount());
+    updateMask.AppendToPacket(&cacheValue.buffer);
+    int32 fieldBufferPos = static_cast<int32>(cacheValue.buffer.wpos());
+    cacheValue.buffer.append(fieldBuffer);
+    cacheValue.posPointers.ApplyOffset(fieldBufferPos);
+
+    int32 cachePos = static_cast<int32>(data->wpos());
+    data->append(cacheValue.buffer);
+
+    BuildValuesCachePosPointers dataAdjustedPos = cacheValue.posPointers;
+    if (cachePos)
+        dataAdjustedPos.ApplyOffset(cachePos);
+
+    PatchValuesUpdate(*data, dataAdjustedPos, target);
+
+    _valuesUpdateCache.insert(std::pair<uint64, BuildValuesCachedBuffer>(cacheKey, std::move(cacheValue)));
+}
+
+void Unit::PatchValuesUpdate(ByteBuffer& valuesUpdateBuf, BuildValuesCachePosPointers& posPointers, Player* target)
+{
+    Creature const* creature = ToCreature();
+
+    // @epoch-start
+    if (Player* plr = GetCharmerOrOwnerPlayerOrPlayerItself())
+    {
+        for (auto& [index, posPointerItemDisplayId] : posPointers.itemDisplayIds)
+        {
+            uint32 displayId = m_uint32Values[index];
+            if (!target->CanSeeTransmog())
+            {
+                // Display original items in visible slots
+                if (Item const* item = plr->GetItemByPos(INVENTORY_SLOT_BAG_0, ItemDisplayIndexToItemSlot(index)))
+                    displayId = item->GetEntry();
+            }
+            valuesUpdateBuf.put(posPointerItemDisplayId, displayId);
+        }
+    }
+    // @epoch-end
+
+    // UNIT_NPC_FLAGS
+    if (creature && posPointers.UnitNPCFlagsPos >= 0)
+    {
+        uint32 appendValue = m_uint32Values[UNIT_NPC_FLAGS];
+
+        if (creature)
+            if (!target->CanSeeSpellClickOn(creature))
+                appendValue &= ~UNIT_NPC_FLAG_SPELLCLICK;
+
+        valuesUpdateBuf.put(posPointers.UnitNPCFlagsPos, appendValue);
+    }
+
+    // UNIT_FIELD_AURASTATE
+    if (posPointers.UnitFieldAuraStatePos >= 0)
+    {
+        // Check per caster aura states to not enable using a spell in client if specified aura is not by target
+        valuesUpdateBuf.put(posPointers.UnitFieldAuraStatePos, uint32(BuildAuraStateUpdateForTarget(target)));
+    }
+
+    // UNIT_FIELD_FLAGS
+    // Gamemasters should be always able to interact with units - remove uninteractible flag
+    if (posPointers.UnitFieldFlagsPos >= 0)
+    {
+        uint32 appendValue = m_uint32Values[UNIT_FIELD_FLAGS];
+        if (target->IsGameMaster())
+            appendValue &= ~UNIT_FLAG_UNINTERACTIBLE;
+
+        valuesUpdateBuf.put(posPointers.UnitFieldFlagsPos, appendValue);
+    }
+
+    // UNIT_FIELD_DISPLAYID
+    // use modelid_a if not gm, _h if gm for CREATURE_FLAG_EXTRA_TRIGGER creatures
+    if (posPointers.UnitFieldDisplayPos >= 0)
+    {
+        uint32 displayId = m_uint32Values[UNIT_FIELD_DISPLAYID];
+        if (creature)
+        {
+            CreatureTemplate const* cinfo = creature->GetCreatureTemplate();
+
+            // this also applies for transform auras
+            if (SpellInfo const* transform = sSpellMgr->GetSpellInfo(GetTransformSpell()))
+            {
+                for (SpellEffectInfo const& spellEffectInfo : transform->GetEffects())
+                {
+                    if (spellEffectInfo.IsAura(SPELL_AURA_TRANSFORM))
+                    {
+                        if (CreatureTemplate const* transformInfo = sObjectMgr->GetCreatureTemplate(spellEffectInfo.MiscValue))
+                        {
+                            cinfo = transformInfo;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (cinfo->flags_extra & CREATURE_FLAG_EXTRA_TRIGGER)
+                if (target->IsGameMaster())
+                    displayId = cinfo->GetFirstVisibleModel();
+        }
+
+        valuesUpdateBuf.put(posPointers.UnitFieldDisplayPos, uint32(displayId));
+    }
+
+    // UNIT_DYNAMIC_FLAGS
+    // hide lootable animation for unallowed players
+    if (posPointers.UnitDynamicFlagsPos >= 0)
+    {
+        uint32 dynamicFlags = m_uint32Values[UNIT_DYNAMIC_FLAGS] & ~(UNIT_DYNFLAG_TAPPED | UNIT_DYNFLAG_TAPPED_BY_PLAYER);
+
+        if (creature)
+        {
+            if (creature->hasLootRecipient())
+            {
+                dynamicFlags |= UNIT_DYNFLAG_TAPPED;
+                if (creature->isTappedBy(target))
+                    dynamicFlags |= UNIT_DYNFLAG_TAPPED_BY_PLAYER;
+            }
+
+            if (!target->isAllowedToLoot(creature))
+                dynamicFlags &= ~UNIT_DYNFLAG_LOOTABLE;
+        }
+
+        // unit UNIT_DYNFLAG_TRACK_UNIT should only be sent to caster of SPELL_AURA_MOD_STALKED auras
+        if (dynamicFlags & UNIT_DYNFLAG_TRACK_UNIT)
+            if (!HasAuraTypeWithCaster(SPELL_AURA_MOD_STALKED, target->GetGUID()))
+                dynamicFlags &= ~UNIT_DYNFLAG_TRACK_UNIT;
+
+        valuesUpdateBuf.put(posPointers.UnitDynamicFlagsPos, dynamicFlags);
+    }
+
+    // UNIT_FIELD_BYTES_2
+    // FG: pretend that OTHER players in own group are friendly ("blue")
+    if (posPointers.UnitFieldBytes2Pos >= 0)
+    {
+        if (IsControlledByPlayer() && target != this && sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP) && IsInRaidWith(target))
+        {
+            FactionTemplateEntry const* ft1 = GetFactionTemplateEntry();
+            FactionTemplateEntry const* ft2 = target->GetFactionTemplateEntry();
+            if (!ft1->IsFriendlyTo(*ft2))
+                // Allow targetting opposite faction in party when enabled in config
+                valuesUpdateBuf.put(posPointers.UnitFieldBytes2Pos, (m_uint32Values[UNIT_FIELD_BYTES_2] & ((UNIT_BYTE2_FLAG_SANCTUARY /*| UNIT_BYTE2_FLAG_AURAS | UNIT_BYTE2_FLAG_UNK5*/) << 8))); // this flag is at uint8 offset 1 !!
+        }
+        else
+        {
+            valuesUpdateBuf.put(posPointers.UnitFieldBytes2Pos, m_uint32Values[UNIT_FIELD_BYTES_2]);
+        }
+    }
+
+    // UNIT_FIELD_FACTIONTEMPLATE
+    // FG: pretend that OTHER players in own group are friendly ("blue")
+    if (posPointers.UnitFieldFactionTemplatePos >= 0)
+    {
+        if (IsControlledByPlayer() && target != this && sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP) && IsInRaidWith(target))
+        {
+            FactionTemplateEntry const* ft1 = GetFactionTemplateEntry();
+            FactionTemplateEntry const* ft2 = target->GetFactionTemplateEntry();
+            if (!ft1->IsFriendlyTo(*ft2))
+                // pretend that all other HOSTILE players have own faction, to allow follow, heal, rezz (trade wont work)
+                valuesUpdateBuf.put(posPointers.UnitFieldFactionTemplatePos, uint32(target->GetFaction()));
+        }
+        else
+        {
+            valuesUpdateBuf.put(posPointers.UnitFieldFactionTemplatePos, m_uint32Values[UNIT_FIELD_FACTIONTEMPLATE]);
+        }
+    }
 }
 
 int32 Unit::GetHighestExclusiveSameEffectSpellGroupValue(AuraEffect const* aurEff, AuraType auraType, bool checkMiscValue /*= false*/, int32 miscValue /*= 0*/) const
@@ -14427,6 +14729,20 @@ GameObject* Unit::FindNearestGuardPost(float range) const
     Cell::VisitGridObjects(this, searcher, range);
 
     return guardPost;
+}
+
+void Unit::SetUInt32Value(uint16 index, uint32 value)
+{
+    Object::SetUInt32Value(index, value);
+
+    switch (index)
+    {
+        // Invalidating the cache on health change should fix an issue where the client sees dead NPCs when they are not.
+        // We might also need to invalidate the cache for some other fields as well.
+        case UNIT_FIELD_HEALTH:
+            InvalidateValuesUpdateCache();
+            break;
+    }
 }
 
 std::string Unit::GetDebugInfo() const

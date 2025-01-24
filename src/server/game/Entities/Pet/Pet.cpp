@@ -2161,3 +2161,10 @@ std::string Pet::GetDebugInfo() const
         << "PetNumber: " << m_charmInfo->GetPetNumber();
     return sstr.str();
 }
+
+// @epoch-start
+CreatureMovementData const& Pet::GetMovementTemplate() const
+{
+    return ForcedMovement;
+}
+// @epoch-end
