@@ -9273,9 +9273,11 @@ void Unit::AtTargetAttacked(Unit* target, bool canInitialAggro)
     Player* targetPlayerOwner = target->GetCharmerOrOwnerPlayerOrPlayerItself();
     if (myPlayerOwner && targetPlayerOwner && !(myPlayerOwner->duel && myPlayerOwner->duel->Opponent == targetPlayerOwner))
     {
-        myPlayerOwner->UpdatePvP(true);
-        myPlayerOwner->SetContestedPvP(targetPlayerOwner);
-        myPlayerOwner->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
+        if (myPlayerOwner->UpdatePvP(true, false, targetPlayerOwner))
+        {
+            myPlayerOwner->SetContestedPvP(targetPlayerOwner);
+            myPlayerOwner->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
+        }
     }
 }
 

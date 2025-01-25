@@ -22347,7 +22347,7 @@ void Player::UpdateHomebindTime(uint32 time)
 void Player::InitPvP()
 {
     // pvp flag should stay after relog
-    if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP))
+    if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP) || HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_PVP_TIMER))
         UpdatePvP(true, true);
 }
 
@@ -22394,8 +22394,20 @@ void Player::SetPvP(bool state)
         (*itr)->SetPvP(state);
 }
 
-void Player::UpdatePvP(bool state, bool _override)
+bool Player::UpdatePvP(bool state, bool _override, WorldObject const* source)
 {
+    if (IsCharmed())
+        return false;
+
+    if (source)
+    {
+        if (Unit const* unit = source->ToUnit())
+        {
+            if (unit->IsCharmed())
+                return false;
+        }
+    }
+
     if (!state || _override)
     {
         SetPvP(state);
@@ -22406,6 +22418,8 @@ void Player::UpdatePvP(bool state, bool _override)
         pvpInfo.EndTimer = GameTime::GetGameTime();
         SetPvP(state);
     }
+
+    return true;
 }
 
 void Player::UpdatePotionCooldown(Spell* spell)

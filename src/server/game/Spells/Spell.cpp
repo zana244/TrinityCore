@@ -2730,7 +2730,7 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
         spell->DoTriggersOnSpellHit(_spellHitTarget, EffectMask);
 
         if (_enablePVP)
-            spell->m_caster->ToPlayer()->UpdatePvP(true);
+            spell->m_caster->ToPlayer()->UpdatePvP(true, false, _spellHitTarget);
     }
 
     spell->_spellAura = HitAura;
@@ -2834,7 +2834,7 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
                 if (Player* playerOwner = m_caster->GetCharmerOrOwnerPlayerOrPlayerItself())
                 {
                     playerOwner->SetContestedPvP();
-                    playerOwner->UpdatePvP(true);
+                    playerOwner->UpdatePvP(true, false, m_caster);
                 }
             }
 
