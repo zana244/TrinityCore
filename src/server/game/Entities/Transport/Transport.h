@@ -54,6 +54,12 @@ class TC_GAME_API GenericTransport : public GameObject, public TransportBase
             TransportBase::CalculatePassengerOffset(x, y, z, o, GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation());
         }
 
+        //! Needed when transport moves from inactive to active grid
+        virtual void LoadStaticPassengers() {}
+
+        //! Needed when transport enters inactive grid
+        virtual void UnloadStaticPassengers() {}
+
     protected:
         void UpdatePassengerPositions(PassengerSet& passengers);
 
@@ -118,10 +124,10 @@ class TC_GAME_API Transport : public GenericTransport
         KeyFrameVec const& GetKeyFrames() const { return _transportInfo->keyFrames; }
 
         //! Needed when transport moves from inactive to active grid
-        void LoadStaticPassengers();
+        void LoadStaticPassengers() override;
 
         //! Needed when transport enters inactive grid
-        void UnloadStaticPassengers();
+        void UnloadStaticPassengers() override;
 
         void EnableMovement(bool enabled);
 

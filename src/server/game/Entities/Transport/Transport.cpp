@@ -293,7 +293,7 @@ void GenericTransport::RemovePassenger(WorldObject* passenger)
         erased = _passengers.erase(passenger) > 0;
 
     // TODO _staticPassengers
-    if (erased /* || _staticPassengers.erase(passenger) */) // static passenger can remove itself in case of grid unload
+    if (erased  || _staticPassengers.erase(passenger)) // static passenger can remove itself in case of grid unload
     {
         TC_LOG_ERROR("tp","RemovePassenger {}", passenger->GetName());
         passenger->SetTransport(nullptr);
@@ -563,13 +563,13 @@ void GenericTransport::UpdatePosition(float x, float y, float z, float o)
       4. the grid that transport is currently in unloads
     */
    // TODO
-    // if (_staticPassengers.empty() && newActive) // 1.
-    //     LoadStaticPassengers();
-    // else if (!_staticPassengers.empty() && !newActive && oldCell.DiffGrid(Cell(GetPositionX(), GetPositionY()))) // 3.
-    //     UnloadStaticPassengers();
-    // else
-    //     UpdatePassengerPositions(_staticPassengers);
-    // 4. is handed by grid unload
+    if (_staticPassengers.empty() && newActive) // 1.
+        LoadStaticPassengers();
+    else if (!_staticPassengers.empty() && !newActive && oldCell.DiffGrid(Cell(GetPositionX(), GetPositionY()))) // 3.
+        UnloadStaticPassengers();
+    else
+        UpdatePassengerPositions(_staticPassengers);
+    //4. is handed by grid unload
 }
 
 void Transport::LoadStaticPassengers()
