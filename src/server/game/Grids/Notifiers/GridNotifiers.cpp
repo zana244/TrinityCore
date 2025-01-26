@@ -36,7 +36,7 @@ void VisibleNotifier::SendToSelf()
     // but exist one case when this possible and object not out of range: transports
     if (GenericTransport* transport = i_player.GetTransport())
     {
-        for (GenericTransport::PassengerSet::const_iterator itr = transport->GetPassengers().begin(); itr != transport->GetPassengers().end(); ++itr)
+        for (GenericTransport::PassengerSet::iterator itr = transport->GetPassengers().begin(); itr != transport->GetPassengers().end(); ++itr)
         {
             if (vis_guids.find((*itr)->GetGUID()) != vis_guids.end())
             {

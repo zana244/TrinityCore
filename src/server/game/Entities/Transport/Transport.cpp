@@ -32,7 +32,9 @@
 #include "Vehicle.h"
 #include "TSProfile.h"
 #include <G3D/Vector3.h>
+#include <G3D/Quat.h>
 #include "Pet.h"
+#include "GameTime.h"
 
 Transport::Transport() : GenericTransport(),
     _transportInfo(nullptr), _isMoving(true), _pendingStop(false),
@@ -749,7 +751,108 @@ void Transport::DelayedTeleportTransport()
 
 void ElevatorTransport::Update(const uint32 /*diff*/)
 {
-    return;
+    if (!m_goValue.Transport.AnimationInfo)
+        return;
+
+    if (!m_stopped)
+    {
+        uint32 timeSinceLastStop = (GameTime::GetGameTimeMS() - m_movementStarted) % m_goValue.Transport.AnimationInfo->TotalTime;
+        if (!GetGOInfo()->transport.pause)
+            m_goValue.Transport.PathProgress = timeSinceLastStop;
+        else
+        {
+            // Think this part is related to Lady Deathwhisper elevator? unsure
+            if (timeSinceLastStop >= GetGOInfo()->transport.pause) // stopped and needs to be reenabled by script
+            {
+                m_stopped = true;
+                timeSinceLastStop = GetGOInfo()->transport.pause;
+
+                // if (AI())
+                //     AI()->JustReachedStopPoint();
+            }
+            m_goValue.Transport.PathProgress = ((m_goValue.Transport.PathProgress / GetGOInfo()->transport.pause) * GetGOInfo()->transport.pause + timeSinceLastStop) % m_goValue.Transport.AnimationInfo->TotalTime;
+        }
+        TransportAnimationEntry const* nodeNext = m_goValue.Transport.AnimationInfo->GetNextAnimNode(m_goValue.Transport.PathProgress);
+        TransportAnimationEntry const* nodePrev = m_goValue.Transport.AnimationInfo->GetPrevAnimNode(m_goValue.Transport.PathProgress);
+        if (nodeNext && nodePrev)
+        {
+                m_goValue.Transport.CurrentSeg = nodePrev->TimeIndex;
+
+            G3D::Vector3 posPrev = G3D::Vector3(nodePrev->Pos.X, nodePrev->Pos.Y, nodePrev->Pos.Z);
+            G3D::Vector3 posNext = G3D::Vector3(nodeNext->Pos.X, nodeNext->Pos.Y, nodeNext->Pos.Z);
+            G3D::Vector3 currentPos;
+            if (posPrev == posNext)
+                currentPos = posPrev;
+            else
+            {
+                float nodeProgress = float(m_goValue.Transport.PathProgress - nodePrev->TimeIndex) / float(nodeNext->TimeIndex - nodePrev->TimeIndex);
+
+                currentPos = posPrev.lerp(posNext, nodeProgress);
+            }
+
+            TransportRotationEntry const* rotPrev = m_goValue.Transport.AnimationInfo->GetPrevRotation(m_goValue.Transport.PathProgress);
+            if (rotPrev)
+            {
+                G3D::Quat rotation;
+                TransportRotationEntry const* rotNext = m_goValue.Transport.AnimationInfo->GetNextRotation(m_goValue.Transport.PathProgress);
+                if (rotPrev == rotNext)
+                    rotation = G3D::Quat(rotPrev->X, rotPrev->Y, rotPrev->Z, rotPrev->W);
+                else
+                {
+                    G3D::Quat quatPrev(rotPrev->X, rotPrev->Y, rotPrev->Z, rotPrev->W);
+                    G3D::Quat quatNext(rotNext->X, rotNext->Y, rotNext->Z, rotNext->W);
+
+                    float nodeProgress = float(m_goValue.Transport.PathProgress - rotPrev->TimeIndex) / float(rotNext->TimeIndex - rotPrev->TimeIndex);
+
+                    rotation = quatPrev.slerp(quatNext, nodeProgress);
+                }
+
+                SetOrientation(std::asin(rotation.z) * 2);
+
+                SetLocalRotation(rotation.x, rotation.y, rotation.z, rotation.w);
+            }
+
+            G3D::Quat transportPathRotation(GetFloatValue(GAMEOBJECT_PARENTROTATION + 0), GetFloatValue(GAMEOBJECT_PARENTROTATION + 1), GetFloatValue(GAMEOBJECT_PARENTROTATION + 2), GetFloatValue(GAMEOBJECT_PARENTROTATION + 3));
+            currentPos = currentPos * transportPathRotation;
+
+            currentPos += G3D::Vector3(m_stationaryPosition.GetPositionX(), m_stationaryPosition.GetPositionY(), m_stationaryPosition.GetPositionZ());
+
+            GetMap()->GameObjectRelocation(this, currentPos.x, currentPos.y, currentPos.z, GetOrientation());
+            // SummonCreature(1, currentPos.x, currentPos.y, currentPos.z, GetOrientation(), TEMPSPAWN_TIMED_DESPAWN, 5000);
+
+            UpdatePassengerPositions(GetPassengers());
+
+            // Ulduar stuff
+            // if (!m_eventTriggered && (GetGOInfo()->transport.pause1EventID || GetGOInfo()->transport.pause2EventID))
+            // {
+            //     uint32 eventId = 0;
+            //     switch (GetGOInfo()->id)
+            //     {
+            //         case 194675: // Ulduar Tram
+            //         {
+            //             if (nodePrev->id == 179512)
+            //                 eventId = GetGOInfo()->transport.pause1EventID;
+            //             else if (nodePrev->id == 179620)
+            //                 eventId = GetGOInfo()->transport.pause2EventID;
+            //             break;
+            //         }
+            //         default:
+            //             break;
+            //     }
+            //     if (eventId)
+            //     {
+            //         m_eventTriggered = true;
+            //         StartEvents_Event(GetMap(), eventId, this, this, true);
+            //     }
+            // }
+        }
+
+        if (GetGOInfo()->transport.pause)
+            SetUInt16Value(GAMEOBJECT_DYNAMIC, 1, m_goValue.Transport.PathProgress);
+    }
+
+    // if (AI())
+    //     AI()->UpdateAI(diff);
 }
 void GenericTransport::UpdatePassengerPositions(PassengerSet& passengers)
 {

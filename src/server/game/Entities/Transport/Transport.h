@@ -33,12 +33,13 @@ class TC_GAME_API GenericTransport : public GameObject, public TransportBase
     public:
     typedef std::set<WorldObject*> PassengerSet;
 
+        GenericTransport() : m_movementStarted(0), m_stopped(false){}
         void AddPassenger(WorldObject* passenger);
         void RemovePassenger(WorldObject* passenger);
         void AddFollowerToTransport(Unit* passenger, Unit* follower);
         void RemoveFollowerFromTransport(Unit* passenger, Unit* follower);
 
-        PassengerSet const& GetPassengers() const { return _passengers; }
+        PassengerSet& GetPassengers() { return _passengers; }
 
         void UpdatePosition(float x, float y, float z, float o);
 
@@ -62,6 +63,10 @@ class TC_GAME_API GenericTransport : public GameObject, public TransportBase
 
     protected:
         void UpdatePassengerPositions(PassengerSet& passengers);
+
+        // Used for ElevatorTransport
+        uint32 m_movementStarted;
+        bool m_stopped;
 
         PassengerSet _passengers;
         PassengerSet::iterator _passengerTeleportItr;

@@ -385,7 +385,7 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
             SetLevel(goinfo->transport.pause);
             SetGoState(goinfo->transport.startOpen ? GO_STATE_ACTIVE : GO_STATE_READY);
             SetGoAnimProgress(animprogress);
-            m_goValue.Transport.PathProgress = 0;
+            m_goValue.Transport.PathProgress = goinfo->transport.startOpen ? goinfo->transport.pause : 0; // these start in the middle of their path
             m_goValue.Transport.AnimationInfo = sTransportMgr->GetTransportAnimInfo(goinfo->entry);
             m_goValue.Transport.CurrentSeg = 0;
             break;
