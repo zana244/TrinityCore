@@ -523,7 +523,9 @@ void GameObject::Update(uint32 diff)
                         // Hardcoded tooltip value
                         m_cooldownTime = GameTime::GetGameTimeMS() + 10 * IN_MILLISECONDS;
                     else if (Unit* owner = GetOwner())
-                        if (owner->IsInCombat())
+                        // @epoch-start
+                        // if (owner->IsInCombat())
+                        // @epoch-end
                             m_cooldownTime = GameTime::GetGameTimeMS() + goInfo->trap.startDelay * IN_MILLISECONDS;
 
                     SetLootState(GO_READY);
