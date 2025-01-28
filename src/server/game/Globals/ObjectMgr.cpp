@@ -2479,7 +2479,7 @@ ObjectGuid::LowType ObjectMgr::AddGameObjectData(uint32 entry, uint32 mapId, Pos
     // We use spawn coords to spawn
     if (!map->Instanceable() && map->IsGridLoaded(data.spawnPoint))
     {
-        GameObject* go = new GameObject;
+        GameObject* go = GameObject::CreateGameObject(entry);
         if (!go->LoadFromDB(spawnId, map, true))
         {
             TC_LOG_ERROR("misc", "AddGameObjectData: cannot add gameobject entry {} to map", entry);
@@ -2731,6 +2731,8 @@ void ObjectMgr::LoadGameObjects()
 
         if (gameEvent == 0 && PoolId == 0)                      // if not this is to be managed by GameEvent System or Pool system
             AddGameobjectToGrid(guid, &data);
+            if (gInfo->type == GAMEOBJECT_TYPE_TRANSPORT)
+        }
     }
     while (result->NextRow());
 

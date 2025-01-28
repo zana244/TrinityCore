@@ -160,6 +160,15 @@ GameObject::~GameObject()
     //    CleanupsBeforeDelete();
 }
 
+GameObject* GameObject::CreateGameObject(uint32 entry)
+{
+    GameObjectTemplate const* goinfo = sObjectMgr->GetGameObjectTemplate(entry);
+    if (goinfo && goinfo->type == GAMEOBJECT_TYPE_TRANSPORT) {
+        return new ElevatorTransport;
+    }
+    return new GameObject;
+}
+
 void GameObject::AIM_Destroy()
 {
     delete m_AI;
