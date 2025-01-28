@@ -2731,8 +2731,6 @@ void ObjectMgr::LoadGameObjects()
 
         if (gameEvent == 0 && PoolId == 0)                      // if not this is to be managed by GameEvent System or Pool system
             AddGameobjectToGrid(guid, &data);
-            if (gInfo->type == GAMEOBJECT_TYPE_TRANSPORT)
-        }
     }
     while (result->NextRow());
 
