@@ -4797,13 +4797,27 @@ Pet* Map::GetPet(ObjectGuid const& guid)
     return _objectsStore.Find<Pet>(guid);
 }
 
-Transport* Map::GetTransport(ObjectGuid const& guid)
+GenericTransport* Map::GetTransport(ObjectGuid const& guid)
 {
-    if (!guid.IsMOTransport())
-        return nullptr;
+    // if (!guid.IsMOTransport() || !guid.IsTransport())
+    //     return nullptr;
 
-    GameObject* go = GetGameObject(guid);
-    return go ? go->ToTransport() : nullptr;
+    // GameObject* go = GetGameObject(guid);
+    // return go ? go->ToTransport() : nullptr;
+
+    // elevators also cause the client to send MOVEFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
+    for (auto& transport : _transports)
+    {
+        if (transport->GetGUID() == guid)
+        {
+            return transport;
+        }
+    }
+    if (guid.GetEntry())
+        if (GameObject* go = GetGameObject(guid))
+            if (go->IsTransport())
+                return static_cast<GenericTransport*>(go);
+    return nullptr;
 }
 
 DynamicObject* Map::GetDynamicObject(ObjectGuid const& guid)
