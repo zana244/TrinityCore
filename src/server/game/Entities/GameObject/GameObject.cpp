@@ -397,6 +397,7 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
             m_goValue.Transport.PathProgress = goinfo->transport.startOpen ? goinfo->transport.pause : 0; // these start in the middle of their path
             m_goValue.Transport.AnimationInfo = sTransportMgr->GetTransportAnimInfo(goinfo->entry);
             m_goValue.Transport.CurrentSeg = 0;
+            setActive(true);
             break;
         case GAMEOBJECT_TYPE_FISHINGNODE:
             SetGoAnimProgress(0);
