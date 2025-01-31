@@ -541,41 +541,6 @@ void GameObject::Update(uint32 diff)
                     SetLootState(GO_READY);
                     break;
                 }
-                case GAMEOBJECT_TYPE_TRANSPORT:
-                {
-                    if (!m_goValue.Transport.AnimationInfo)
-                        break;
-
-                    if (GetGoState() == GO_STATE_READY)
-                    {
-                        m_goValue.Transport.PathProgress += diff;
-                        /* TODO: Fix movement in unloaded grid - currently GO will just disappear
-                        uint32 timer = m_goValue.Transport.PathProgress % m_goValue.Transport.AnimationInfo->TotalTime;
-                        TransportAnimationEntry const* node = m_goValue.Transport.AnimationInfo->GetAnimNode(timer);
-                        if (node && m_goValue.Transport.CurrentSeg != node->TimeSeg)
-                        {
-                            m_goValue.Transport.CurrentSeg = node->TimeSeg;
-
-                            G3D::Quat rotation;
-                            if (TransportRotationEntry const* rot = m_goValue.Transport.AnimationInfo->GetAnimRotation(timer))
-                                rotation = G3D::Quat(rot->X, rot->Y, rot->Z, rot->W);
-
-                            G3D::Vector3 pos = rotation.toRotationMatrix()
-                                             * G3D::Matrix3::fromEulerAnglesZYX(GetOrientation(), 0.0f, 0.0f)
-                                             * G3D::Vector3(node->X, node->Y, node->Z);
-
-                            pos += G3D::Vector3(GetStationaryX(), GetStationaryY(), GetStationaryZ());
-
-                            G3D::Vector3 src(GetPositionX(), GetPositionY(), GetPositionZ());
-
-                            TC_LOG_DEBUG("misc", "Src: {} Dest: {}", src.toString(), pos.toString());
-
-                            GetMap()->GameObjectRelocation(this, pos.x, pos.y, pos.z, GetOrientation());
-                        }
-                        */
-                    }
-                    break;
-                }
                 case GAMEOBJECT_TYPE_FISHINGNODE:
                 {
                     // fishing code (bobber ready)

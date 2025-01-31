@@ -232,9 +232,9 @@ namespace Movement
         {
             if (Unit* vehicle = unit->GetVehicleBase())
                 angle -= vehicle->GetOrientation();
-            else if (GenericTransport* transport = unit->GetTransport())
-                angle -= transport->GetOrientation();
-        }
+        } // Handle Transport outside args.TransformForTransport
+        else if (GenericTransport* transport = unit->GetTransport())
+            angle -= transport->GetOrientation();
 
         args.facing.angle = G3D::wrap(angle, 0.f, (float)G3D::twoPi());
         args.flags.EnableFacingAngle();

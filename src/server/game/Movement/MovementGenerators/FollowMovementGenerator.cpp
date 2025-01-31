@@ -139,9 +139,7 @@ bool FollowMovementGenerator::PositionOkay(Unit* target, bool isPlayerPet, bool&
 {
     if (!_lastTargetPosition)
         return false;
-
-    //Position currPos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
-    Position currPos = target->GetPosition();
+    Position currPos = target->GetTransport() ? target->GetTransOffset() : target->GetPosition();
 
     // target->GetExactDistSq calculates against target->GetPosition, but we care about transport, so calculate directly against the intended position.
     float exactDistSq = currPos.GetExactDistSq(_lastTargetPosition->GetPositionX(), _lastTargetPosition->GetPositionY(), _lastTargetPosition->GetPositionZ());

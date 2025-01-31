@@ -14031,7 +14031,12 @@ void Unit::SetFacingTo(float ori, bool force)
         return;
 
     Movement::MoveSplineInit init(this);
-    init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
+    // Do we even need MoveTo? Shauren says yes...
+    if (GetTransport())
+        init.MoveTo(GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), false);
+    else
+        init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
+    // For transports this is already disabled, keep for vehicles?
     if (HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && GetTransGUID())
         init.DisableTransportPathTransformations(); // It makes no sense to target global orientation
     init.SetFacing(ori);
@@ -14048,7 +14053,11 @@ void Unit::SetFacingToObject(WorldObject const* object, bool force)
 
     /// @todo figure out under what conditions creature will move towards object instead of facing it where it currently is.
     Movement::MoveSplineInit init(this);
-    init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
+    // Do we even need MoveTo? ...
+    if (GetTransport())
+        init.MoveTo(GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), false);
+    else
+        init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
     init.SetFacing(GetAbsoluteAngle(object));   // when on transport, GetAbsoluteAngle will still return global coordinates (and angle) that needs transforming
 
     //GetMotionMaster()->LaunchMoveSpline(std::move(init), EVENT_FACE, MOTION_PRIORITY_HIGHEST);
