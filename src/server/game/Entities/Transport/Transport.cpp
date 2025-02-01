@@ -715,6 +715,11 @@ void Transport::DelayedTeleportTransport()
         obj->m_movementInfo.transport.pos.GetPosition(destX, destY, destZ, destO);
         TransportBase::CalculatePassengerPosition(destX, destY, destZ, &destO, x, y, z, o);
 
+        // TODO Needs a more robust way to teleport vehicle passengers.
+        if (Unit* unit = obj->ToUnit())
+            if (unit->GetVehicleKit())
+                unit->GetVehicleKit()->TeleportPassengers(_nextFrame->Node->ContinentID, destX, destY, destZ, destO);
+
         switch (obj->GetTypeId())
         {
             case TYPEID_PLAYER:

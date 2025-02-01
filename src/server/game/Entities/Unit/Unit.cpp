@@ -13451,10 +13451,16 @@ void Unit::_ExitVehicle(Position const* exitPosition)
     else
     {
         // Set exit position to vehicle position and use the current orientation
-        pos = vehicle->GetBase()->GetPosition();
+        // If the vehicle is on a transport, we either are passengers too now after m_vehicle->RemovePassenger
+        // or the transport is teleporting, and we are not a passenger.
+        if (vehicle->GetBase()->GetTransport() && GetTransport())
+            pos = vehicle->GetBase()->GetTransOffset();
+        else
+            pos = vehicle->GetBase()->GetPosition();
         pos.SetOrientation(GetOrientation());
 
         // Change exit position based on seat entry addon data
+        // Possible TODO? Might not mesh well with transport offsets?
         if (seatAddon)
         {
             if (seatAddon->ExitParameter == VehicleExitParameters::VehicleExitParamOffset)
