@@ -3110,7 +3110,7 @@ void Spell::EffectSummonPet()
     std::string new_name = sObjectMgr->GeneratePetName(petentry);
     if (!new_name.empty())
         pet->SetName(new_name);
-    
+
     if (GenericTransport* transport = owner->GetTransport())
         transport->AddFollowerToTransport(owner, pet);
 

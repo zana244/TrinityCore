@@ -240,7 +240,7 @@ namespace MMAP
         FILE* file = fopen(fileName, "rb");
         if (!file)
         {
-            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Error: Could not open mmap file %s", fileName);
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Error: Could not open mmap file {}", fileName);
             delete[] fileName;
             return false;
         }
@@ -248,13 +248,13 @@ namespace MMAP
         fread(&fileHeader, sizeof(MmapTileHeader), 1, file);
         if (fileHeader.mmapMagic != MMAP_MAGIC)
         {
-            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Bad header in mmap %s", fileName);
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Bad header in mmap {}", fileName);
             fclose(file);
             return false;
         }
         if (fileHeader.mmapVersion != MMAP_VERSION)
         {
-            TC_LOG_ERROR("maps", "MMAP:loadGameObject: %s was built with generator v%i, expected v%i",
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: {} was built with generator v%i, expected v%i",
                 fileName, fileHeader.mmapVersion, MMAP_VERSION);
             fclose(file);
             return false;
@@ -264,7 +264,7 @@ namespace MMAP
         size_t result = fread(data, fileHeader.size, 1, file);
         if (!result)
         {
-            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Bad header or data in mmap %s", fileName);
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Bad header or data in mmap {}", fileName);
             fclose(file);
             return false;
         }
@@ -275,15 +275,14 @@ namespace MMAP
         if (dtStatusFailed(r))
         {
             dtFreeNavMesh(mesh);
-            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Failed to initialize dtNavMesh from file %s. Result 0x%x.", fileName, r);
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Failed to initialize dtNavMesh from file {}. Result 0x%x.", fileName, r);
             delete[] fileName;
             return false;
         }
-        TC_LOG_INFO("maps", "MMAP:loadGameObject: Loaded file %s [size=%u]", fileName, fileHeader.size);
+        TC_LOG_INFO("maps", "MMAP:loadGameObject: Loaded file {} [size=%u]", fileName, fileHeader.size);
         delete[] fileName;
         MMapGOData* mmap_data = new MMapGOData(mesh);
         m_loadedModels.insert(std::pair<uint32, MMapGOData*>(displayId, mmap_data));
-        TC_LOG_ERROR("nav","Loaded GO model {}", displayId);
         return true;
     }
 

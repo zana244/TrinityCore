@@ -196,7 +196,6 @@ namespace Movement
         // This might be obsolete... for actual transports we pass global coordinates
         // GetTransGUID returns vehicle GUIDs too ... transform only for vehicles
         args.TransformForTransport = unit->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && unit->GetTransGUID() && !unit->GetTransport();
-        //TC_LOG_ERROR("pos","TransformForTransport {}", args.TransformForTransport);
         // mix existing state into new
         args.flags.canswim = unit->CanSwim();
         args.walk = unit->HasUnitMovementFlag(MOVEMENTFLAG_WALKING);
@@ -247,6 +246,8 @@ namespace Movement
         std::transform(controls.begin(), controls.end(), args.path.begin(), TransportPathTransform(unit, args.TransformForTransport));
     }
 
+    // If generatePath == true, needs global coordinates
+    // else, needs transport offsets.
     void MoveSplineInit::MoveTo(float x, float y, float z, bool generatePath, bool forceDestination)
     {
         MoveTo(G3D::Vector3(x, y, z), generatePath, forceDestination);

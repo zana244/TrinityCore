@@ -138,7 +138,6 @@ void Transport::Update(uint32 diff)
     if (IsMoving() || !_pendingStop)
         m_goValue.Transport.PathProgress += diff;
 
-    //TC_LOG_ERROR("pos","GetGOInfo->Type {} GetTransportPeriod() {}",GetGOInfo()->type, GetTransportPeriod());
     uint32 timer = m_goValue.Transport.PathProgress % GetTransportPeriod();
     bool justStopped = false;
 
@@ -258,13 +257,13 @@ void GenericTransport::AddPassenger(WorldObject* passenger)
 {
     if (!IsInWorld())
         return;
-    TC_LOG_ERROR("tp","AddPassenger {} GetGOInfo()->type {}", passenger->GetName(), GetGOInfo()->type);
+
     if (_passengers.insert(passenger).second)
     {
         passenger->SetTransport(this);
         passenger->m_movementInfo.AddMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
         passenger->m_movementInfo.transport.guid = GetGUID();
-        TC_LOG_ERROR("entities.transport", "Object {} boarded transport {}.", passenger->GetName(), GetName());
+        TC_LOG_DEBUG("entities.transport", "Object {} boarded transport {}.", passenger->GetName(), GetName());
 
         if (Player* plr = passenger->ToPlayer())
         {
@@ -294,10 +293,8 @@ void GenericTransport::RemovePassenger(WorldObject* passenger)
     else
         erased = _passengers.erase(passenger) > 0;
 
-    // TODO _staticPassengers
     if (erased  || _staticPassengers.erase(passenger)) // static passenger can remove itself in case of grid unload
     {
-        TC_LOG_ERROR("tp","RemovePassenger {}", passenger->GetName());
         passenger->SetTransport(nullptr);
         passenger->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
         passenger->m_movementInfo.transport.Reset();
@@ -564,14 +561,13 @@ void GenericTransport::UpdatePosition(float x, float y, float z, float o)
       3. transport moves from active to inactive grid
       4. the grid that transport is currently in unloads
     */
-   // TODO
     if (_staticPassengers.empty() && newActive) // 1.
         LoadStaticPassengers();
     else if (!_staticPassengers.empty() && !newActive && oldCell.DiffGrid(Cell(GetPositionX(), GetPositionY()))) // 3.
         UnloadStaticPassengers();
     else
         UpdatePassengerPositions(_staticPassengers);
-    //4. is handed by grid unload
+    // 4. is handed by grid unload
 }
 
 void Transport::LoadStaticPassengers()

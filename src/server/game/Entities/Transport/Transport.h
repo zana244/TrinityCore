@@ -24,10 +24,8 @@
 
 struct CreatureData;
 
-// Transport is MO Transport
+// Transport is Type 15 MO Transport
 // Elevator is Type 11 Transport
-// GenericTransport is 
-
 class TC_GAME_API GenericTransport : public GameObject, public TransportBase
 {
     public:
@@ -81,6 +79,8 @@ class TC_GAME_API ElevatorTransport : public GenericTransport
         // Don't really need a new Create for ElevatorTransport since we already initialise m_GoValue in GameObject::Create
         //bool Create(uint32 dbGuid, uint32 guidlow, uint32 name_id, Map* map, uint32 phaseMask, Position const& pos, 
         //    const QuaternionData& rotation = QuaternionData(), uint32 animprogress = 255, GOState go_state = GO_STATE_READY) override;
+        // Alternatively, instead of overriding Update, we can do like in TC master branch and implement m_goTypeImpl and call this Update()
+        // in generic GameObject->Update() code
         void Update(const uint32 diff) override;
 };
 
@@ -88,16 +88,16 @@ class TC_GAME_API Transport : public GenericTransport
 {
         friend Transport* TransportMgr::CreateTransport(uint32, ObjectGuid::LowType, Map*); // Used for MO_TRANSPORT
 
-        explicit Transport(); //?
+        explicit Transport();
     public:
 
-        ~Transport(); //?
+        ~Transport();
 
         bool Create(ObjectGuid::LowType guidlow, uint32 entry, uint32 mapid, float x, float y, float z, float ang, uint32 animprogress); // ?
-        void CleanupsBeforeDelete(bool finalCleanup = true) override; // ?
+        void CleanupsBeforeDelete(bool finalCleanup = true) override;
 
         void Update(uint32 diff) override;
-        void DelayedUpdate(uint32 diff); // ?
+        void DelayedUpdate(uint32 diff);
 
         void BuildUpdate(UpdateDataMapType& data_map) override;
 

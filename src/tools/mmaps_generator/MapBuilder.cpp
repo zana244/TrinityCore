@@ -353,7 +353,7 @@ namespace MMAP
 
         // mark almost unwalkable triangles with steep flag
         //rcModAlmostUnwalkableTriangles(m_rcContext, 50.0f, verts, nverts, tris, ntris, m_triareas);
-        
+
         // try with NAV_AREA_GROUND and without
         // no rcModAlmostUnwalkableTriangles in TC, take rcMarkWalkableTriangles from buildMoveMapTile
         rcMarkWalkableTriangles(m_rcContext, config.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas, NAV_AREA_GROUND);
@@ -534,6 +534,7 @@ namespace MMAP
             }
         }
     }
+
     void MapBuilder::buildTransports()
     {
         // List of MO Transport gameobjects
