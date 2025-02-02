@@ -19711,7 +19711,7 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
         stmt->setFloat(index++, finiteAlways(GetTransOffsetZ()));
         stmt->setFloat(index++, finiteAlways(GetTransOffsetO()));
         ObjectGuid::LowType transLowGUID = 0;
-        if (GetTransport())
+        if (GetTransport() && GetTransport()->GetGOInfo()->type == GAMEOBJECT_TYPE_MO_TRANSPORT) // TODO Type 11 Login
             transLowGUID = GetTransport()->GetGUID().GetCounter();
         stmt->setUInt32(index++, transLowGUID);
 
@@ -19836,7 +19836,7 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
         stmt->setFloat(index++, finiteAlways(GetTransOffsetZ()));
         stmt->setFloat(index++, finiteAlways(GetTransOffsetO()));
         ObjectGuid::LowType transLowGUID = 0;
-        if (GetTransport())
+        if (GetTransport() && GetTransport()->GetGOInfo()->type == GAMEOBJECT_TYPE_MO_TRANSPORT) // TODO Type 11 Login
             transLowGUID = GetTransport()->GetGUID().GetCounter();
         stmt->setUInt32(index++, transLowGUID);
 
