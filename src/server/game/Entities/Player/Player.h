@@ -1582,7 +1582,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void InitPvP();
         void UpdatePvPState(bool onlyFFA = false);
         void SetPvP(bool state) override;
-        void UpdatePvP(bool state, bool override = false);
+        bool UpdatePvP(bool state, bool override = false, WorldObject const* source = nullptr);
         void UpdateZone(uint32 newZone, uint32 newArea);
         void UpdateArea(uint32 newArea);
         void SetNeedsZoneUpdate(bool needsUpdate) { m_needsZoneUpdate = needsUpdate; }

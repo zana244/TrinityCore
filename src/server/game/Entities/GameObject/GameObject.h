@@ -95,6 +95,8 @@ class TC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
         explicit GameObject();
         ~GameObject();
 
+        static GameObject* CreateGameObject(uint32 entry);
+
         void BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* target) override;
 
         void AddToWorld() override;

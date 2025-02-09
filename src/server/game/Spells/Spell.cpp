@@ -1923,13 +1923,24 @@ void Spell::SearchAreaTargets(std::list<WorldObject*>& targets, float range, Pos
 
 void Spell::SearchChainTargets(std::list<WorldObject*>& targets, uint32 chainTargets, WorldObject* target, SpellTargetObjectTypes objectType, SpellTargetCheckTypes selectType, ConditionContainer* condList, bool isChainHeal)
 {
+    // @epoch-start
+    // chain lightning/heal spells and similar - allow to jump at larger distance and go out of los
+    bool isBouncingFar = (m_spellInfo->HasAttribute(SPELL_ATTR4_AREA_TARGET_CHAIN)
+        || m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_NONE
+        || m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC);
+    // @epoch-end
+
     // max dist for jump target selection
     float jumpRadius = 0.0f;
     switch (m_spellInfo->DmgClass)
     {
         case SPELL_DAMAGE_CLASS_RANGED:
-            // 7.5y for multi shot
-            jumpRadius = 7.5f;
+            // @epoch-start
+            jumpRadius = 10.0f;
+            isBouncingFar = true;
+            // // 7.5y for multi shot
+            // jumpRadius = 7.5f;
+            // @epoch-end
             break;
         case SPELL_DAMAGE_CLASS_MELEE:
             // 5y for swipe, cleave and similar
@@ -1937,19 +1948,15 @@ void Spell::SearchChainTargets(std::list<WorldObject*>& targets, uint32 chainTar
             break;
         case SPELL_DAMAGE_CLASS_NONE:
         case SPELL_DAMAGE_CLASS_MAGIC:
+            // @epoch-start
             // 12.5y for chain heal spell since 3.2 patch
-            if (isChainHeal)
-                jumpRadius = 12.5f;
-            // 10y as default for magic chain spells
-            else
-                jumpRadius = 10.0f;
-            break;
+            // if (isChainHeal)
+            //     jumpRadius = 12.5f;
+            // // 10y as default for magic chain spells
+            // else
+            jumpRadius = 10.0f;
+            // @epoch-end
     }
-
-    // chain lightning/heal spells and similar - allow to jump at larger distance and go out of los
-    bool isBouncingFar = (m_spellInfo->HasAttribute(SPELL_ATTR4_AREA_TARGET_CHAIN)
-        || m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_NONE
-        || m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC);
 
     // max dist which spell can reach
     float searchRadius = jumpRadius;
@@ -2414,7 +2421,7 @@ void Spell::TargetInfo::PreprocessTarget(Spell* spell)
     {
         // if target is flagged for pvp also flag caster if a player
         // but respect current pvp rules (buffing/healing npcs flagged for pvp only flags you if they are in combat)
-        if (unit->IsPvP() && (unit->IsInCombat() || unit->IsCharmedOwnedByPlayerOrPlayer()) && spell->m_caster->GetTypeId() == TYPEID_PLAYER)
+        if (unit->IsPvP() && (unit->IsInCombat() || unit->IsCharmedOwnedByPlayerOrPlayer()) && spell->m_caster->GetTypeId() == TYPEID_PLAYER && spell->m_caster->GetGUID() != unit->GetGUID())
             _enablePVP = true; // Decide on PvP flagging now, but act on it later.
 
         SpellMissInfo missInfo = spell->PreprocessSpellHit(_spellHitTarget, ScaleAura, *this);
@@ -2730,7 +2737,7 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
         spell->DoTriggersOnSpellHit(_spellHitTarget, EffectMask);
 
         if (_enablePVP)
-            spell->m_caster->ToPlayer()->UpdatePvP(true);
+            spell->m_caster->ToPlayer()->UpdatePvP(true, false, _spellHitTarget);
     }
 
     spell->_spellAura = HitAura;
@@ -2834,7 +2841,7 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
                 if (Player* playerOwner = m_caster->GetCharmerOrOwnerPlayerOrPlayerItself())
                 {
                     playerOwner->SetContestedPvP();
-                    playerOwner->UpdatePvP(true);
+                    playerOwner->UpdatePvP(true, false, m_caster);
                 }
             }
 
@@ -8202,10 +8209,18 @@ SpellCastResult Spell::CallScriptCheckCastHandlers()
 
         (*scritr)->_FinishScriptCall();
     }
+
+    uint32 custom_result = 0;
     FIRE_ID(m_spellInfo->events.id
         , Spell,OnCheckCast
         , TSSpell(this)
-        , TSMutableNumber<uint8>(reinterpret_cast<uint8_t*>(&retVal)));
+        , TSMutableNumber<uint8>(reinterpret_cast<uint8_t*>(&retVal))
+        , TSMutableNumber<uint32>(&custom_result)
+    );
+
+    if (retVal == SPELL_FAILED_CUSTOM_ERROR && custom_result)
+        m_customError = static_cast<SpellCustomErrors>(custom_result);
+
     return retVal;
 }
 

@@ -127,7 +127,7 @@ public:
         Player* player = handler->GetSession()->GetPlayer();
         Map* map = player->GetMap();
 
-        GameObject* object = new GameObject();
+        GameObject* object = GameObject::CreateGameObject(objectInfo->entry);
         ObjectGuid::LowType guidLow = map->GenerateLowGuid<HighGuid::GameObject>();
 
         QuaternionData rot = QuaternionData::fromEulerAnglesZYX(player->GetOrientation(), 0.f, 0.f);
@@ -148,7 +148,7 @@ public:
         // this is required to avoid weird behavior and memory leaks
         delete object;
 
-        object = new GameObject();
+        object = GameObject::CreateGameObject(objectInfo->entry);
         // this will generate a new guid if the object is in an instance
         if (!object->LoadFromDB(guidLow, map, true))
         {
@@ -362,7 +362,11 @@ public:
         // however it entirely skips parsing that block and only uses already known location
         object->Delete();
 
-        object = new GameObject();
+        GameObjectData const* godata = sObjectMgr->GetGameObjectData(guidLow);
+        if (!godata)
+            return false;
+
+        object = GameObject::CreateGameObject(godata->id);
         if (!object->LoadFromDB(guidLow, map, true))
         {
             delete object;
@@ -419,7 +423,11 @@ public:
         // however it entirely skips parsing that block and only uses already known location
         object->Delete();
 
-        object = new GameObject();
+        GameObjectData const* godata = sObjectMgr->GetGameObjectData(guidLow);
+        if (!godata)
+            return false;
+
+        object = GameObject::CreateGameObject(godata->id);
         if (!object->LoadFromDB(guidLow, map, true))
         {
             delete object;

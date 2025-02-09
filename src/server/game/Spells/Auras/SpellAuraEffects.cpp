@@ -5879,7 +5879,7 @@ void AuraEffect::HandleRaidProcFromChargeWithValueAuraProc(AuraApplication* aurA
             float radius = GetSpellEffectInfo().CalcRadius(caster);
 
             Unit* triggerTarget = nullptr;
-            Trinity::MostHPMissingGroupInRange u_check(target, radius, 0);
+            Trinity::MostHPMissingGroupInRange u_check(target, radius, 0, false);
             Trinity::UnitLastSearcher<Trinity::MostHPMissingGroupInRange> searcher(target, triggerTarget, u_check);
             Cell::VisitAllObjects(target, searcher, radius);
 

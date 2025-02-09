@@ -1707,7 +1707,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
         TC_LOG_DEBUG("maps", "Player '{}' ({}) using client without required expansion tried teleport to non accessible map (MapID: {})",
             GetName(), GetGUID().ToString(), mapid);
 
-        if (Transport* transport = GetTransport())
+        if (GenericTransport* transport = GetTransport())
         {
             transport->RemovePassenger(this);
             RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
@@ -1728,7 +1728,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     DisableSpline();
     GetMotionMaster()->Remove(EFFECT_MOTION_TYPE);
 
-    if (Transport* transport = GetTransport())
+    if (GenericTransport* transport = GetTransport())
     {
         if (options & TELE_TO_NOT_LEAVE_TRANSPORT)
             AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
@@ -1869,7 +1869,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
                 // send transfer packets
                 WorldPacket data(SMSG_TRANSFER_PENDING, 4 + 4 + 4);
                 data << uint32(mapid);
-                if (Transport* transport = GetTransport())
+                if (GenericTransport* transport = GetTransport())
                     data << transport->GetEntry() << GetMapId();
 
                 SendDirectMessage(&data);
@@ -17776,7 +17776,7 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     {
         ObjectGuid transGUID(HighGuid::Mo_Transport, transLowGUID);
 
-        Transport* transport = nullptr;
+        GenericTransport* transport = nullptr;
         if (Transport* go = HashMapHolder<Transport>::Find(transGUID))
             transport = go;
 
@@ -19711,7 +19711,7 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
         stmt->setFloat(index++, finiteAlways(GetTransOffsetZ()));
         stmt->setFloat(index++, finiteAlways(GetTransOffsetO()));
         ObjectGuid::LowType transLowGUID = 0;
-        if (GetTransport())
+        if (GetTransport() && GetTransport()->GetGOInfo()->type == GAMEOBJECT_TYPE_MO_TRANSPORT) // TODO Type 11 Login
             transLowGUID = GetTransport()->GetGUID().GetCounter();
         stmt->setUInt32(index++, transLowGUID);
 
@@ -19836,7 +19836,7 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
         stmt->setFloat(index++, finiteAlways(GetTransOffsetZ()));
         stmt->setFloat(index++, finiteAlways(GetTransOffsetO()));
         ObjectGuid::LowType transLowGUID = 0;
-        if (GetTransport())
+        if (GetTransport() && GetTransport()->GetGOInfo()->type == GAMEOBJECT_TYPE_MO_TRANSPORT) // TODO Type 11 Login
             transLowGUID = GetTransport()->GetGUID().GetCounter();
         stmt->setUInt32(index++, transLowGUID);
 
@@ -22347,7 +22347,7 @@ void Player::UpdateHomebindTime(uint32 time)
 void Player::InitPvP()
 {
     // pvp flag should stay after relog
-    if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP))
+    if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP) || HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_PVP_TIMER))
         UpdatePvP(true, true);
 }
 
@@ -22394,8 +22394,20 @@ void Player::SetPvP(bool state)
         (*itr)->SetPvP(state);
 }
 
-void Player::UpdatePvP(bool state, bool _override)
+bool Player::UpdatePvP(bool state, bool _override, WorldObject const* source)
 {
+    if (IsCharmed())
+        return false;
+
+    if (source)
+    {
+        if (Unit const* unit = source->ToUnit())
+        {
+            if (unit->IsCharmed())
+                return false;
+        }
+    }
+
     if (!state || _override)
     {
         SetPvP(state);
@@ -22406,6 +22418,8 @@ void Player::UpdatePvP(bool state, bool _override)
         pvpInfo.EndTimer = GameTime::GetGameTime();
         SetPvP(state);
     }
+
+    return true;
 }
 
 void Player::UpdatePotionCooldown(Spell* spell)
@@ -27843,7 +27857,7 @@ bool Player::TeleportToInstanceId(uint32 mapid, float x, float y, float z, float
         TC_LOG_DEBUG("maps", "Player '{}' ({}) using client without required expansion tried teleport to non accessible map (MapID: {})",
             GetName(), GetGUID().ToString(), mapid);
 
-        if (Transport* transport = GetTransport())
+        if (GenericTransport* transport = GetTransport())
         {
             transport->RemovePassenger(this);
             RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
@@ -27864,7 +27878,7 @@ bool Player::TeleportToInstanceId(uint32 mapid, float x, float y, float z, float
     DisableSpline();
     GetMotionMaster()->Remove(EFFECT_MOTION_TYPE);
 
-    if (Transport* transport = GetTransport())
+    if (GenericTransport* transport = GetTransport())
     {
         if (options & TELE_TO_NOT_LEAVE_TRANSPORT)
             AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
@@ -28006,7 +28020,7 @@ bool Player::TeleportToInstanceId(uint32 mapid, float x, float y, float z, float
                 // send transfer packets
                 WorldPacket data(SMSG_TRANSFER_PENDING, 4 + 4 + 4);
                 data << uint32(mapid);
-                if (Transport* transport = GetTransport())
+                if (GenericTransport* transport = GetTransport())
                     data << transport->GetEntry() << GetMapId();
 
                 SendDirectMessage(&data);

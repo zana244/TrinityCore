@@ -1000,11 +1000,14 @@ namespace Trinity
     class MostHPMissingGroupInRange
     {
         public:
-            MostHPMissingGroupInRange(Unit const* obj, float range, uint32 hp) : i_obj(obj), i_range(range), i_hp(hp) { }
+            MostHPMissingGroupInRange(Unit const* obj, float range, uint32 hp, bool with_pets) : i_obj(obj), i_range(range), i_hp(hp), i_pets(with_pets) { }
 
             bool operator()(Unit* u)
             {
                 if (i_obj == u)
+                    return false;
+
+                if (i_obj->IsPet() && !i_pets)
                     return false;
 
                 Player* player = nullptr;
@@ -1033,6 +1036,7 @@ namespace Trinity
             Unit const* i_obj;
             float i_range;
             uint32 i_hp;
+            bool i_pets;
     };
 
     class FriendlyCCedInRange

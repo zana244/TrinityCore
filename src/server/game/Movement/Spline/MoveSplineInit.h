@@ -92,6 +92,8 @@ namespace Movement
         void MovebyPath(PointsArray const& path, int32 pointId = 0);
 
         /* Initializes simple A to B motion, A is current unit's position, B is destination
+         * If generatePath == true, it takes global coordinates.
+         * Else, it takes transport offsets.
          */
         void MoveTo(Vector3 const& destination, bool generatePath = true, bool forceDestination = false);
         void MoveTo(float x, float y, float z, bool generatePath = true, bool forceDestination = false);

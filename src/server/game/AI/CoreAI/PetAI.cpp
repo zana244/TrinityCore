@@ -432,7 +432,10 @@ void PetAI::DoAttack(Unit* target, bool chase)
             float chaseDistance = m_bMeleeAttack ? 0.f : me->GetPetChaseDistance();
             float angle = chaseDistance == 0.f && target->GetTypeId() != TYPEID_PLAYER && !target->IsPet() ? float(M_PI) : 0.f;
             float tolerance = chaseDistance == 0.f ? float(M_PI_4) : float(M_PI * 2);
-            me->GetMotionMaster()->MoveChase(target, ChaseRange(0.f, chaseDistance), ChaseAngle(angle, tolerance));
+            if (m_bMeleeAttack) // Pass angle and tolerance only for melee chasing, otherwise imp bugs out.
+                me->GetMotionMaster()->MoveChase(target, ChaseRange(0.f, chaseDistance), ChaseAngle(angle, tolerance));
+            else
+                me->GetMotionMaster()->MoveChase(target, ChaseRange(0.f, chaseDistance));
         }
         else // (Stay && ((Aggressive || Defensive) && In Melee Range)))
         {

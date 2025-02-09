@@ -5889,17 +5889,32 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
     //if (GetTypeId() == TYPEID_UNIT)
     //    ToCreature()->SetCombatStartPosition(GetPositionX(), GetPositionY(), GetPositionZ());
 
-    if (creature && !IsControlledByPlayer())
+    if (creature)
     {
-        EngageWithTarget(victim); // ensure that anything we're attacking has threat
+        bool engage = false;
+        if (! IsControlledByPlayer())
+        {
+            engage = true;
+        }
+        else
+        {
+            Player* player = creature->GetControllingPlayer();
+            if (player && player->IsInCombatWith(victim))
+                engage = true;
+        }
 
-        creature->SendAIReaction(AI_REACTION_HOSTILE);
-        creature->CallAssistance(); // the first call that happens on initial aggro, will link nearby creatures
-
-        creature->SetAssistanceTimer(sWorld->getIntConfig(CONFIG_CREATURE_FAMILY_ASSISTANCE_PERIOD));
-
-        // Remove emote state - will be restored on creature reset
-        SetEmoteState(EMOTE_ONESHOT_NONE);
+        if (engage)
+        {
+            EngageWithTarget(victim); // ensure that anything we're attacking has threat
+    
+            creature->SendAIReaction(AI_REACTION_HOSTILE);
+            creature->CallAssistance();
+    
+            creature->SetAssistanceTimer(sWorld->getIntConfig(CONFIG_CREATURE_FAMILY_ASSISTANCE_PERIOD));
+    
+            // Remove emote state - will be restored on creature reset
+            SetEmoteState(EMOTE_ONESHOT_NONE);
+        }
     }
 
     // delay offhand weapon attack by 50% of the base attack time
@@ -9282,9 +9297,11 @@ void Unit::AtTargetAttacked(Unit* target, bool canInitialAggro)
     Player* targetPlayerOwner = target->GetCharmerOrOwnerPlayerOrPlayerItself();
     if (myPlayerOwner && targetPlayerOwner && !(myPlayerOwner->duel && myPlayerOwner->duel->Opponent == targetPlayerOwner))
     {
-        myPlayerOwner->UpdatePvP(true);
-        myPlayerOwner->SetContestedPvP(targetPlayerOwner);
-        myPlayerOwner->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
+        if (myPlayerOwner->UpdatePvP(true, false, targetPlayerOwner))
+        {
+            myPlayerOwner->SetContestedPvP(targetPlayerOwner);
+            myPlayerOwner->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
+        }
     }
 }
 
@@ -13458,10 +13475,16 @@ void Unit::_ExitVehicle(Position const* exitPosition)
     else
     {
         // Set exit position to vehicle position and use the current orientation
-        pos = vehicle->GetBase()->GetPosition();
+        // If the vehicle is on a transport, we either are passengers too now after m_vehicle->RemovePassenger
+        // or the transport is teleporting, and we are not a passenger.
+        if (vehicle->GetBase()->GetTransport() && GetTransport())
+            pos = vehicle->GetBase()->GetTransOffset();
+        else
+            pos = vehicle->GetBase()->GetPosition();
         pos.SetOrientation(GetOrientation());
 
         // Change exit position based on seat entry addon data
+        // Possible TODO? Might not mesh well with transport offsets?
         if (seatAddon)
         {
             if (seatAddon->ExitParameter == VehicleExitParameters::VehicleExitParamOffset)
@@ -14038,7 +14061,12 @@ void Unit::SetFacingTo(float ori, bool force)
         return;
 
     Movement::MoveSplineInit init(this);
-    init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
+    // Do we even need MoveTo? Shauren says yes...
+    if (GetTransport())
+        init.MoveTo(GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), false);
+    else
+        init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
+    // For transports this is already disabled, keep for vehicles?
     if (HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && GetTransGUID())
         init.DisableTransportPathTransformations(); // It makes no sense to target global orientation
     init.SetFacing(ori);
@@ -14055,7 +14083,11 @@ void Unit::SetFacingToObject(WorldObject const* object, bool force)
 
     /// @todo figure out under what conditions creature will move towards object instead of facing it where it currently is.
     Movement::MoveSplineInit init(this);
-    init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
+    // Do we even need MoveTo? ...
+    if (GetTransport())
+        init.MoveTo(GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), false);
+    else
+        init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
     init.SetFacing(GetAbsoluteAngle(object));   // when on transport, GetAbsoluteAngle will still return global coordinates (and angle) that needs transforming
 
     //GetMotionMaster()->LaunchMoveSpline(std::move(init), EVENT_FACE, MOTION_PRIORITY_HIGHEST);

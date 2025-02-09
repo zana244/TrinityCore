@@ -1701,6 +1701,9 @@ SpellCastResult SpellInfo::CheckTarget(WorldObject const* caster, WorldObject co
                 }
             }
         }
+
+        if (MaxTargetLevel && unitTarget->GetLevel() > MaxTargetLevel)
+            return SPELL_FAILED_HIGHLEVEL;
     }
     // corpse specific target checks
     else if (Corpse const* corpseTarget = target->ToCorpse())
