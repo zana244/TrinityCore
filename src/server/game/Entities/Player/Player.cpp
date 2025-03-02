@@ -225,6 +225,7 @@ Player::Player(WorldSession* session): Unit(true)
 
     m_regenTimer = 0;
     m_foodEmoteTimerCount = 0;
+    m_carryHealthRegen = 0;
     m_weaponChangeTimer = 0;
 
     m_zoneUpdateId = uint32(-1);
@@ -2228,10 +2229,16 @@ void Player::RegenerateHealth(uint32 diff)
     // always regeneration bonus (including combat)
     addValue += (GetTotalAuraModifier(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT) / 5.0f);
 
+    addValue *= float(diff) / 1000;
+
+    // Health fractions get carried to the next tick
+    addValue += m_carryHealthRegen;
+    m_carryHealthRegen = addValue - int32(addValue);
+
     if (addValue < 0.0f)
         addValue = 0.0f;
 
-    ModifyHealth(int32(addValue * float(diff) / 1000));
+    ModifyHealth(int32(addValue));
 }
 
 void Player::ResetAllPowers()
