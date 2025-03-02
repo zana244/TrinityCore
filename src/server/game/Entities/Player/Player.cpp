@@ -2046,7 +2046,7 @@ bool Player::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo 
 
 void Player::HandleFoodEmotes(uint32 diff)
 {
-    m_foodEmoteTimerCount += m_regenTimer;
+    m_foodEmoteTimerCount += diff;
 
     // Handles the emotes for drinking and eating.
     // According to sniffs there is a background timer going on that repeats independed from the time window where the aura applies.
