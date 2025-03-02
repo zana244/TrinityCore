@@ -7578,7 +7578,8 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
                 if (GetTypeId() == TYPEID_UNIT)
                 {
                     int32 const levelDiff = static_cast<int32>(GetLevelForTarget(caster)) - caster->GetLevel();
-                    crit_chance -= levelDiff * 0.7f;
+                    if (levelDiff > 0)
+                        crit_chance -= levelDiff * 0.7f;
                 }
             }
             break;
