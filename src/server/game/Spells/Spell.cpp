@@ -3519,9 +3519,9 @@ void Spell::_cast(bool skipCheck)
     {
         if (m_spellInfo->HasAttribute(SPELL_ATTR1_DISMISS_PET))
         {
-            if (Creature* pet = ObjectAccessor::GetCreature(*m_caster, unitCaster->GetPetGUID())) // For NPCs
+            if (Pet* pet = ObjectAccessor::GetPet(*m_caster, unitCaster->GetPetGUID())) // For Players
                 pet->DespawnOrUnsummon();
-            else if (Pet* pet = ObjectAccessor::GetPet(*m_caster, unitCaster->GetPetGUID())) // For Players
+            else if (Creature* pet = ObjectAccessor::GetCreature(*m_caster, unitCaster->GetPetGUID())) // For NPCs
                 pet->DespawnOrUnsummon();
         }
     }
@@ -5241,7 +5241,9 @@ void Spell::HandleThreatSpells()
             if (!target->CanHaveThreatList())
                 continue;
 
-            target->GetThreatManager().AddThreat(unitCaster, threatToAdd, m_spellInfo, true);
+            // @epoch-start
+            target->GetThreatManager().AddThreat(unitCaster, threatToAdd, m_spellInfo);
+            // @epoch-end
         }
     }
     TC_LOG_DEBUG("spells", "Spell {}, added an additional {} threat for {} {} target(s)", m_spellInfo->Id, threat, IsPositive() ? "assisting" : "harming", uint32(m_UniqueTargetInfo.size()));

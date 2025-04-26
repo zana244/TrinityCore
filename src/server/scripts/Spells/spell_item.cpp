@@ -3998,6 +3998,66 @@ class spell_item_mirrens_drinking_hat : public SpellScript
         OnEffectHitTarget += SpellEffectFn(spell_item_mirrens_drinking_hat::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
+// 13006 - Gnomish Shrink Ray
+enum ShrinkRaySpells
+{
+    SPELL_GNOMISH_SHRINK_RAY        = 13003,
+    SPELL_GNOMISH_SHRINK_RAY_GROW   = 13004,
+    SPELL_GNOMISH_SHRINK_RAY_SHRINK = 13010,
+};
+
+class spell_item_gnomish_shrink_ray : public SpellScript
+{
+    PrepareSpellScript(spell_item_gnomish_shrink_ray);
+
+    bool Load() override
+    {
+        if (!GetCastItem())
+            return false;
+        return true;
+    }
+
+    bool Validate(SpellInfo const* /*spell*/) override
+    {
+        return ValidateSpellInfo({ SPELL_GNOMISH_SHRINK_RAY, SPELL_GNOMISH_SHRINK_RAY_GROW, SPELL_GNOMISH_SHRINK_RAY_SHRINK });
+    }
+
+    void HandleDummy(SpellEffIndex /* effIndex */)
+    {
+        Unit* caster = GetCaster();
+        if (Unit* target = GetHitUnit())
+        {
+            uint32 r = urand(0, 99);
+            // Normal behavior
+            if (r > 15)
+                caster->CastSpell(target, 13003, true);
+            else if (r > 13) // Make the user bigger
+            {
+                caster->AddAura(13004, caster);
+                //caster->SendSpellGo(m_originalCaster, 13004);
+            }
+            else if (r > 11) // Make the user smaller
+            {
+                caster->AddAura(13010, caster);
+                //m_originalCaster->SendSpellGo(m_originalCaster, 13010);
+            }
+            else if (r > 9) // Make the target bigger
+            {
+                target->AddAura(13004, target);
+                //m_originalCaster->SendSpellGo(unitTarget, 13004);
+            }
+            else if (r > 4) // Make the user's entire party smaller
+                caster->CastSpell(target, 13010, true);
+            else // Make the user's entire party bigger
+                caster->CastSpell(target, 13004, true);
+        }
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_item_gnomish_shrink_ray::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
 
 // 13180 - Gnomish Mind Control Cap
 enum MindControlCap
@@ -4412,6 +4472,7 @@ void AddSC_item_spell_scripts()
     RegisterSpellScript(spell_item_mana_drain);
     RegisterSpellScript(spell_item_taunt_flag_targeting);
     RegisterSpellScript(spell_item_mirrens_drinking_hat);
+    RegisterSpellScript(spell_item_gnomish_shrink_ray);
     RegisterSpellScript(spell_item_mind_control_cap);
     RegisterSpellScript(spell_item_universal_remote);
 

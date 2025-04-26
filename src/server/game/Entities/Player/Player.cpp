@@ -225,6 +225,7 @@ Player::Player(WorldSession* session): Unit(true)
 
     m_regenTimer = 0;
     m_foodEmoteTimerCount = 0;
+    m_carryHealthRegen = 0;
     m_weaponChangeTimer = 0;
 
     m_zoneUpdateId = uint32(-1);
@@ -2045,7 +2046,7 @@ bool Player::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo 
 
 void Player::HandleFoodEmotes(uint32 diff)
 {
-    m_foodEmoteTimerCount += m_regenTimer;
+    m_foodEmoteTimerCount += diff;
 
     // Handles the emotes for drinking and eating.
     // According to sniffs there is a background timer going on that repeats independed from the time window where the aura applies.
@@ -2209,6 +2210,14 @@ void Player::RegenerateHealth(uint32 diff)
         if (! IsInCombat())
         {
             addValue *= GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALTH_REGEN_PERCENT);
+
+            // Food
+            float food = 0.0f;
+            AuraEffectList const& regenAuras = GetAuraEffectsByType(SPELL_AURA_MOD_REGEN);
+            for (AuraEffect const* aurEff : regenAuras)
+                food += (float(aurEff->GetAmount()) * 0.4f) * 0.5f;
+
+            addValue += food;
         }
         else if (HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
             addValue *= GetTotalAuraModifier(SPELL_AURA_MOD_REGEN_DURING_COMBAT) / 100.0f;
@@ -2220,10 +2229,16 @@ void Player::RegenerateHealth(uint32 diff)
     // always regeneration bonus (including combat)
     addValue += (GetTotalAuraModifier(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT) / 5.0f);
 
+    addValue *= float(diff) / 1000;
+
+    // Health fractions get carried to the next tick
+    addValue += m_carryHealthRegen;
+    m_carryHealthRegen = addValue - int32(addValue);
+
     if (addValue < 0.0f)
         addValue = 0.0f;
 
-    ModifyHealth(int32(addValue * float(diff) / 1000));
+    ModifyHealth(int32(addValue));
 }
 
 void Player::ResetAllPowers()
