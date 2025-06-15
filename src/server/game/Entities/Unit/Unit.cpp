@@ -8776,6 +8776,9 @@ void Unit::EngageWithTarget(Unit* enemy)
     // Maybe there is a better place for it.
     if (Creature* pCreature = ToCreature())
         pCreature->UpdateLeashExtensionTime();
+
+    if (Unit* enemyOwner = enemy->GetCharmerOrOwner())
+        EngageWithTarget(enemyOwner);
 }
 
 void Unit::SetImmuneToAll(bool apply, bool keepCombat)
