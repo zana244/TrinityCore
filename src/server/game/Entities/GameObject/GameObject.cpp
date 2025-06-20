@@ -742,6 +742,8 @@ void GameObject::Update(uint32 diff)
                     if (target)
                         SetLootState(GO_ACTIVATED, target);
 
+                    if (HasCustomAnim())
+                        SendCustomAnim(0);
                 }
                 else if (uint32 max_charges = goInfo->GetCharges())
                 {
@@ -1715,6 +1717,9 @@ void GameObject::Use(Unit* user)
 
             m_cooldownTime = GameTime::GetGameTimeMS() + (goInfo->trap.cooldown ? goInfo->trap.cooldown : uint32(4)) * IN_MILLISECONDS;   // template or 4 seconds
 
+            if (HasCustomAnim())
+                SendCustomAnim(0);
+
             if (goInfo->trap.type == 1)         // Deactivate after trigger
                 SetLootState(GO_JUST_DEACTIVATED);
 
@@ -2307,6 +2312,27 @@ void GameObject::Use(Unit* user)
     else
         CastSpell(target, spellId);
     // @tswow-end
+}
+
+bool GameObject::HasCustomAnim() const
+{
+    switch (GetDisplayId())
+    {
+        case 2570: // eternal flame
+        case 3071: // freezing trap
+        case 3072: // explosive trap
+        case 3073: // frost trap, fixed trap
+        case 3074: // immolation trap
+        case 4392: // lava fissure
+        case 4472: // lava fissure
+        case 4491: // mortar in dun morogh
+        case 6785: // plague fissure
+        case 6747: // sapphiron birth
+        case 6871: // Silithyst bring in
+            return true;
+    }
+
+    return false;
 }
 
 void GameObject::SendCustomAnim(uint32 anim)
