@@ -3643,6 +3643,9 @@ void Creature::AtEngage(Unit* target)
         // @tswow-end
     }
 
+    if (Unit* targetOwner = target->GetCharmerOrOwner())
+        EngageWithTarget(targetOwner);
+
     if (CreatureAI* ai = AI())
         ai->JustEngagedWith(target);
     // @tswow-begin custom boss check
