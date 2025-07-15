@@ -2208,7 +2208,7 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType, bool extr
     if ((attType == BASE_ATTACK || attType == OFF_ATTACK) && !IsWithinLOSInMap(victim))
         return;
 
-    AtTargetAttacked(victim, true);
+    AtTargetAttacked(victim, true, false);
     RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MELEE_ATTACK);
 
     if (attType != BASE_ATTACK && attType != OFF_ATTACK)
@@ -9316,7 +9316,7 @@ void Unit::AtExitCombat()
         creature->SetAssistanceTimer(0);
 }
 
-void Unit::AtTargetAttacked(Unit* target, bool canInitialAggro)
+void Unit::AtTargetAttacked(Unit* target, bool canInitialAggro, bool canTapImmediately)
 {
     if (!target->IsEngaged() && !canInitialAggro)
         return;
@@ -9325,9 +9325,10 @@ void Unit::AtTargetAttacked(Unit* target, bool canInitialAggro)
         targetOwner->EngageWithTarget(this);
 
     //Patch 3.0.8: All player spells which cause a creature to become aggressive to you will now also immediately cause the creature to be tapped.
-    // if (Creature* creature = target->ToCreature())
-    //     if (!creature->hasLootRecipient() && GetTypeId() == TYPEID_PLAYER)
-    //         creature->SetLootRecipient(this);
+    if (canTapImmediately)
+        if (Creature* creature = target->ToCreature())
+            if (!creature->hasLootRecipient() && GetTypeId() == TYPEID_PLAYER)
+                creature->SetLootRecipient(this);
 
     Player* myPlayerOwner = GetCharmerOrOwnerPlayerOrPlayerItself();
     Player* targetPlayerOwner = target->GetCharmerOrOwnerPlayerOrPlayerItself();

@@ -642,7 +642,7 @@ enum SpellAttr6 : uint32
     SPELL_ATTR6_ONLY_VISIBLE_TO_CASTER           = 0x00100000, // TITLE Only visible to caster (client only)
     SPELL_ATTR6_CLIENT_UI_TARGET_EFFECTS         = 0x00200000, // TITLE Client UI target effects (client only)
     SPELL_ATTR6_UNK22                            = 0x00400000, // TITLE Unknown attribute 22@Attr6
-    SPELL_ATTR6_UNK23                            = 0x00800000, // TITLE Unknown attribute 23@Attr6
+    SPELL_ATTR6_TAPS_IMMEDIATELY                 = 0x00800000, // TITLE Instantly tap the target even if it does not deal damage
     SPELL_ATTR6_CAN_TARGET_UNTARGETABLE          = 0x01000000, // TITLE Can target untargetable units
     SPELL_ATTR6_NOT_RESET_SWING_IF_INSTANT       = 0x02000000, // TITLE Do not reset swing timer if cast time is instant
     SPELL_ATTR6_UNK26                            = 0x04000000, // TITLE Unknown attribute 26@Attr6 DESCRIPTION Player castable buff?

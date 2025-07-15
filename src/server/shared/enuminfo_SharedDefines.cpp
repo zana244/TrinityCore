@@ -1065,7 +1065,7 @@ TC_API_EXPORT EnumText EnumUtils<SpellAttr6>::ToString(SpellAttr6 value)
         case SPELL_ATTR6_ONLY_VISIBLE_TO_CASTER: return { "SPELL_ATTR6_ONLY_VISIBLE_TO_CASTER", "Only visible to caster (client only)", "" };
         case SPELL_ATTR6_CLIENT_UI_TARGET_EFFECTS: return { "SPELL_ATTR6_CLIENT_UI_TARGET_EFFECTS", "Client UI target effects (client only)", "" };
         case SPELL_ATTR6_UNK22: return { "SPELL_ATTR6_UNK22", "Unknown attribute 22@Attr6", "" };
-        case SPELL_ATTR6_UNK23: return { "SPELL_ATTR6_UNK23", "Unknown attribute 23@Attr6", "" };
+        case SPELL_ATTR6_TAPS_IMMEDIATELY: return { "SPELL_ATTR6_TAPS_IMMEDIATELY", "Instantly tap the target even if it does not deal damage", "" };
         case SPELL_ATTR6_CAN_TARGET_UNTARGETABLE: return { "SPELL_ATTR6_CAN_TARGET_UNTARGETABLE", "Can target untargetable units", "" };
         case SPELL_ATTR6_NOT_RESET_SWING_IF_INSTANT: return { "SPELL_ATTR6_NOT_RESET_SWING_IF_INSTANT", "Do not reset swing timer if cast time is instant", "" };
         case SPELL_ATTR6_UNK26: return { "SPELL_ATTR6_UNK26", "Unknown attribute 26@Attr6", "Player castable buff?" };
@@ -1109,7 +1109,7 @@ TC_API_EXPORT SpellAttr6 EnumUtils<SpellAttr6>::FromIndex(size_t index)
         case 20: return SPELL_ATTR6_ONLY_VISIBLE_TO_CASTER;
         case 21: return SPELL_ATTR6_CLIENT_UI_TARGET_EFFECTS;
         case 22: return SPELL_ATTR6_UNK22;
-        case 23: return SPELL_ATTR6_UNK23;
+        case 23: return SPELL_ATTR6_TAPS_IMMEDIATELY;
         case 24: return SPELL_ATTR6_CAN_TARGET_UNTARGETABLE;
         case 25: return SPELL_ATTR6_NOT_RESET_SWING_IF_INSTANT;
         case 26: return SPELL_ATTR6_UNK26;
@@ -1150,7 +1150,7 @@ TC_API_EXPORT size_t EnumUtils<SpellAttr6>::ToIndex(SpellAttr6 value)
         case SPELL_ATTR6_ONLY_VISIBLE_TO_CASTER: return 20;
         case SPELL_ATTR6_CLIENT_UI_TARGET_EFFECTS: return 21;
         case SPELL_ATTR6_UNK22: return 22;
-        case SPELL_ATTR6_UNK23: return 23;
+        case SPELL_ATTR6_TAPS_IMMEDIATELY: return 23;
         case SPELL_ATTR6_CAN_TARGET_UNTARGETABLE: return 24;
         case SPELL_ATTR6_NOT_RESET_SWING_IF_INSTANT: return 25;
         case SPELL_ATTR6_UNK26: return 26;
