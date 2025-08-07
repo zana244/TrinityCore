@@ -111,7 +111,7 @@ void PetitionMgr::RemovePetition(ObjectGuid petitionGuid)
     _petitionStore.erase(petitionGuid);
 
     // Delete From DB
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("PetitionMgr::RemovePetition");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_PETITION_BY_GUID);
     stmt->setUInt32(0, petitionGuid.GetCounter());
@@ -163,7 +163,7 @@ void PetitionMgr::RemovePetitionsByOwnerAndType(ObjectGuid ownerGuid, CharterTyp
     }
 
     CharacterDatabasePreparedStatement* stmt;
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("PetitionMgr::RemovePetitionsByOwnerAndType");
     if (type == CHARTER_TYPE_ANY)
     {
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_PETITION_BY_OWNER);

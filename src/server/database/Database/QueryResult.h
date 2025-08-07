@@ -21,11 +21,12 @@
 #include "Define.h"
 #include "DatabaseEnvFwd.h"
 #include <vector>
+#include <string>
 
 class TC_DATABASE_API ResultSet
 {
     public:
-        ResultSet(MySQLResult* result, MySQLField* fields, uint64 rowCount, uint32 fieldCount);
+        ResultSet(MySQLResult* result, MySQLField* fields, uint64 rowCount, uint32 fieldCount, std::string query);
         ~ResultSet();
 
         bool NextRow();
@@ -37,7 +38,9 @@ class TC_DATABASE_API ResultSet
 
         QueryResultFieldMetadata const& GetFieldMetadata(std::size_t index) const;
 
+        std::string GetQuery() const { return _query; }
     protected:
+        std::string _query;
         std::vector<QueryResultFieldMetadata> _fieldMetadata;
         uint64 _rowCount;
         Field* _currentRow;
@@ -55,7 +58,7 @@ class TC_DATABASE_API ResultSet
 class TC_DATABASE_API PreparedResultSet
 {
     public:
-        PreparedResultSet(MySQLStmt* stmt, MySQLResult* result, uint64 rowCount, uint32 fieldCount);
+        PreparedResultSet(MySQLStmt* stmt, MySQLResult* result, uint64 rowCount, uint32 fieldCount, std::string query);
         ~PreparedResultSet();
 
         bool NextRow();
@@ -67,7 +70,9 @@ class TC_DATABASE_API PreparedResultSet
 
         QueryResultFieldMetadata const& GetFieldMetadata(std::size_t index) const;
 
+        std::string GetQuery() const { return m_query; }
     protected:
+        std::string m_query;
         std::vector<QueryResultFieldMetadata> m_fieldMetadata;
         std::vector<Field> m_rows;
         uint64 m_rowCount;

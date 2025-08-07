@@ -936,6 +936,10 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         void CleanupsBeforeDelete(bool finalCleanup = true) override;
 
+        std::optional<uint32>& GetZoneChange() {
+            return zoneChange;
+        }
+
         void AddToWorld() override;
         void RemoveFromWorld() override;
         void AddToPartition() override;
@@ -2651,6 +2655,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         WorldLocation _corpseLocation;
         time_t _corpseTime;
+
+        std::optional<uint32> zoneChange;
 
         // @tswow-begin
         friend class TSPlayer;

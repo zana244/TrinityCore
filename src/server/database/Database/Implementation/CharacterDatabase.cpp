@@ -903,11 +903,13 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     // @tswow-end
 }
 
-CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo)
+CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo, "Character")
 {
 }
 
-CharacterDatabaseConnection::CharacterDatabaseConnection(ProducerConsumerQueue<SQLOperation*>* q, MySQLConnectionInfo& connInfo) : MySQLConnection(q, connInfo)
+CharacterDatabaseConnection::CharacterDatabaseConnection(ProducerConsumerQueue<SQLOperation*>* q,
+                                                         MySQLConnectionInfo& connInfo)
+: MySQLConnection(q, connInfo, "Character")
 {
 }
 

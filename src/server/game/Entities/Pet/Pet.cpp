@@ -477,7 +477,7 @@ void Pet::SavePetToDB(PetSaveMode mode)
     uint32 curhealth = GetHealth();
     uint32 curmana = GetPower(POWER_MANA);
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Pet::SavePetToDB");
     // save auras before possibly removing them
     _SaveAuras(trans);
 
@@ -493,7 +493,7 @@ void Pet::SavePetToDB(PetSaveMode mode)
     if (mode >= PET_SAVE_AS_CURRENT)
     {
         ObjectGuid::LowType ownerLowGUID = GetOwnerGUID().GetCounter();
-        trans = CharacterDatabase.BeginTransaction();
+        trans                            = CharacterDatabase.BeginTransaction("Pet::SavePetToDB");
         // remove current data
 
         CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_PET_BY_ID);
@@ -567,7 +567,7 @@ void Pet::FillPetInfo(PetStable::PetInfo* petInfo) const
 
 void Pet::DeleteFromDB(ObjectGuid::LowType guidlow)
 {
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Pet::DeleteFromDB");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_PET_BY_ID);
     stmt->setUInt32(0, guidlow);

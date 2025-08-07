@@ -24,7 +24,6 @@
 #include "TSLua.h"
 #include "TSProfile.h"
 #include "TSScriptMgrEvents.h"
-#include "EpochLaunchLog.hpp"
 // @tswow-end
 #include "World.h"
 #include "AccountMgr.h"
@@ -124,6 +123,7 @@ TC_GAME_API int32 World::m_visibility_notify_periodInArenas     = DEFAULT_VISIBI
 World::World()
 {
     m_playerLimit = 0;
+    m_connectionLimit = 0;
     m_allowedSecurityLevel = SEC_PLAYER;
     m_allowMovement = true;
     m_ShutdownMask = 0;
@@ -133,6 +133,7 @@ World::World()
     m_maxQueuedSessionCount = 0;
     m_PlayerCount = 0;
     m_MaxPlayerCount = 0;
+    m_lastQueueProcessTime = 0;
     m_NextDailyQuestReset = 0;
     m_NextWeeklyQuestReset = 0;
     m_NextMonthlyQuestReset = 0;
@@ -307,15 +308,17 @@ WorldSession* World::FindSession(uint32 id) const
 /// Remove a given session
 bool World::RemoveSession(uint32 id)
 {
-    ///- Find the session, kick the user, but we can't delete session at this moment to prevent iterator invalidation
     SessionMap::const_iterator itr = m_sessions.find(id);
-
     if (itr != m_sessions.end() && itr->second)
     {
         if (itr->second->PlayerLoading())
             return false;
 
         itr->second->KickPlayer("World::RemoveSession");
+
+        RemoveQueuedPlayer(itr->second);
+
+        delete itr->second;
     }
 
     return true;
@@ -334,44 +337,23 @@ void World::AddSession_(WorldSession* s)
 
     ///- kick already loaded player with same account (if any) and remove session
     ///- if player is in loading and want to load again, return
+    // The player is loading from the time we get the login opcode until the character data is loaded, in this window
+    // we cannot replace their session as the client interaction is messy.  This also includes the loginCallbackQueue.
     if (!RemoveSession(s->GetAccountId()))
     {
         s->KickPlayer("World::AddSession_ Couldn't remove the other session while on loading screen");
-        delete s;                                           // session not added yet in session list, so not listed in queue
+        delete s; // session not added yet in session list, so not listed in queue
         return;
     }
 
-    // decrease session counts only at not reconnection case
-    bool decrease_session = true;
-
-    // if session already exist, prepare to it deleting at next world update
-    // NOTE - KickPlayer() should be called on "old" in RemoveSession()
-    {
-        SessionMap::const_iterator old = m_sessions.find(s->GetAccountId());
-
-        if (old != m_sessions.end())
-        {
-            // prevent decrease sessions count if session queued
-            if (RemoveQueuedPlayer(old->second))
-                decrease_session = false;
-            // not remove replaced session form queue if listed
-            delete old->second;
-        }
-    }
+    // Get counts before adding the new session
+    uint32 pLimit = GetPlayerLimit();
+    uint32 count = GetActiveAndQueuedSessionCount();
+    uint32 QueueSize = GetQueuedSessionCount(); //number of players in the queue
 
     m_sessions[s->GetAccountId()] = s;
 
-    uint32 Sessions = GetActiveAndQueuedSessionCount();
-    uint32 pLimit = GetPlayerAmountLimit();
-    bool pLimitNoQueue = sWorld->GetPlayerAmountLimitNoQueue();
-    uint32 QueueSize = GetQueuedSessionCount(); //number of players in the queue
-
-    //so we don't count the user trying to
-    //login as a session and queue the socket that we are using
-    if (decrease_session)
-        --Sessions;
-
-    if (!pLimitNoQueue && pLimit > 0 && Sessions >= pLimit && !s->HasPermission(rbac::RBAC_PERM_SKIP_QUEUE) && !HasRecentlyDisconnected(s))
+    if (pLimit > 0 && (count >= pLimit || !m_QueuedPlayer.empty()) && !s->HasPermission(rbac::RBAC_PERM_SKIP_QUEUE) && !HasRecentlyDisconnected(s))
     {
         AddQueuedPlayer(s);
         UpdateMaxSessionCounters();
@@ -380,7 +362,6 @@ void World::AddSession_(WorldSession* s)
     }
 
     s->InitializeSession();
-
     UpdateMaxSessionCounters();
 
     // Updates the population
@@ -437,52 +418,15 @@ void World::AddQueuedPlayer(WorldSession* sess)
 
 bool World::RemoveQueuedPlayer(WorldSession* sess)
 {
-    // sessions count including queued to remove (if removed_session set)
-    uint32 sessions = GetActiveSessionCount();
-
-    uint32 position = 1;
-    Queue::iterator iter = m_QueuedPlayer.begin();
-
-    // search to remove and count skipped positions
-    bool found = false;
-
-    for (; iter != m_QueuedPlayer.end(); ++iter, ++position)
+    auto oldSize = m_QueuedPlayer.size();
+    m_QueuedPlayer.remove(sess);
+    bool wasRemoved = m_QueuedPlayer.size() != oldSize;
+    if (wasRemoved)
     {
-        if (*iter == sess)
-        {
-            sess->SetInQueue(false);
-            sess->ResetTimeOutTime(false);
-            iter = m_QueuedPlayer.erase(iter);
-            found = true;                                   // removing queued session
-            break;
-        }
+        sess->SetInQueue(false);
+        sess->ResetTimeOutTime(false);
     }
-
-    // iter point to next socked after removed or end()
-    // position store position of removed socket and then new position next socket after removed
-
-    // if session not queued then we need decrease sessions count
-    if (!found && sessions)
-        --sessions;
-
-    // accept first in queue
-    if ((!m_playerLimit || sessions < m_playerLimit) && !m_QueuedPlayer.empty())
-    {
-        WorldSession* pop_sess = m_QueuedPlayer.front();
-        pop_sess->InitializeSession();
-        m_QueuedPlayer.pop_front();
-
-        // update iter to point first queued socket or end() if queue is empty now
-        iter = m_QueuedPlayer.begin();
-        position = 1;
-    }
-
-    // update position from iter to end()
-    // iter point to first not updated socket, position store new position
-    for (; iter != m_QueuedPlayer.end(); ++iter, ++position)
-        (*iter)->SendAuthWaitQueue(position);
-
-    return found;
+    return wasRemoved;
 }
 
 /// Initialize config values
@@ -508,8 +452,8 @@ void World::LoadConfigSettings(bool reload)
     // @tswow-en
 
     ///- Read the player limit and the Message of the day from the config file
-    SetPlayerAmountLimit(sConfigMgr->GetIntDefault("PlayerLimit", 100));
-    SetPlayerAmountLimitNoQueue(sConfigMgr->GetBoolDefault("PlayerLimit.NoQueue", false));
+    SetPlayerLimit(sConfigMgr->GetIntDefault("PlayerLimit", 100));
+    SetConnectionLimit(sConfigMgr->GetIntDefault("ConnectionLimit", 10000));
     Motd::SetMotd(sConfigMgr->GetStringDefault("Motd", "Welcome to a Trinity Core Server."));
 
     ///- Read ticket system setting from the config file
@@ -811,7 +755,6 @@ void World::LoadConfigSettings(bool reload)
     m_bool_configs[CONFIG_NAME_RESERVATION] = sConfigMgr->GetBoolDefault("NameReservation", false);
     m_bool_configs[CONFIG_ALWAYS_UPDATE_WAYPOINT_CREATURES] = sConfigMgr->GetBoolDefault("AlwaysUpdateWaypointCreatures", false);
     m_bool_configs[CONFIG_HIDE_GAMEOBJECT_SPARKLE] = sConfigMgr->GetBoolDefault("HideGameObjectSparkle", false);
-    m_int_configs[CONFIG_MAX_RESPAWN_COUNT_ON_UPDATE] = sConfigMgr->GetIntDefault("MaxRespawnCountOnUpdate", 0);
     m_int_configs[CONFIG_MUTE_DEFAULT_GUILD_BROADCASTS] = sConfigMgr->GetIntDefault("MuteDefaultGuildBroadcasts", 0);
     m_int_configs[CONFIG_SLOW_MODE_CHANNEL_MASK] = sConfigMgr->GetIntDefault("SlowMode.ChannelMask", 0);
     m_int_configs[CONFIG_SLOW_MODE_MUTE_TIME] = sConfigMgr->GetIntDefault("SlowMode.MuteTime", 0);
@@ -1550,7 +1493,6 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_ANTICHEAT_MAX_REPORTS_FOR_DAILY_REPORT] = sConfigMgr->GetIntDefault("Anticheat.MaxReportsForDailyReport",70);
     m_int_configs[CONFIG_ANTICHEAT_REPORT_IN_CHAT_MIN] = sConfigMgr->GetIntDefault("Anticheat.ReportinChat.Min", 70);
     m_int_configs[CONFIG_ANTICHEAT_REPORT_IN_CHAT_MAX] = sConfigMgr->GetIntDefault("Anticheat.ReportinChat.Max", 80);
-
     m_int_configs[CONFIG_ANTICHEAT_SPEED_LIMIT_TOLERANCE] = sConfigMgr->GetIntDefault("Anticheat.SpeedLimitTolerance", 4);
     m_int_configs[CONFIG_ANTICHEAT_MAX_REPORTS_FOR_BANS] = sConfigMgr->GetIntDefault("Anticheat.ReportsForBan", 70);
     m_int_configs[CONFIG_ANTICHEAT_MAX_REPORTS_FOR_KICKS] = sConfigMgr->GetIntDefault("Anticheat.ReportsForKick", 70);
@@ -1614,6 +1556,13 @@ void World::LoadConfigSettings(bool reload)
 
     // Anti movement cheat measure. Time each client have to acknowledge a movement change until they are kicked
     m_int_configs[CONFIG_PENDING_MOVE_CHANGES_TIMEOUT] = sConfigMgr->GetIntDefault("AntiCheat.PendingMoveChangesTimeoutTime", 0);
+
+    // Queue processing configuration
+    m_int_configs[CONFIG_QUEUE_UPDATE_TIME_THRESHOLD] = sConfigMgr->GetIntDefault("Queue.Update.TimeThreshold", 100);   // 100ms default
+    m_int_configs[CONFIG_QUEUE_UPDATE_DELAY] = sConfigMgr->GetIntDefault("Queue.Update.Delay", 50);                      // 50ms default minimum delay between queue processing
+    m_int_configs[CONFIG_QUEUE_POSITION_UPDATE_INTERVAL] = sConfigMgr->GetIntDefault("Queue.Position.UpdateInterval", 5); // 5 seconds default
+    m_int_configs[CONFIG_MAP_UPDATE_TIME_THRESHOLD] = sConfigMgr->GetIntDefault("Map.Update.TimeThreshold", 150);        // 150ms default (same as MAX_DIFF_THRESHOLD)
+    m_int_configs[CONFIG_MAX_RESPAWN_COUNT_ON_UPDATE] = sConfigMgr->GetIntDefault("Map.Update.MaxRespawn", 0);
 
     // Specifies if IP addresses can be logged to the database
     m_bool_configs[CONFIG_ALLOW_LOGGING_IP_ADDRESSES_IN_DATABASE] = sConfigMgr->GetBoolDefault("AllowLoggingIPAddressesInDatabase", true, true);
@@ -2266,6 +2215,8 @@ void World::SetInitialWorldSettings()
 
     m_timers[WUPDATE_CHANNEL_SAVE].SetInterval(getIntConfig(CONFIG_PRESERVE_CUSTOM_CHANNEL_INTERVAL) * MINUTE * IN_MILLISECONDS);
 
+    m_timers[WUPDATE_QUEUE_POSITIONS].SetInterval(getIntConfig(CONFIG_QUEUE_POSITION_UPDATE_INTERVAL) * IN_MILLISECONDS); // configurable queue position update interval
+
     //to set mailtimer to return mails every day between 4 and 5 am
     //mailtimer is increased when updating auctions
     //one second is 1000 -(tested on win system)
@@ -2495,7 +2446,6 @@ void World::LoadAutobroadcasts()
 void World::Update(uint32 diff)
 {
     ZoneScopedC(WORLD_UPDATE_COLOR)
-    WriteEpochLaunchLog();
     clear_lua_garbage();
     TC_METRIC_TIMER("world_update_time_total");
     ///- Update the game time and check for shutdown time
@@ -2623,6 +2573,18 @@ void World::Update(uint32 diff)
         ZoneScopedNC("World::UpdateSessions", WORLD_UPDATE_COLOR)
         TC_METRIC_TIMER("world_update_time", TC_METRIC_TAG("type", "Update sessions"));
         UpdateSessions(diff);
+    }
+
+    /// <li> Update queue positions
+    if (m_timers[WUPDATE_QUEUE_POSITIONS].Passed())
+    {
+        ZoneScopedNC("World::UpdateQueuePositions", WORLD_UPDATE_COLOR)
+        TC_METRIC_TIMER("world_update_time", TC_METRIC_TAG("type", "Update queue positions"));
+        uint32 position = 1;
+        for (auto iter = m_QueuedPlayer.begin(); iter != m_QueuedPlayer.end(); ++iter, ++position)
+            (*iter)->SendAuthWaitQueue(position);
+        
+        m_timers[WUPDATE_QUEUE_POSITIONS].Reset();
     }
 
     /// <li> Update uptime table
@@ -2801,9 +2763,28 @@ void World::Update(uint32 diff)
         sMetric->Update();
         TC_METRIC_VALUE("update_time_diff", diff);
     }
+
+    {
+        UpdateZoneChannelChange();
+    }
     // @tswow-begin
     FrameMark
     // @tswow-end
+}
+
+void World::UpdateZoneChannelChange()
+{
+    ZoneScoped;
+    // TODO: this isn't idiomatic or fast, but it's safe
+    HashMapHolder<Player>::MapType const& m = ObjectAccessor::GetPlayers();
+    for (HashMapHolder<Player>::MapType::const_iterator itr = m.begin(); itr != m.end(); ++itr)
+    {
+        if (itr->second->GetZoneChange().has_value())
+        {
+            itr->second->UpdateLocalChannels(*itr->second->GetZoneChange());
+        }
+        itr->second->GetZoneChange().reset();
+    }
 }
 
 void World::ForceGameEventUpdate()
@@ -3040,7 +3021,7 @@ BanReturn World::BanAccount(BanMode mode, std::string const& nameOrIP, uint32 du
     }
 
     ///- Disconnect all affected players (for IP it can be several)
-    LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction();
+    LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction("World::BanAccount");
     do
     {
         Field* fieldsAccount = resultAccounts->Fetch();
@@ -3120,7 +3101,7 @@ BanReturn World::BanCharacter(std::string const& name, std::string const& durati
     else
         guid = banned->GetGUID().GetCounter();
     //Use transaction in order to ensure the order of the queries
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("World::BanCharacter");
     // make sure there is only one active ban
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHARACTER_BAN);
     stmt->setUInt32(0, guid);
@@ -3285,18 +3266,19 @@ void World::UpdateSessions(uint32 diff)
 {
     {
         ZoneScopedN("AddSessions");
+
         TC_METRIC_DETAILED_NO_THRESHOLD_TIMER("world_update_time",
             TC_METRIC_TAG("type", "Add sessions"),
             TC_METRIC_TAG("parent_type", "Update sessions"));
-        ///- Add new sessions
+
         WorldSession* sess = nullptr;
         while (addSessQueue.next(sess))
             AddSession_(sess);
     }
 
-    ///- Then send an update signal to remaining ones
     {
         ZoneScopedN("PacketUpdates");
+
         uint64_t start = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         std::map<uint32, uint32> opcode_map;
         for (SessionMap::iterator itr = m_sessions.begin(), next; itr != m_sessions.end(); itr = next)
@@ -3311,17 +3293,20 @@ void World::UpdateSessions(uint32 diff)
             [[maybe_unused]] uint32 currentSessionId = itr->first;
             TC_METRIC_DETAILED_TIMER("world_update_sessions_time", TC_METRIC_TAG("account_id", std::to_string(currentSessionId)));
 
-
+            // update returns false when socket is null
             if (!pSession->Update(diff, updater, opcode_map))    // As interval = 0
             {
-                if (!RemoveQueuedPlayer(itr->second) && itr->second && getIntConfig(CONFIG_INTERVAL_DISCONNECT_TOLERANCE))
+                // check if player was NOT in the queue when they disconnected
+                if (!RemoveQueuedPlayer(pSession) && itr->second && getIntConfig(CONFIG_INTERVAL_DISCONNECT_TOLERANCE))
                     m_disconnects[itr->second->GetAccountId()] = GameTime::GetGameTime();
-                RemoveQueuedPlayer(pSession);
+                
                 m_sessions.erase(itr);
+
                 delete pSession;
 
             }
         }
+
         uint64_t end = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         if (end - start > 250)
         {
@@ -3340,6 +3325,37 @@ void World::UpdateSessions(uint32 diff)
             }
             std::string str = ss.str();
             TracyMessage(str.c_str(), str.size());
+        }
+
+        // Process queued players if update time is below threshold
+        // Maintain a window of ticks for comparison
+        m_recentUpdateTimes.push_back(diff);
+        if (m_recentUpdateTimes.size() > 50)
+            m_recentUpdateTimes.pop_front();
+        
+        // Calculate maximum update time
+        uint32 maxUpdateTime = 0;
+        for (uint32 time : m_recentUpdateTimes)
+            if (time > maxUpdateTime)
+                maxUpdateTime = time;
+        
+        uint32 timeThreshold = getIntConfig(CONFIG_QUEUE_UPDATE_TIME_THRESHOLD);
+        if (maxUpdateTime < timeThreshold && !m_QueuedPlayer.empty())
+        {
+            uint32 queueDelay = getIntConfig(CONFIG_QUEUE_UPDATE_DELAY);
+            
+            // Check if enough time has passed since last queue processing
+            if (GetMSTimeDiffToNow(m_lastQueueProcessTime) >= queueDelay)
+            {
+                // Process only 1 player per tick when delay criteria is met
+                WorldSession* session = m_QueuedPlayer.front();
+                m_QueuedPlayer.pop_front();
+
+                session->InitializeSession();
+                UpdateMaxSessionCounters();
+                
+                m_lastQueueProcessTime = getMSTime();
+            }
         }
     }
 }
@@ -3435,7 +3451,7 @@ void World::_UpdateRealmCharCount(PreparedQueryResult resultCharCount)
         uint32 accountId = fields[0].GetUInt32();
         uint8 charCount = uint8(fields[1].GetUInt64());
 
-        LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction();
+        LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction("World::_UpdateRealmCharCount");
 
         LoginDatabasePreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_REP_REALM_CHARACTERS);
         stmt->setUInt8(0, charCount);

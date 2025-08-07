@@ -537,7 +537,7 @@ void WorldSession::HandleAcceptTradeOpcode(WorldPacket& /*recvPacket*/)
         trader->m_trade = nullptr;
 
         // desynchronized with the other saves here (SaveInventoryAndGoldToDB() not have own transaction guards)
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleAcceptTradeOpcode");
         _player->SaveInventoryAndGoldToDB(trans);
         trader->SaveInventoryAndGoldToDB(trans);
         CharacterDatabase.CommitTransaction(trans);

@@ -162,7 +162,8 @@ target_compile_options(trinity-compile-option-interface
 target_compile_options(trinity-compile-option-interface
   INTERFACE
     /we4263
-    /we4264)
+    /we4264
+    /we4716)
 
 if(ASAN)
   target_compile_definitions(trinity-compile-option-interface

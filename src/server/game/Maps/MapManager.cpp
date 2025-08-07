@@ -348,41 +348,101 @@ void MapManager::Update(uint32 diff)
         return;
 
     // map updates can be scheduled to be run in parallel if the updater is activated
-    for (auto& [id, mapPtr] : _baseMaps)
+    if (m_updater.activated())
     {
-        if (m_updater.activated())
-            m_updater.schedule_update(*mapPtr, uint32(i_timer.GetCurrent()));
-        else
-            mapPtr->Update(uint32(i_timer.GetCurrent()));
+        // Separate priority maps (MapPartitioned and PartitionMaps) from instances
+        std::vector<std::pair<Map*, uint32>> priorityMaps;
+        std::vector<Map*> instanceMaps;
+        std::vector<std::pair<MapInstanced*, MapInstanced::Instances::iterator>> unloadableMaps;
         
-        if (MapPartitioned* mapPartitioned = mapPtr->ToMapPartitioned())
+        // Fixed reserves - memory is negligible vs iteration cost
+        priorityMaps.reserve(30);    // ~2 base maps + ~20 partitions + buffer
+        instanceMaps.reserve(1000);  // ~20 instanced maps * ~50 instances + buffer
+        
+        for (auto& [id, mapPtr] : _baseMaps)
         {
-            for (auto& [_, partitionPtr] : mapPartitioned->GetPartitions())
+            if (MapPartitioned* mapPartitioned = mapPtr->ToMapPartitioned())
             {
-                if (m_updater.activated())
-                    m_updater.schedule_update(*partitionPtr, uint32(i_timer.GetCurrent()));
-                else
-                    partitionPtr->Update(uint32(i_timer.GetCurrent()));
+                // Add base MapPartitioned with player count
+                uint32 playerCount = mapPtr->GetPlayersCountExceptGMs();
+                priorityMaps.push_back({mapPtr.get(), playerCount});
+                
+                // Add all partitions with their player counts
+                for (auto& [_, partitionPtr] : mapPartitioned->GetPartitions())
+                {
+                    uint32 partitionPlayerCount = partitionPtr->GetPlayersCountExceptGMs();
+                    priorityMaps.push_back({partitionPtr.get(), partitionPlayerCount});
+                }
+            }
+            else if (MapInstanced* mapInstanced = mapPtr->ToMapInstanced())
+            {
+                // Separate schedulable instances from unloadable ones
+                auto& instances = mapInstanced->GetInstances();
+                for (auto it = instances.begin(); it != instances.end(); ++it)
+                {
+                    auto& [_, instancePtr] = *it;
+                    if (instancePtr->CanUnload(uint32(i_timer.GetCurrent())))
+                    {
+                        unloadableMaps.push_back({mapInstanced, it});
+                    }
+                    else
+                    {
+                        instanceMaps.push_back(instancePtr.get());
+                    }
+                }
             }
         }
-
-        // (Previously this was done in MapInstanced::Update, but I prefer not to tie up another thread as a scheduler, thats what this is for)
-        if (MapInstanced* mapInstanced = mapPtr->ToMapInstanced())
+        
+        // Sort only priority maps by player count (descending) - largest maps scheduled first
+        std::sort(priorityMaps.begin(), priorityMaps.end(), 
+            [](const auto& a, const auto& b) { return a.second > b.second; });
+        
+        // Schedule priority maps first (sorted by player count)
+        for (auto& [mapPtr, playerCount] : priorityMaps)
         {
-            auto& instances = mapInstanced->GetInstances();
-            for (auto it = instances.begin(); it != instances.end(); /* no increment here */)
+            m_updater.schedule_update(*mapPtr, uint32(i_timer.GetCurrent()));
+        }
+        
+        // Schedule instances after priority maps (unsorted, any order)
+        for (Map* mapPtr : instanceMaps)
+        {
+            m_updater.schedule_update(*mapPtr, uint32(i_timer.GetCurrent()));
+        }
+        
+        // Handle instance cleanup using collected unloadable maps
+        for (auto& [mapInstanced, it] : unloadableMaps)
+        {
+            mapInstanced->DestroyInstance(it);
+        }
+    }
+    else
+    {
+        // Single-threaded fallback - no sorting needed
+        for (auto& [id, mapPtr] : _baseMaps)
+        {
+            mapPtr->Update(uint32(i_timer.GetCurrent()));
+            
+            if (MapPartitioned* mapPartitioned = mapPtr->ToMapPartitioned())
             {
-                if (it->second->CanUnload(uint32(i_timer.GetCurrent())))
+                for (auto& [_, partitionPtr] : mapPartitioned->GetPartitions())
+                    partitionPtr->Update(uint32(i_timer.GetCurrent()));
+            }
+
+            // Handle instanced maps in single-threaded mode
+            if (MapInstanced* mapInstanced = mapPtr->ToMapInstanced())
+            {
+                auto& instances = mapInstanced->GetInstances();
+                for (auto it = instances.begin(); it != instances.end(); /* no increment here */)
                 {
-                    mapInstanced->DestroyInstance(it); // iterator incremented
-                }
-                else
-                {
-                    if (m_updater.activated())
-                        m_updater.schedule_update(*it->second, uint32(i_timer.GetCurrent()));
+                    if (it->second->CanUnload(uint32(i_timer.GetCurrent())))
+                    {
+                        mapInstanced->DestroyInstance(it); // iterator incremented
+                    }
                     else
+                    {
                         it->second->Update(uint32(i_timer.GetCurrent()));
-                    ++it;
+                        ++it;
+                    }
                 }
             }
         }

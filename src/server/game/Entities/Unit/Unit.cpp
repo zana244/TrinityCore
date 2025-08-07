@@ -314,7 +314,8 @@ Unit::Unit(bool isWorldObject) :
     m_removedAurasCount(0), m_charmer(nullptr), m_charmed(nullptr),
     i_motionMaster(new MotionMaster(this)), m_regenTimer(0), m_vehicle(nullptr), m_vehicleKit(nullptr),
     m_unitTypeMask(UNIT_MASK_NONE), m_Diminishing(), m_combatManager(this), m_threatManager(this),
-    m_aiLocked(false), m_comboTarget(nullptr), m_comboPoints(0), _spellHistory(new SpellHistory(this))
+    m_aiLocked(false), m_comboTarget(nullptr), m_comboPoints(0), _spellHistory(new SpellHistory(this)),
+    m_lastTickTime(0), m_lastNotifiedTime(0)
 {
     m_objectType |= TYPEMASK_UNIT;
     m_objectTypeId = TYPEID_UNIT;
@@ -453,8 +454,9 @@ Unit::~Unit()
 
 void Unit::Update(uint32 p_time)
 {
+    m_lastTickTime = GameTime::GetGameTimeMS();
+
     // @tswow-begin
-    ZoneScopedN("Unit::Update")
     m_tsWorldEntity.tick(TSWorldObject(this));
     m_tsCollisions.Tick(TSWorldObject(this));
     // @tswow-end
@@ -9590,6 +9592,8 @@ bool Unit::HandleAttackPowerModifier(AttackPowerModIndex index, AttackPowerModTy
     if (!CanModifyStats())
         return false;
     UpdateAttackPowerAndDamage(index == RANGED_AP_MODS);
+
+    return true;
 }
 
 float Unit::GetAttackPowerModifierValue(AttackPowerModIndex index, AttackPowerModType modifierType) const
@@ -10209,7 +10213,6 @@ void Unit::AIUpdateTick(uint32 diff)
 
                 FIRE_ID(c->GetCreatureTemplate()->events.id,Creature,OnCombatTick,TSCreature(c),diff);
             }
-            
             m_aiLocked = false;
         }
     }
@@ -10299,7 +10302,8 @@ void Unit::AddToWorld()
     WorldObject::AddToWorld();
     i_motionMaster->AddToWorld();
 
-    _lastCheckedPartitionPosition = GetPosition();
+    m_lastNotifiedPosition = GetPosition();
+    m_lastCheckedPartitionPosition = GetPosition();
 }
 
 void Unit::RemoveFromWorld()
@@ -10359,7 +10363,8 @@ void Unit::AddToPartition()
     WorldObject::AddToPartition();
     //i_motionMaster->AddToWorld();
 
-    _lastCheckedPartitionPosition = GetPosition();
+    m_lastNotifiedPosition = GetPosition();
+    m_lastCheckedPartitionPosition = GetPosition();
 }
 
 void Unit::RemoveFromPartition()
@@ -10371,15 +10376,13 @@ void Unit::RemoveFromPartition()
         return;
 
     m_duringRemoveFromWorld = true;
-
-    //if (UnitAI* ai = GetAI())
-    //    ai->OnDespawn();
+    if (UnitAI* ai = GetAI())
+        ai->OnDespawn();
 
     //if (IsVehicle())
     //    RemoveVehicleKit();
 
-    //RemoveCharmAuras();
-    if (!IsVehicle())
+    if (!IsVehicle()) // Allow carts
         RemoveCharmAuras();
     RemoveBindSightAuras();
     RemoveNotOwnSingleTargetAuras();
@@ -10389,7 +10392,8 @@ void Unit::RemoveFromPartition()
 
     //ExitVehicle();  // Remove applied auras with SPELL_AURA_CONTROL_VEHICLE
     UnsummonAllTotems();
-    //RemoveAllControlled();
+    if (!IsVehicle()) // Allow carts
+        RemoveAllControlled();
     // unsummon any controlled temp summons
     for (auto itr = m_Controlled.begin(); itr != m_Controlled.end(); )
     {
@@ -10405,24 +10409,27 @@ void Unit::RemoveFromPartition()
         }
     }
 
-    //RemoveAreaAurasDueToLeaveWorld();
-
+    RemoveAreaAurasDueToLeaveWorld();
     RemoveAllFollowers();
 
-    //if (IsCharmed())
-    //    RemoveCharmedBy(nullptr);
+    if (!IsVehicle()) // Allow carts
+        if (IsCharmed())
+            RemoveCharmedBy(nullptr);
 
-    //ASSERT(!GetCharmedGUID(), "Unit %u has charmed guid when removed from world", GetEntry());
-    //ASSERT(!GetCharmerGUID(), "Unit %u has charmer guid when removed from world", GetEntry());
+    if (!IsVehicle()) // Allow carts
+    {
+        ASSERT(!GetCharmedGUID(), "Unit %u has charmed guid when removed from world", GetEntry());
+        ASSERT(!GetCharmerGUID(), "Unit %u has charmer guid when removed from world", GetEntry());
 
-    //if (Unit* owner = GetOwner())
-    //{
-    //    if (owner->m_Controlled.find(this) != owner->m_Controlled.end())
-    //    {
-    //        TC_LOG_FATAL("entities.unit", "Unit {} is in controlled list of {} when removed from world", GetEntry(), owner->GetEntry());
-    //        ABORT();
-    //    }
-    //}
+        if (Unit* owner = GetOwner())
+        {
+            if (owner->m_Controlled.find(this) != owner->m_Controlled.end())
+            {
+                TC_LOG_FATAL("entities.unit", "Unit {} is in controlled list of {} when removed from world", GetEntry(), owner->GetEntry());
+                ABORT();
+            }
+        }
+    }
 
     WorldObject::RemoveFromPartition();
 
@@ -10448,10 +10455,10 @@ bool Unit::ShouldRelocateUpdateMapPartition()
         return false;
 
     // Partition calculation is expensive, so only check again if we have moved a consequential amount
-    if (GetPosition().GetExactDist(_lastCheckedPartitionPosition) < 0.25f)
+    if (GetPosition().GetExactDist(m_lastCheckedPartitionPosition) < 0.25f)
         return false;
 
-    _lastCheckedPartitionPosition = GetPosition();
+    m_lastCheckedPartitionPosition = GetPosition();
     return sMapMgr->CalculatePartitionId(GetMap()->GetId(), GetPosition()) != GetMap()->GetPartitionId();
 }
 
@@ -13921,10 +13928,9 @@ bool Unit::UpdatePosition(float x, float y, float z, float orientation, bool tel
             GetMap()->CreatureRelocation(ToCreature(), x, y, z, orientation);
     }
     else if (turn)
-    {
         UpdateOrientation(orientation);
-        UpdatePositionData();
-    }
+
+    UpdatePositionData();
 
     _positionUpdateInfo.Relocated = relocated;
     _positionUpdateInfo.Turned = turn;

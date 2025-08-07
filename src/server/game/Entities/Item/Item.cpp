@@ -326,7 +326,7 @@ void Item::SaveToDB(CharacterDatabaseTransaction trans)
 {
     bool isInTransaction = bool(trans);
     if (!isInTransaction)
-        trans = CharacterDatabase.BeginTransaction();
+        trans = CharacterDatabase.BeginTransaction("Item::SaveToDB");
 
     ObjectGuid::LowType guid = GetGUID().GetCounter();
     switch (uState)
@@ -1148,7 +1148,7 @@ void Item::RemoveFromObjectUpdate()
 
 void Item::SaveRefundDataToDB()
 {
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Item::SaveRefundDataToDB");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_REFUND_INSTANCE);
     stmt->setUInt32(0, GetGUID().GetCounter());

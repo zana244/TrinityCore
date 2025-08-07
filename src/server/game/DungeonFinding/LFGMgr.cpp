@@ -100,7 +100,7 @@ void LFGMgr::_SaveToDB(ObjectGuid guid, uint32 db_guid)
     if (!guid.IsGroup())
         return;
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("LFGMgr::_SaveToDB");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_LFG_DATA);
     stmt->setUInt32(0, db_guid);

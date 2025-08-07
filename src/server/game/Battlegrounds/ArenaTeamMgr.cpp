@@ -149,7 +149,7 @@ void ArenaTeamMgr::DistributeArenaPoints()
     for (auto [teamId, team] : ArenaTeamStore)
         team->UpdateArenaPointsHelper(PlayerPoints);
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("ArenaTeamMgr::DistributeArenaPoints");
 
     CharacterDatabasePreparedStatement* stmt;
 

@@ -31,10 +31,11 @@ class SQLOperation;
 class TC_DATABASE_API DatabaseWorker
 {
     public:
-        DatabaseWorker(ProducerConsumerQueue<SQLOperation*>* newQueue, MySQLConnection* connection);
+        DatabaseWorker(ProducerConsumerQueue<SQLOperation*>* newQueue, MySQLConnection* connection, std::string name);
         ~DatabaseWorker();
 
     private:
+        std::string _name;
         ProducerConsumerQueue<SQLOperation*>* _queue;
         MySQLConnection* _connection;
 

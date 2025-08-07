@@ -28,6 +28,8 @@
 #include "Util.h"
 #include <errmsg.h>
 #include "MySQLWorkaround.h"
+#include "AsyncLog.h"
+#include "Tracy.hpp"
 #include <mysqld_error.h>
 
 MySQLConnectionInfo::MySQLConnectionInfo(std::string const& infoString)
@@ -47,23 +49,25 @@ MySQLConnectionInfo::MySQLConnectionInfo(std::string const& infoString)
         ssl.assign(tokens[5]);
 }
 
-MySQLConnection::MySQLConnection(MySQLConnectionInfo& connInfo) :
+MySQLConnection::MySQLConnection(MySQLConnectionInfo& connInfo, std::string name) :
 m_reconnecting(false),
 m_prepareError(false),
 m_queue(nullptr),
 m_Mysql(nullptr),
 m_connectionInfo(connInfo),
-m_connectionFlags(CONNECTION_SYNCH) { }
+m_connectionFlags(CONNECTION_SYNCH),
+m_type(name) { }
 
-MySQLConnection::MySQLConnection(ProducerConsumerQueue<SQLOperation*>* queue, MySQLConnectionInfo& connInfo) :
+MySQLConnection::MySQLConnection(ProducerConsumerQueue<SQLOperation*>* queue, MySQLConnectionInfo& connInfo, std::string name) :
 m_reconnecting(false),
 m_prepareError(false),
 m_queue(queue),
 m_Mysql(nullptr),
 m_connectionInfo(connInfo),
-m_connectionFlags(CONNECTION_ASYNC)
+m_connectionFlags(CONNECTION_ASYNC),
+m_type(name)
 {
-    m_worker = std::make_unique<DatabaseWorker>(m_queue, this);
+    m_worker = std::make_unique<DatabaseWorker>(m_queue, this, std::move(name));
 }
 
 MySQLConnection::~MySQLConnection()
@@ -191,6 +195,12 @@ bool MySQLConnection::Execute(char const* sql)
     if (!m_Mysql)
         return false;
 
+    std::string name = sql;
+    name = fmt::format("{}:{}", m_type, name);
+    ZoneScoped;
+    ZoneText(name.c_str(), name.size());
+
+    uint64 logEntry  = CreateAsyncLogEntry(name);
     {
         uint32 _s = getMSTime();
 
@@ -202,14 +212,19 @@ bool MySQLConnection::Execute(char const* sql)
             TC_LOG_ERROR("sql.sql", "[{}] {}", lErrno, mysql_error(m_Mysql));
 
             if (_HandleMySQLErrno(lErrno))  // If it returns true, an error was handled successfully (i.e. reconnection)
+            {
+                RemoveAsyncLogEntry(logEntry);
                 return Execute(sql);       // Try again
+            }
 
+            RemoveAsyncLogEntry(logEntry);
             return false;
         }
         else
             TC_LOG_DEBUG("sql.sql", "[{} ms] SQL: {}", getMSTimeDiff(_s, getMSTime()), sql);
     }
 
+    RemoveAsyncLogEntry(logEntry);
     return true;
 }
 
@@ -218,6 +233,11 @@ bool MySQLConnection::Execute(PreparedStatementBase* stmt)
     if (!m_Mysql)
         return false;
 
+    std::string name = stmt ? stmt->GetName() : "unknown";
+    name = fmt::format("{}:{}", m_type, name);
+    ZoneScoped;
+    ZoneText(name.c_str(), name.size());
+    uint64 logEntry  = CreateAsyncLogEntry(name);
     uint32 index = stmt->GetIndex();
 
     MySQLPreparedStatement* m_mStmt = GetPreparedStatement(index);
@@ -236,9 +256,13 @@ bool MySQLConnection::Execute(PreparedStatementBase* stmt)
         TC_LOG_ERROR("sql.sql", "SQL(p): {}\n [ERROR]: [{}] {}", m_mStmt->getQueryString(), lErrno, mysql_stmt_error(msql_STMT));
 
         if (_HandleMySQLErrno(lErrno))  // If it returns true, an error was handled successfully (i.e. reconnection)
+        {
+            RemoveAsyncLogEntry(logEntry);
             return Execute(stmt);       // Try again
+        }
 
         m_mStmt->ClearParameters();
+        RemoveAsyncLogEntry(logEntry);
         return false;
     }
 
@@ -248,15 +272,20 @@ bool MySQLConnection::Execute(PreparedStatementBase* stmt)
         TC_LOG_ERROR("sql.sql", "SQL(p): {}\n [ERROR]: [{}] {}", m_mStmt->getQueryString(), lErrno, mysql_stmt_error(msql_STMT));
 
         if (_HandleMySQLErrno(lErrno))  // If it returns true, an error was handled successfully (i.e. reconnection)
+        {
+            RemoveAsyncLogEntry(logEntry);
             return Execute(stmt);       // Try again
+        }
 
         m_mStmt->ClearParameters();
+        RemoveAsyncLogEntry(logEntry);
         return false;
     }
 
     TC_LOG_DEBUG("sql.sql", "[{} ms] SQL(p): {}", getMSTimeDiff(_s, getMSTime()), m_mStmt->getQueryString());
 
     m_mStmt->ClearParameters();
+    RemoveAsyncLogEntry(logEntry);
     return true;
 }
 
@@ -265,6 +294,12 @@ bool MySQLConnection::_Query(PreparedStatementBase* stmt, MySQLPreparedStatement
     if (!m_Mysql)
         return false;
 
+    std::string name = stmt ? stmt->GetName() : "unknown";
+    name = fmt::format("{}:{}", m_type, name);
+    ZoneScoped;
+    ZoneText(name.c_str(), name.size());
+
+    uint64 logEntry  = CreateAsyncLogEntry(name);
     uint32 index = stmt->GetIndex();
 
     MySQLPreparedStatement* m_mStmt = GetPreparedStatement(index);
@@ -284,9 +319,13 @@ bool MySQLConnection::_Query(PreparedStatementBase* stmt, MySQLPreparedStatement
         TC_LOG_ERROR("sql.sql", "SQL(p): {}\n [ERROR]: [{}] {}", m_mStmt->getQueryString(), lErrno, mysql_stmt_error(msql_STMT));
 
         if (_HandleMySQLErrno(lErrno))  // If it returns true, an error was handled successfully (i.e. reconnection)
+        {
+            RemoveAsyncLogEntry(logEntry);
             return _Query(stmt, mysqlStmt, pResult, pRowCount, pFieldCount);       // Try again
+        }
 
         m_mStmt->ClearParameters();
+        RemoveAsyncLogEntry(logEntry);
         return false;
     }
 
@@ -297,9 +336,13 @@ bool MySQLConnection::_Query(PreparedStatementBase* stmt, MySQLPreparedStatement
             m_mStmt->getQueryString(), lErrno, mysql_stmt_error(msql_STMT));
 
         if (_HandleMySQLErrno(lErrno))  // If it returns true, an error was handled successfully (i.e. reconnection)
+        {
+            RemoveAsyncLogEntry(logEntry);
             return _Query(stmt, mysqlStmt, pResult, pRowCount, pFieldCount);      // Try again
+        }
 
         m_mStmt->ClearParameters();
+        RemoveAsyncLogEntry(logEntry);
         return false;
     }
 
@@ -311,6 +354,7 @@ bool MySQLConnection::_Query(PreparedStatementBase* stmt, MySQLPreparedStatement
     *pRowCount = mysql_stmt_num_rows(msql_STMT);
     *pFieldCount = mysql_stmt_field_count(msql_STMT);
 
+    RemoveAsyncLogEntry(logEntry);
     return true;
 }
 
@@ -327,7 +371,7 @@ ResultSet* MySQLConnection::Query(char const* sql)
     if (!_Query(sql, &result, &fields, &rowCount, &fieldCount))
         return nullptr;
 
-    return new ResultSet(result, fields, rowCount, fieldCount);
+    return new ResultSet(result, fields, rowCount, fieldCount, sql);
 }
 
 bool MySQLConnection::_Query(const char* sql, MySQLResult** pResult, MySQLField** pFields, uint64* pRowCount, uint32* pFieldCount)
@@ -335,6 +379,12 @@ bool MySQLConnection::_Query(const char* sql, MySQLResult** pResult, MySQLField*
     if (!m_Mysql)
         return false;
 
+    std::string name = sql;
+    name = fmt::format("{}:{}", m_type, name);
+    ZoneScoped;
+    ZoneText(name.c_str(), name.size());
+
+    uint64 logEntry  = CreateAsyncLogEntry(name);
     {
         uint32 _s = getMSTime();
 
@@ -345,8 +395,12 @@ bool MySQLConnection::_Query(const char* sql, MySQLResult** pResult, MySQLField*
             TC_LOG_ERROR("sql.sql", "[{}] {}", lErrno, mysql_error(m_Mysql));
 
             if (_HandleMySQLErrno(lErrno, 5, sql))      // If it returns true, an error was handled successfully (i.e. reconnection)
+            {
+                RemoveAsyncLogEntry(logEntry);
                 return _Query(sql, pResult, pFields, pRowCount, pFieldCount);    // We try again
+            }
 
+            RemoveAsyncLogEntry(logEntry);
             return false;
         }
         else
@@ -357,17 +411,22 @@ bool MySQLConnection::_Query(const char* sql, MySQLResult** pResult, MySQLField*
         *pFieldCount = mysql_field_count(m_Mysql);
     }
 
-    if (!*pResult )
+    if (!*pResult)
+    {
+        RemoveAsyncLogEntry(logEntry);
         return false;
+    }
 
     if (!*pRowCount)
     {
         mysql_free_result(*pResult);
+        RemoveAsyncLogEntry(logEntry);
         return false;
     }
 
     *pFields = reinterpret_cast<MySQLField*>(mysql_fetch_fields(*pResult));
 
+    RemoveAsyncLogEntry(logEntry);
     return true;
 }
 
@@ -392,6 +451,12 @@ int MySQLConnection::ExecuteTransaction(std::shared_ptr<TransactionBase> transac
     if (queries.empty())
         return -1;
 
+    std::string name = transaction ? transaction->GetName() : "unknown";
+    name = fmt::format("{}:{}", m_type, name);
+    ZoneScoped;
+    ZoneText(name.c_str(), name.size());
+
+    uint64 logEntry  = CreateAsyncLogEntry(name);
     BeginTransaction();
 
     for (auto itr = queries.begin(); itr != queries.end(); ++itr)
@@ -408,6 +473,7 @@ int MySQLConnection::ExecuteTransaction(std::shared_ptr<TransactionBase> transac
                     TC_LOG_WARN("sql.sql", "Transaction aborted. {} queries not executed.", (uint32)queries.size());
                     int errorCode = GetLastError();
                     RollbackTransaction();
+                    RemoveAsyncLogEntry(logEntry);
                     return errorCode;
                 }
             }
@@ -421,6 +487,7 @@ int MySQLConnection::ExecuteTransaction(std::shared_ptr<TransactionBase> transac
                     TC_LOG_WARN("sql.sql", "Transaction aborted. {} queries not executed.", (uint32)queries.size());
                     int errorCode = GetLastError();
                     RollbackTransaction();
+                    RemoveAsyncLogEntry(logEntry);
                     return errorCode;
                 }
             }
@@ -434,6 +501,7 @@ int MySQLConnection::ExecuteTransaction(std::shared_ptr<TransactionBase> transac
     // and not while iterating over every element.
 
     CommitTransaction();
+    RemoveAsyncLogEntry(logEntry);
     return 0;
 }
 
@@ -513,6 +581,7 @@ void MySQLConnection::PrepareStatement(uint32 index, std::string const& sql, Con
 
 PreparedResultSet* MySQLConnection::Query(PreparedStatementBase* stmt)
 {
+    std::string name                  = stmt ? stmt->GetName() : "unknown";
     MySQLPreparedStatement* mysqlStmt = nullptr;
     MySQLResult* result = nullptr;
     uint64 rowCount = 0;
@@ -525,7 +594,7 @@ PreparedResultSet* MySQLConnection::Query(PreparedStatementBase* stmt)
     {
         mysql_next_result(m_Mysql);
     }
-    return new PreparedResultSet(mysqlStmt->GetSTMT(), result, rowCount, fieldCount);
+    return new PreparedResultSet(mysqlStmt->GetSTMT(), result, rowCount, fieldCount, name);
 }
 
 bool MySQLConnection::_HandleMySQLErrno(uint32 errNo, uint8 attempts /*= 5*/, const char* sql /*= nullptr*/)
@@ -654,6 +723,12 @@ void MySQLConnection::PrepareCustomStatement(uint32 id, std::string const& sql)
 
 PreparedResultSet* MySQLConnection::QueryCustomStatement(uint32 id, PreparedStatementBase* values)
 {
+    std::string name              = values ? values->GetName() : "unknown";
+    name = fmt::format("{}:{}", m_type, name);
+    ZoneScoped;
+    ZoneText(name.c_str(), name.size());
+
+    uint64 logEntry               = CreateAsyncLogEntry(name);
     MySQLPreparedStatement* stmnt = m_customStmts[id].get();
     stmnt->BindParameters(values);
     MYSQL_STMT* msql_STMT = stmnt->GetSTMT();
@@ -670,6 +745,7 @@ PreparedResultSet* MySQLConnection::QueryCustomStatement(uint32 id, PreparedStat
         TC_LOG_ERROR("sql.sql", "SQL(p): {}\n [ERROR]: [{}] {}", stmnt->getQueryString().c_str(), lErrno, mysql_stmt_error(msql_STMT));
         // TODO: exit(?)
         stmnt->ClearParameters();
+        RemoveAsyncLogEntry(logEntry);
         return nullptr;
     }
 
@@ -680,6 +756,7 @@ PreparedResultSet* MySQLConnection::QueryCustomStatement(uint32 id, PreparedStat
             stmnt->getQueryString().c_str(), lErrno, mysql_stmt_error(msql_STMT));
         // TODO: exit(?)
         stmnt->ClearParameters();
+        RemoveAsyncLogEntry(logEntry);
         return nullptr;
     }
 
@@ -695,6 +772,7 @@ PreparedResultSet* MySQLConnection::QueryCustomStatement(uint32 id, PreparedStat
     {
         mysql_next_result(m_Mysql);
     }
-    return new PreparedResultSet(stmnt->GetSTMT(), result, rowCount, fieldCount);
+    RemoveAsyncLogEntry(logEntry);
+    return new PreparedResultSet(stmnt->GetSTMT(), result, rowCount, fieldCount, values->GetName());
 }
 // @tswow-end

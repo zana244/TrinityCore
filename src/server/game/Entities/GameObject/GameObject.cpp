@@ -1090,7 +1090,7 @@ void GameObject::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
         data.spawnGroupData = sObjectMgr->GetDefaultSpawnGroup();
 
     // Update in DB
-    WorldDatabaseTransaction trans = WorldDatabase.BeginTransaction();
+    WorldDatabaseTransaction trans = WorldDatabase.BeginTransaction("GameObject::SaveToDB");
 
     uint8 index = 0;
 
@@ -1203,7 +1203,7 @@ bool GameObject::LoadFromDB(ObjectGuid::LowType spawnId, Map* map, bool addToMap
     if (!data)
         return false;
 
-    CharacterDatabaseTransaction charTrans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction charTrans = CharacterDatabase.BeginTransaction("GameObject::DeleteFromDB");
 
     sMapMgr->DoForAllMapsWithMapId(data->mapId,
         [spawnId, charTrans](Map* map) -> void
@@ -1223,7 +1223,7 @@ bool GameObject::LoadFromDB(ObjectGuid::LowType spawnId, Map* map, bool addToMap
 
     CharacterDatabase.CommitTransaction(charTrans);
 
-    WorldDatabaseTransaction trans = WorldDatabase.BeginTransaction();
+    WorldDatabaseTransaction trans = WorldDatabase.BeginTransaction("GameObject::DeleteFromDB");
 
     // ... and the database
     WorldDatabasePreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_GAMEOBJECT);
@@ -2861,7 +2861,7 @@ void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* t
             {
                 uint32 goFlags = m_uint32Values[GAMEOBJECT_FLAGS];
                 if (GetGoType() == GAMEOBJECT_TYPE_CHEST)
-                    if (GetGOInfo()->chest.groupLootRules && !IsLootAllowedFor(target))
+                    if ((GetGOInfo()->chest.groupLootRules && !IsLootAllowedFor(target)) || GetGOInfo()->chest.level > target->GetLevel())
                         goFlags |= GO_FLAG_LOCKED | GO_FLAG_NOT_SELECTABLE;
 
                 fieldBuffer << goFlags;

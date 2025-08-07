@@ -36,7 +36,8 @@ if(WITH_WARNINGS)
       -Winvalid-pch
       -Wfatal-errors
       -Woverloaded-virtual
-      -Wno-missing-field-initializers) # this warning is useless when combined with structure members that have default initializers
+      -Wno-missing-field-initializers
+      -Werror=return-type) # this warning is useless when combined with structure members that have default initializers
 
   message(STATUS "GCC: All warnings enabled")
 endif()

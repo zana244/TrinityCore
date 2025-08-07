@@ -115,7 +115,7 @@ public:
             return;
 
         // Start a transaction
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("OnLoginPlayerScript::OnLogin");
 
         do
         {

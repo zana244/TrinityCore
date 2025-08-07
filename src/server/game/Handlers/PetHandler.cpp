@@ -645,7 +645,7 @@ void WorldSession::HandlePetRename(WorldPacket& recvData)
         }
     }
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandlePetNameQuery");
     if (isdeclined)
     {
         CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_PET_DECLINEDNAME);

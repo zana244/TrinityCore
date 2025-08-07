@@ -825,7 +825,7 @@ DumpReturn PlayerDumpReader::LoadDump(std::istream& input, uint32 account, std::
     // for logs
     size_t lineNumber = 0;
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("PlayerDumpReader::LoadDump");
     while (std::getline(input, line))
     {
         ++lineNumber;

@@ -58,8 +58,8 @@ class TC_DATABASE_API MySQLConnection
     friend class PingOperation;
 
     public:
-        MySQLConnection(MySQLConnectionInfo& connInfo);                               //! Constructor for synchronous connections.
-        MySQLConnection(ProducerConsumerQueue<SQLOperation*>* queue, MySQLConnectionInfo& connInfo);  //! Constructor for asynchronous connections.
+        MySQLConnection(MySQLConnectionInfo& connInfo, std::string type);                               //! Constructor for synchronous connections.
+        MySQLConnection(ProducerConsumerQueue<SQLOperation*>* queue, MySQLConnectionInfo& connInfo, std::string type);  //! Constructor for asynchronous connections.
         virtual ~MySQLConnection();
 
         virtual uint32 Open();
@@ -114,6 +114,7 @@ class TC_DATABASE_API MySQLConnection
     private:
         bool _HandleMySQLErrno(uint32 errNo, uint8 attempts = 5, const char* sql = nullptr);
 
+        std::string m_type;
         ProducerConsumerQueue<SQLOperation*>* m_queue;      //! Queue shared with other asynchronous connections.
         std::unique_ptr<DatabaseWorker> m_worker;           //! Core worker task.
         MySQLHandle*          m_Mysql;                      //! MySQL Handle.

@@ -332,7 +332,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket& recvData)
         sAuctionMgr->AddAuction(AH);
         _player->MoveItemFromInventory(item->GetBagSlot(), item->GetSlot(), true);
 
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleAuctionSellItem");
         item->DeleteFromInventoryDB(trans);
         item->SaveToDB(trans);
 
@@ -398,7 +398,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket& recvData)
             {
                 _player->MoveItemFromInventory(item2->GetBagSlot(), item2->GetSlot(), true);
 
-                CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleAuctionSellItem");
                 item2->DeleteFromInventoryDB(trans);
                 item2->DeleteFromDB(trans);
                 CharacterDatabase.CommitTransaction(trans);
@@ -411,13 +411,13 @@ void WorldSession::HandleAuctionSellItem(WorldPacket& recvData)
                 _player->ItemRemovedQuestCheck(item2->GetEntry(), count[j]);
                 item2->SendUpdateToPlayer(_player);
 
-                CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleAuctionSellItem");
                 item2->SaveToDB(trans);
                 CharacterDatabase.CommitTransaction(trans);
             }
         }
 
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleAuctionSellItem");
         newItem->SaveToDB(trans);
         AH->SaveToDB(trans);
         _player->SaveInventoryAndGoldToDB(trans);
@@ -494,7 +494,7 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket& recvData)
         return;
     }
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleAuctionPlaceBid");
 
     if (price < auction->buyout || auction->buyout == 0)
     {
@@ -608,7 +608,7 @@ void WorldSession::HandleAuctionRemoveItem(WorldPacket& recvData)
     AuctionEntry* auction = auctionHouse->GetAuction(auctionId);
     Player* player = GetPlayer();
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleAuctionRemoveItem");
     if (auction && auction->owner == player->GetGUID().GetCounter())
     {
         Item* pItem = sAuctionMgr->GetAItem(auction->itemGUIDLow);

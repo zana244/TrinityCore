@@ -252,9 +252,7 @@ void CreatureGroup::AddMember(Creature* member)
         // Reset the temp leaders motion type (idle or random) and path id
         _leader->SetDefaultMovementType(_tempLeaderDefaultMovementType);
         _leader->LoadPath(_tempLeaderPathId);
-        // Unregister temp leader from waypoint creatures if not have a path (same criteria for adding)
-        if (!_tempLeaderPathId)
-            _leader->GetMap()->RemoveFromWaypointCreatures(_leader);
+
         // Reset temp variables
         _tempLeaderDefaultMovementType = IDLE_MOTION_TYPE;
         _tempLeaderPathId = 0;

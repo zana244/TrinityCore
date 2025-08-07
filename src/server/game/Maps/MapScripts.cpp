@@ -736,7 +736,7 @@ void Map::ScriptsProcess()
 
                 if (!uTarget)
                 {
-                    TC_LOG_ERROR("scripts", "{} no target worldobject found for spell {}", step.script->GetDebugInfo(), step.script->CastSpell.SpellID);
+                    TC_LOG_ERROR("scripts", "{} no target worldobject found for spell {} source? {}", step.script->GetDebugInfo(), step.script->CastSpell.SpellID, (uSource ? uSource->GetDebugInfo() : "None"));
                     break;
                 }
 

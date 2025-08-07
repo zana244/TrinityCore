@@ -51,6 +51,7 @@ target_link_libraries(database
   PRIVATE
     trinity-core-interface
     mysql
+    TracyClient
   PUBLIC
     common)
 

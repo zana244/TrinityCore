@@ -31,6 +31,7 @@
 #include "Timer.h"
 
 #include <atomic>
+#include <deque>
 #include <list>
 #include <map>
 #include <unordered_map>
@@ -82,6 +83,7 @@ enum WorldTimers
     WUPDATE_CHECK_FILECHANGES,
     WUPDATE_WHO_LIST,
     WUPDATE_CHANNEL_SAVE,
+    WUPDATE_QUEUE_POSITIONS,
     WUPDATE_COUNT
 };
 
@@ -420,6 +422,10 @@ enum WorldIntConfigs : uint32
     CONFIG_MUTE_DEFAULT_GUILD_BROADCASTS,
     CONFIG_SLOW_MODE_CHANNEL_MASK,
     CONFIG_SLOW_MODE_MUTE_TIME,
+    CONFIG_QUEUE_UPDATE_TIME_THRESHOLD,
+    CONFIG_QUEUE_UPDATE_DELAY,
+    CONFIG_QUEUE_POSITION_UPDATE_INTERVAL,
+    CONFIG_MAP_UPDATE_TIME_THRESHOLD,
     // @epoch-end
     CONFIG_MAX_INSTANCES_PER_HOUR,
     CONFIG_XP_BOOST_DAYMASK,
@@ -693,10 +699,10 @@ class TC_GAME_API World
         void LoadDBAllowedSecurityLevel();
 
         /// Active session server limit
-        void SetPlayerAmountLimit(uint32 limit) { m_playerLimit = limit; }
-        uint32 GetPlayerAmountLimit() const { return m_playerLimit; }
-        void SetPlayerAmountLimitNoQueue(bool noQueue) { m_playerLimitNoQueue = noQueue; }
-        bool GetPlayerAmountLimitNoQueue() const { return m_playerLimitNoQueue; }
+        void SetPlayerLimit(uint32 limit) { m_playerLimit = limit; }
+        uint32 GetPlayerLimit() const { return m_playerLimit; }
+        void SetConnectionLimit(uint32 limit) { m_connectionLimit = limit; }
+        uint32 GetConnectionLimit() const { return m_connectionLimit; }
 
         //player Queue
         typedef std::list<WorldSession*> Queue;
@@ -754,6 +760,7 @@ class TC_GAME_API World
         static bool IsStopped() { return m_stopEvent; }
 
         void Update(uint32 diff);
+        void UpdateZoneChannelChange();
 
         void UpdateSessions(uint32 diff);
         /// Set a server rate (see #Rates)
@@ -909,7 +916,7 @@ class TC_GAME_API World
         typedef std::map<uint32, uint64> WorldStatesMap;
         WorldStatesMap m_worldstates;
         uint32 m_playerLimit;
-        bool m_playerLimitNoQueue;
+        uint32 m_connectionLimit;
         AccountTypes m_allowedSecurityLevel;
         LocaleConstant m_defaultDbcLocale;                     // from config for one from loaded DBC locales
         uint32 m_availableDbcLocaleMask;                       // by loaded DBC
@@ -941,6 +948,8 @@ class TC_GAME_API World
 
         //Player Queue
         Queue m_QueuedPlayer;
+        std::deque<uint32> m_recentUpdateTimes;
+        uint32 m_lastQueueProcessTime;
 
         // sessions that are added async
         void AddSession_(WorldSession* s);

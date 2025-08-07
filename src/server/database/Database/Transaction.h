@@ -19,6 +19,7 @@
 #define _TRANSACTION_H
 
 #include "Define.h"
+#include "AsyncLog.h"
 #include "DatabaseEnvFwd.h"
 #include "SQLOperation.h"
 #include "StringFormat.h"
@@ -36,7 +37,7 @@ class TC_DATABASE_API TransactionBase
     friend class DatabaseWorkerPool;
 
     public:
-        TransactionBase() : _cleanedUp(false) { }
+        TransactionBase(std::string const& name) : _cleanedUp(false), m_name(name) { }
         virtual ~TransactionBase() { Cleanup(); }
 
         void Append(char const* sql);
@@ -48,11 +49,12 @@ class TC_DATABASE_API TransactionBase
 
         std::size_t GetSize() const { return m_queries.size(); }
 
+        std::string GetName() const { return m_name; }
     protected:
         void AppendPreparedStatement(PreparedStatementBase* statement);
         void Cleanup();
         std::vector<SQLElementData> m_queries;
-
+        std::string m_name;
     private:
         bool _cleanedUp;
 };
@@ -61,6 +63,7 @@ template<typename T>
 class Transaction : public TransactionBase
 {
 public:
+    using TransactionBase::TransactionBase;
     using TransactionBase::Append;
     void Append(PreparedStatement<T>* statement)
     {
@@ -79,6 +82,16 @@ class TC_DATABASE_API TransactionTask : public SQLOperation
         TransactionTask(std::shared_ptr<TransactionBase> trans) : m_trans(trans) { }
         ~TransactionTask() { }
 
+        std::string GetName() {
+            if (m_trans)
+            {
+                return m_trans->GetName();
+            }
+            else
+            {
+                return "unknown";
+            }
+        }
     protected:
         bool Execute() override;
         int TryExecute();
@@ -104,10 +117,25 @@ protected:
 class TC_DATABASE_API TransactionCallback
 {
 public:
-    TransactionCallback(TransactionFuture&& future) : m_future(std::move(future)) { }
-    TransactionCallback(TransactionCallback&&) = default;
+    TransactionCallback(TransactionFuture&& future, std::string const& name) : m_future(std::move(future))
+    {
 
-    TransactionCallback& operator=(TransactionCallback&&) = default;
+    }
+    TransactionCallback(TransactionCallback&& other) noexcept
+        : m_future(std::move(other.m_future))
+        , m_callback(std::move(other.m_callback))
+        , logEntryNo(other.logEntryNo)
+    {
+        other.logEntryNo = 0;
+    }
+
+    TransactionCallback& operator=(TransactionCallback&& other) noexcept {
+        m_future = std::move(other.m_future);
+        m_callback = std::move(other.m_callback);
+        logEntryNo = other.logEntryNo;
+        other.logEntryNo = 0;
+        return *this;
+    }
 
     void AfterComplete(std::function<void(bool)> callback) &
     {
@@ -118,6 +146,7 @@ public:
 
     TransactionFuture m_future;
     std::function<void(bool)> m_callback;
+    uint64 logEntryNo = 0;
 };
 
 #endif

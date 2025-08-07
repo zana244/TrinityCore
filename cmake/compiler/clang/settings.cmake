@@ -51,7 +51,8 @@ if(WITH_WARNINGS)
       -Winit-self
       -Wfatal-errors
       -Wno-mismatched-tags
-      -Woverloaded-virtual)
+      -Woverloaded-virtual
+      -Werror=return-type)
 
   message(STATUS "Clang: All warnings enabled")
 endif()

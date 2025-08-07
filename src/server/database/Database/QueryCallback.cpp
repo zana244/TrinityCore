@@ -17,6 +17,13 @@
 
 #include "QueryCallback.h"
 #include "Errors.h"
+#include "AsyncLog.h"
+#include <chrono>
+#include <memory>
+#include <string>
+#include <vector>
+#include <mutex>
+#include <unordered_map>
 
 template<typename T, typename... Args>
 inline void Construct(T& t, Args&&... args)
@@ -104,14 +111,15 @@ private:
     bool _isPrepared;
 };
 
+
 // Not using initialization lists to work around segmentation faults when compiling with clang without precompiled headers
-QueryCallback::QueryCallback(std::future<QueryResult>&& result)
+QueryCallback::QueryCallback(std::future<QueryResult>&& result, std::string query)
 {
     _isPrepared = false;
     Construct(_string, std::move(result));
 }
 
-QueryCallback::QueryCallback(std::future<PreparedQueryResult>&& result)
+QueryCallback::QueryCallback(std::future<PreparedQueryResult>&& result, std::string query)
 {
     _isPrepared = true;
     Construct(_prepared, std::move(result));
@@ -119,6 +127,8 @@ QueryCallback::QueryCallback(std::future<PreparedQueryResult>&& result)
 
 QueryCallback::QueryCallback(QueryCallback&& right)
 {
+    logEntryNo       = right.logEntryNo;
+    right.logEntryNo = 0;
     _isPrepared = right._isPrepared;
     ConstructActiveMember(this);
     MoveFrom(this, std::move(right));
@@ -132,6 +142,8 @@ QueryCallback& QueryCallback::operator=(QueryCallback&& right)
         if (_isPrepared != right._isPrepared)
         {
             DestroyActiveMember(this);
+            logEntryNo  = right.logEntryNo;
+            right.logEntryNo = 0;
             _isPrepared = right._isPrepared;
             ConstructActiveMember(this);
         }

@@ -22,6 +22,7 @@
 // @tswow-begin
 #include "TSLibLoader.h"
 #include "TSProfile.h"
+#include "client/TracyProfiler.hpp"
 // @tswow-end
 #include "Common.h"
 #include "AppenderDB.h"
@@ -404,7 +405,7 @@ extern int main(int argc, char** argv)
     }
     // @tswow-begin
 #ifdef TRACY_ENABLE
-    TC_LOG_INFO("server.worldserver", "Tracy: Enabled");
+    TC_LOG_INFO("server.worldserver", "Tracy: Enabled on port {}", tracy::GetDataPort());
 #else
     TC_LOG_INFO("server.worldserver", "Tracy: Disabled");
 #endif

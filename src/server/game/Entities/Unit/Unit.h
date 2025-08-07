@@ -2058,6 +2058,10 @@ class TC_GAME_API Unit : public WorldObject
         void SetRooted(bool apply);
 
         uint32 m_rootTimes;
+        uint32 m_lastTickTime;
+        uint32 m_lastNotifiedTime;
+        Position m_lastNotifiedPosition;
+        Position m_lastCheckedPartitionPosition;
 
     private:
 
@@ -2100,7 +2104,6 @@ class TC_GAME_API Unit : public WorldObject
         SpellHistory* _spellHistory;
 
         PositionUpdateInfo _positionUpdateInfo;
-        Position _lastCheckedPartitionPosition;
 
         bool _isCombatDisallowed;
 

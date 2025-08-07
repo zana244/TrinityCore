@@ -169,7 +169,7 @@ void SecretMgr::AttemptLoad(Secrets i, LogLevel errorLevel, std::unique_lock<std
 
 Optional<std::string> SecretMgr::AttemptTransition(Secrets i, Optional<BigNumber> const& newSecret, Optional<BigNumber> const& oldSecret, bool hadOldSecret) const
 {
-    LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction();
+    LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction("SecretMgr::AttemptTransition");
 
     switch (i)
     {

@@ -397,7 +397,7 @@ void AuctionHouseMgr::LoadAuctions()
     // parse auctions from db
     uint32 countAuctions = 0;
     bool moveToNeutralAH = sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_AUCTION);
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("AuctionHouseMgr::LoadAuctions");
     do
     {
         Field* fields = resultAuctions->Fetch();
@@ -573,7 +573,7 @@ void AuctionHouseMgr::UpdateExpiredAuctions()
 
         time_t curTime = GameTime::GetGameTime();
 
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("AuctionHouseMgr::UpdateExpiredAuctions");
         for (AuctionEntryMap::iterator itr = auctionHouse->GetAuctionsBegin(); itr != auctionHouse->GetAuctionsEnd();)
         {
             // from auctionhousehandler.cpp, creates auction pointer & player pointer
@@ -673,7 +673,7 @@ void AuctionHouseMgr::PendingAuctionProcess(Player* player)
     // expire auctions we cannot afford
     if (itrAH != thisAH->end())
     {
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("AuctionHouseMgr::PendingAuctionProcess");
 
         do
         {
@@ -717,7 +717,7 @@ void AuctionHouseMgr::UpdatePendingAuctions()
             TC_LOG_WARN("auctionHouse", "Player {} was offline, unable to retrieve deposit!", playerGUID.ToString());
             PlayerAuctions* thisAH = itr->second.first;
             ++itr;
-            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("AuctionHouseMgr::UpdatePendingAuctions");
             for (auto AHitr = thisAH->begin(); AHitr != thisAH->end();)
             {
                 AuctionEntry* AH = (*AHitr);

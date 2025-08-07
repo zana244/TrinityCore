@@ -36,6 +36,7 @@
 #include "Transaction.h"
 #include "UniqueTrackablePtr.h"
 #include <bitset>
+#include <deque>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -394,12 +395,12 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         void VisitNearbyCellsOf(WorldObject* obj, TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer> &gridVisitor, TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer> &worldVisitor);
         virtual void Update(uint32);
 
-        float GetDiffScaleFactor() const;
-        float GetVisibilityRange() const;
-        float GetVisibilityNotifyPeriod() const;
+        float GetVisibilityRange() const { return m_VisibleDistance; }
+        uint32 GetVisibilityNotifyPeriod() const { return m_VisibilityNotifyPeriod; }
         
         //function for setting up visibility distance for maps on per-type/per-Id basis
         virtual void InitVisibilityDistance();
+        void InitVisibilityDistanceThresholds();
 
         void PlayerRelocation(Player*, float x, float y, float z, float orientation);
         void CreatureRelocation(Creature* creature, float x, float y, float z, float orientation);
@@ -540,26 +541,18 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
                 m_activeNonPlayers.erase(obj);
         }
 
-        // must called with AddToWorld/AddToPartition
         void AddToWaypointCreatures(Creature* creature)
         {
-            m_waypointCreatures.insert(creature);
+            if (m_updatingWaypointCreatures)
+                m_waypointCreaturesToAdd.push_back(creature);
+            else
+                m_waypointCreatures.insert(creature);
         }
 
-        // must called with RemoveFromWorld/RemoveFromPartition
+        // Must not be called during update (usually from RemoveFromMap/Partition)
         void RemoveFromWaypointCreatures(Creature* creature)
         {
-            if (m_waypointCreaturesIter != m_waypointCreatures.end())
-            {
-                WaypointCreatures::iterator itr = m_waypointCreatures.find(creature);
-                if (itr == m_waypointCreatures.end())
-                    return;
-                if (itr == m_waypointCreaturesIter)
-                    ++m_waypointCreaturesIter;
-                m_waypointCreatures.erase(itr);
-            }
-            else
-                m_waypointCreatures.erase(creature);
+            m_waypointCreatures.erase(creature);
         }
 
         template<class T> void SwitchGridContainers(T* obj, bool on);
@@ -773,7 +766,14 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         Trinity::unique_weak_ptr<Map> m_weakRef;
         uint32 m_unloadTimer;
         float m_VisibleDistance;
+        float m_MinVisibleDistance;
+        float m_MaxVisibleDistance;
+        float m_IncVisibleDistance;
         int32 m_VisibilityNotifyPeriod;
+        int32 m_MinVisibilityNotifyPeriod;
+        int32 m_MaxVisibilityNotifyPeriod;
+        int32 m_IncVisibilityNotifyPeriod;
+        std::deque<uint32> m_recentUpdateTimes;  // Rolling window for update time averaging
         DynamicMapTree _dynamicTree;
 
         MapRefManager m_mapRefManager;
@@ -783,9 +783,9 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         ActiveNonPlayers m_activeNonPlayers;
         ActiveNonPlayers::iterator m_activeNonPlayersIter;
 
-        typedef std::set<Creature*> WaypointCreatures;
-        WaypointCreatures m_waypointCreatures;
-        WaypointCreatures::iterator m_waypointCreaturesIter;
+        std::set<Creature*> m_waypointCreatures;
+        std::vector<Creature*> m_waypointCreaturesToAdd;
+        bool m_updatingWaypointCreatures;
 
         // Objects that must update even in inactive grids without activating them
         typedef std::set<Transport*> TransportsContainer;

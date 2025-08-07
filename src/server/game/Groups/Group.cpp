@@ -727,7 +727,7 @@ void Group::ChangeLeader(ObjectGuid newLeaderGuid)
 
     if (!isBGGroup() && !isBFGroup())
     {
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Group::ChangeLeader");
 
         // Copy the permanent binds from the new leader to the group
         Group::ConvertLeaderInstancesToGroup(newLeader, this, true);
@@ -868,7 +868,7 @@ void Group::Disband(bool hideDestroy /* = false */)
 
     if (!isBGGroup() && !isBFGroup())
     {
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Group::Disband");
 
         CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_GROUP);
         stmt->setUInt32(0, m_dbStoreId);

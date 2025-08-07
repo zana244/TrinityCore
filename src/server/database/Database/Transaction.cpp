@@ -107,7 +107,8 @@ bool TransactionTask::Execute()
 
 int TransactionTask::TryExecute()
 {
-    return m_conn->ExecuteTransaction(m_trans);
+    int res = m_conn->ExecuteTransaction(m_trans);
+    return res;
 }
 
 void TransactionTask::CleanupOnFailure()

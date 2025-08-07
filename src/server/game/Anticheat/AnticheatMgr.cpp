@@ -260,7 +260,7 @@ void AnticheatMgr::SpeedHackDetection(Player* player, MovementInfo movementInfo)
     {
         maxDist2d = 3000.0f;
     }
-    if (transportGobj && (transportGobj->IsTransport() || transportGobj->IsWithinDist(player, maxDist2d, false)))
+    if (transportGobj && (transportGobj->IsTransport() && transportGobj->IsWithinDist(player, maxDist2d, false)))
     {
         return;
     }

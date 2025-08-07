@@ -624,8 +624,8 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
             }
             // @tswow-end
 
-            CharacterDatabaseTransaction characterTransaction = CharacterDatabase.BeginTransaction();
-            LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction();
+            CharacterDatabaseTransaction characterTransaction = CharacterDatabase.BeginTransaction("WorldSession::HandleCharCreate");
+            LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction("WorldSession::HandleCharCreateOpcode");
 
                                                                   // Player created, save it now
             newChar->SaveToDB(characterTransaction, true);
@@ -1255,7 +1255,7 @@ void WorldSession::HandleCharRenameCallBack(std::shared_ptr<CharacterRenameInfo>
 
     atLoginFlags &= ~AT_LOGIN_RENAME;
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleCharRenameCallBack");
 
     // Update name and at_login flag in the db
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_NAME_AT_LOGIN);
@@ -1337,7 +1337,7 @@ void WorldSession::HandleSetPlayerDeclinedNames(WorldPacket& recvData)
     for (int i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
         CharacterDatabase.EscapeString(declinedname.name[i]);
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleSetPlayerDeclinedNames");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_DECLINED_NAME);
     stmt->setUInt32(0, guid.GetCounter());
@@ -1542,7 +1542,7 @@ void WorldSession::HandleCharCustomizeCallback(std::shared_ptr<CharacterCustomiz
     }
 
     CharacterDatabasePreparedStatement* stmt = nullptr;
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleCharCustomizeCallback");
 
     ObjectGuid::LowType lowGuid = customizeInfo->Guid.GetCounter();
 
@@ -1848,7 +1848,7 @@ void WorldSession::HandleCharFactionOrRaceChangeCallback(std::shared_ptr<Charact
     ObjectGuid::LowType lowGuid = factionChangeInfo->Guid.GetCounter();
 
     CharacterDatabasePreparedStatement* stmt = nullptr;
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleCharFactionOrRaceChangeCallback");
 
     // resurrect the character in case he's dead
     Player::OfflineResurrect(factionChangeInfo->Guid, trans);

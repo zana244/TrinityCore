@@ -150,7 +150,7 @@ void QuestPoolMgr::LoadFromDB()
                 (*it->second.first)[it->second.second].activeQuests.insert(questId);
             } while (result->NextRow());
 
-            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("QuestPoolMgr::LoadFromDB");
             for (uint32 poolId : unknownPoolIds)
             {
                 CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_POOL_QUEST_SAVE);
@@ -162,7 +162,7 @@ void QuestPoolMgr::LoadFromDB()
     }
 
     // post-processing and sanity checks
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("QuestPoolMgr::LoadFromDB");
     for (auto pair : lookup)
     {
         if (!pair.second.first)
@@ -258,7 +258,7 @@ void QuestPoolMgr::LoadFromDB()
 
 void QuestPoolMgr::Regenerate(std::vector<QuestPool>& pools)
 {
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("QuestPoolMgr::Regenerate");
     for (QuestPool& pool : pools)
     {
         RegeneratePool(pool);

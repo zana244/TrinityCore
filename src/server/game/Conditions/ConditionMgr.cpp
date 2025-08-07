@@ -796,6 +796,8 @@ std::string Condition::ToString(bool ext /*= false*/) const
             ss << " (" << ConditionMgr::StaticConditionTypeData[ConditionType].Name << ")";
         else
             ss << " (Unknown)";
+        ss << ", NegativeCondition: " << (NegativeCondition ? "true" : "false");
+        ss << ", ElseGroup: " << ElseGroup;
     }
 
     ss << "]";
@@ -855,7 +857,7 @@ bool ConditionMgr::IsObjectMeetToConditionList(ConditionSourceInfo& sourceInfo, 
     std::map<uint32, bool> elseGroupStore;
     for (Condition const* condition : conditions)
     {
-        TC_LOG_DEBUG("condition", "ConditionMgr::IsPlayerMeetToConditionList {} val1: {}", condition->ToString(), condition->ConditionValue1);
+        TC_LOG_DEBUG("condition", "ConditionMgr::IsPlayerMeetToConditionList {} val1: {}", condition->ToString(true), condition->ConditionValue1);
         if (condition->isLoaded())
         {
             //! Find ElseGroup in ElseGroupStore

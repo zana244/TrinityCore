@@ -878,6 +878,11 @@ void Creature::SetPhaseMask(uint32 newPhaseMask, bool update, uint64 newPhaseId)
 
 void Creature::Update(uint32 diff)
 {
+    // Guard against double ticks, formations can leadership exchange can result in this
+    uint32 tickTime = GameTime::GetGameTimeMS();
+    if (tickTime == m_lastTickTime)
+        return;
+
     if (m_outfit && !_changesMask.GetBit(UNIT_FIELD_DISPLAYID) && Unit::GetDisplayId() == CreatureOutfit::invisible_model)
     {
         // has outfit, displayid is invisible and displayid update already sent to clients
@@ -1107,24 +1112,44 @@ void Creature::Update(uint32 diff)
             break;
     }
 
-    // For now, do this at the end of the update
-    uint32 scaledPeriod = GetMap()->GetVisibilityNotifyPeriod();
-    uint32 currentTime = GameTime::GetGameTimeMS();
-    uint32 currentOffset = currentTime % scaledPeriod;
-    uint32 lastOffset = (currentTime - diff) % scaledPeriod;
-    uint32 guidOffset = GetGUID().GetCounter() % scaledPeriod;
+    if (!GetMap()->HavePlayers())
+        return;
+
+    if (m_lastTickTime - m_lastNotifiedTime < 500)
+        return;
+
+    // Creature must move some consequential distance to need notify
+    if (!isNeedNotify(NOTIFY_VISIBILITY_CHANGED))
+    {
+        float dx = m_lastNotifiedPosition.GetPositionX() - GetPositionX();
+        float dy = m_lastNotifiedPosition.GetPositionY() - GetPositionY();
+        float dz = m_lastNotifiedPosition.GetPositionZ() - GetPositionZ();
+        float distsq = dx * dx + dy * dy + dz * dz;
+        if (distsq < 9)
+            return;
+            
+        AddToNotify(NOTIFY_VISIBILITY_CHANGED);
+    }
+
+    // We now need a notify, but we ant to avoid clustering of notifies,
+    // so we find a 'slot' based on the dynamic period where this particular
+    // unit should perform its notify.
+    uint32 period = GetMap()->GetVisibilityNotifyPeriod();
+    uint32 currentOffset = m_lastTickTime % period;
+    uint32 lastOffset = (m_lastTickTime - diff) % period;
+    uint32 guidOffset = GetGUID().GetCounter() % period;
     // Check if guidOffset was crossed during this frame
     bool crossed = (lastOffset < currentOffset) ?
         (guidOffset > lastOffset && guidOffset <= currentOffset) :
         (guidOffset > lastOffset || guidOffset <= currentOffset);
     if (crossed)
     {
-        if (isNeedNotify(NOTIFY_VISIBILITY_CHANGED))
-        {
-            CreatureRelocationNotifier relocate(*this);
-            Cell::VisitAllObjects(this, relocate, GetMap()->GetVisibilityRange(), false);
-        }
+        ZoneScopedN("CreatureRelocationNotifier");
 
+        CreatureRelocationNotifier relocate(*this);
+        Cell::VisitAllObjects(this, relocate, GetMap()->GetVisibilityRange(), false);
+        m_lastNotifiedTime = m_lastTickTime;
+        m_lastNotifiedPosition = GetPosition();
         ResetAllNotifies();
     }
 }
@@ -1655,7 +1680,7 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
         data.spawnGroupData = sObjectMgr->GetDefaultSpawnGroup();
 
     // update in DB
-    WorldDatabaseTransaction trans = WorldDatabase.BeginTransaction();
+    WorldDatabaseTransaction trans = WorldDatabase.BeginTransaction("Creature::SaveToDB");
 
     WorldDatabasePreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_CREATURE);
     stmt->setUInt32(0, m_spawnId);
@@ -2108,7 +2133,7 @@ bool Creature::hasInvolvedQuest(uint32 quest_id) const
     if (!data)
         return false;
 
-    CharacterDatabaseTransaction charTrans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction charTrans = CharacterDatabase.BeginTransaction("Creature::DeleteFromDB");
 
     sMapMgr->DoForAllMapsWithMapId(data->mapId,
         [spawnId, charTrans](Map* map) -> void
@@ -2128,7 +2153,7 @@ bool Creature::hasInvolvedQuest(uint32 quest_id) const
 
     CharacterDatabase.CommitTransaction(charTrans);
 
-    WorldDatabaseTransaction trans = WorldDatabase.BeginTransaction();
+    WorldDatabaseTransaction trans = WorldDatabase.BeginTransaction("Creature::DeleteFromDB");
 
     // ... and the database
     WorldDatabasePreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_CREATURE);

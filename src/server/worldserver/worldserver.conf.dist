@@ -257,21 +257,69 @@ Compression = 1
 
 #
 #    PlayerLimit
-#        Description: Maximum number of players in the world. Excluding Mods, GMs and Admins.
+#        Description: Maximum number of players in the world before starting to queue them.
 #          Important: If you want to block players and only allow Mods, GMs or Admins to join the
 #                     server, use the DB field "auth.realmlist.allowedSecurityLevel".
-#            Default: 0   - (Disabled, No limit)
+#            Default: 0   - (Disabled, No Queue)
 #                     1+  - (Enabled)
 
 PlayerLimit = 0
 
 #
-#    PlayerLimit.NoQueue
-#        Description: Kick players over limit rather than add to queue
-#            Default: 0   - (Overflow to Queue)
-#                     1+  - (No Queue)
+#    ConnectionLimit
+#        Description: Maximum number of connections in the world we reject auth
+#            Default: 0   - (Disabled, No Limit)
+#                     1+  - (Enabled)
 
-PlayerLimit.NoQueue = 0
+ConnectionLimit = 0
+
+#
+#    Queue.Update.TimeThreshold
+#        Description: Time threshold in milliseconds for queue processing.
+#                     The server will only process queued players if the average world diff
+#                     is below this threshold, preventing performance degradation during high load.
+#        Default:     100 - (100 milliseconds)
+#                     0   - Pause players from entering game, queue will not be processed
+
+Queue.Update.TimeThreshold = 100
+
+#
+#    Queue.Update.Delay
+#        Description: Minimum delay in milliseconds between processing players from the queue.
+#                     This ensures queue processing doesn't happen too frequently even when
+#                     server performance allows it. Only 1 player is processed per tick when
+#                     the delay criteria is met.
+#        Default:     50 - (50 milliseconds minimum delay between queue processing)
+
+Queue.Update.Delay = 50
+
+#
+#    Queue.Position.UpdateInterval
+#        Description: How often to update queue position messages to players in seconds.
+#                     This controls how frequently players in the queue receive position updates
+#                     showing their current place in line.
+#        Default:     5 - (5 seconds)
+
+Queue.Position.UpdateInterval = 5
+
+#
+#    Map.Update.TimeThreshold
+#        Description: Time threshold in milliseconds for map update performance adjustment.
+#                     When map update times exceed this threshold, the server will incrementally
+#                     adjust visible distance and notification periods to help combat performance
+#                     degradation by reducing visibility processing load.
+#        Default:     150 - (150 milliseconds)
+
+Map.Update.TimeThreshold = 150
+
+#
+#    Map.Update.MaxRespawn
+#        Description: Respawning creatures and particularly adding them to a map is an expensive operation.
+#                     This setting limits the number of respawns that can be processed in a single map update.
+#        Default:     2 - (Count)
+#                     0 - (Disabled)
+
+Map.Update.MaxRespawn = 2
 
 #
 #    MaxOverspeedPings
@@ -4510,14 +4558,6 @@ AlwaysUpdateWaypointCreatures = 1
 
 HideGameObjectSparkle = 1
 
-#
-#    MaxRespawnCountOnUpdate
-#       Description: Respawning creatures and particularly adding them to a map is a expensive operation.
-#                    This setting limits the number of respawns that can be processed in a single update.
-#       Default:     2 - (Count)
-#                    0 - (Disabled)
-
-MaxRespawnCountOnUpdate = 2
 
 #
 #    MuteDefaultGuildBroadcasts

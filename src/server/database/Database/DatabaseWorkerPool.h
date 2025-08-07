@@ -170,7 +170,7 @@ class DatabaseWorkerPool
         */
 
         //! Begins an automanaged transaction pointer that will automatically rollback if not commited. (Autocommit=0)
-        SQLTransaction<T> BeginTransaction();
+        SQLTransaction<T> BeginTransaction(std::string const& name);
 
         //! Enqueues a collection of one-way SQL operations (can be both adhoc and prepared). The order in which these operations
         //! were appended to the transaction will be respected during execution.
@@ -245,6 +245,7 @@ class DatabaseWorkerPool
         std::array<std::vector<std::unique_ptr<T>>, IDX_SIZE> _connections;
         std::unique_ptr<MySQLConnectionInfo> _connectionInfo;
         std::vector<uint8> _preparedStatementSize;
+        std::vector<std::string> _preparedStatementNames;
         uint8 _async_threads, _synch_threads;
 #ifdef TRINITY_DEBUG
         static inline thread_local bool _warnSyncQueries = false;

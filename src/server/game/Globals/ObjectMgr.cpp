@@ -7679,12 +7679,6 @@ void ObjectMgr::LoadGraveyardZones()
             continue;
         }
 
-        if (areaEntry->ParentAreaID != 0)
-        {
-            TC_LOG_ERROR("sql.sql", "Table `graveyard_zone` has a record for SubZone (ID: {}) instead of zone, skipped.", zoneId);
-            continue;
-        }
-
         if (team != 0 && team != HORDE && team != ALLIANCE)
         {
             TC_LOG_ERROR("sql.sql", "Table `graveyard_zone` has a record for non player faction ({}), skipped.", team);
@@ -7716,7 +7710,20 @@ WorldSafeLocsEntry const* ObjectMgr::GetDefaultGraveyard(uint32 team) const
 WorldSafeLocsEntry const* ObjectMgr::GetClosestGraveyard(float x, float y, float z, uint32 MapId, uint32 team) const
 {
     // search for zone associated closest graveyard
-    uint32 zoneId = sMapMgr->GetZoneId(PHASEMASK_NORMAL, MapId, x, y, z);
+    // Try area first
+    uint32 zoneId = sMapMgr->GetAreaId(PHASEMASK_NORMAL, MapId, x, y, z);
+    bool subZoneGraveyard = false;
+    if (zoneId)
+    {
+        GraveyardMapBounds areaRange = GraveyardStore.equal_range(zoneId);
+        // If not graveyard links for the subzone, fallback to the parent zone
+        if (areaRange.first != areaRange.second)
+            subZoneGraveyard = true;
+    }
+
+    // Fallback to parent zone
+    if (!subZoneGraveyard)
+        zoneId = sMapMgr->GetZoneId(PHASEMASK_NORMAL, MapId, x, y, z);
 
     if (!zoneId)
     {
@@ -7735,10 +7742,10 @@ WorldSafeLocsEntry const* ObjectMgr::GetClosestGraveyard(float x, float y, float
     //   if mapId != graveyard.mapId (ghost in instance) and search any graveyard associated
     //     then check faction
     GraveyardMapBounds range = GraveyardStore.equal_range(zoneId);
-    MapEntry const* map = sMapStore.LookupEntry(MapId);
+    MapEntry const* mapEntry = sMapStore.LookupEntry(MapId);
 
     // not need to check validity of map object; MapId _MUST_ be valid here
-    if (range.first == range.second && !map->IsBattlegroundOrArena())
+    if (range.first == range.second && !mapEntry->IsBattlegroundOrArena())
     {
         if (zoneId != 0) // zone == 0 can't be fixed, used by bliz for bugged zones
             TC_LOG_ERROR("sql.sql", "Table `graveyard_zone` incomplete: Zone {} Team {} does not have a linked graveyard.", zoneId, team);
@@ -7757,8 +7764,6 @@ WorldSafeLocsEntry const* ObjectMgr::GetClosestGraveyard(float x, float y, float
 
     // some where other
     WorldSafeLocsEntry const* entryFar = nullptr;
-
-    MapEntry const* mapEntry = sMapStore.LookupEntry(MapId);
 
     for (; range.first != range.second; ++range.first)
     {

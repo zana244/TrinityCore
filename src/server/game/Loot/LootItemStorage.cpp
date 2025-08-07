@@ -213,7 +213,7 @@ void LootItemStorage::RemoveStoredLootForContainer(uint32 containerId)
         _lootItemStore.erase(containerId);
     }
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("LootItemStorage::RemoveStoredLootForContainer");
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEMCONTAINER_ITEMS);
     stmt->setUInt32(0, containerId);
     trans->Append(stmt);
@@ -257,7 +257,7 @@ void LootItemStorage::AddNewStoredLoot(Loot* loot, Player* player)
 
     StoredLootContainer container(loot->containerID);
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("LootItemStorage::AddNewStoredLoot");
     if (loot->gold)
         container.AddMoney(loot->gold, trans);
 

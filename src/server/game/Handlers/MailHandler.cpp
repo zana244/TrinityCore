@@ -234,7 +234,7 @@ void WorldSession::HandleSendMail(WorldPackets::Mail::SendMail& sendMail)
 
         MailDraft draft(mailInfo.Subject, mailInfo.Body);
 
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleSendMail");
 
         if (!mailInfo.Attachments.empty() || mailInfo.SendMoney > 0)
         {
@@ -363,7 +363,7 @@ void WorldSession::HandleMailReturnToSender(WorldPackets::Mail::MailReturnToSend
     }
     //we can return mail now
     //so firstly delete the old one
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleMailReturnToSender");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_MAIL_BY_ID);
     stmt->setUInt32(0, returnToSender.MailID);
@@ -441,7 +441,7 @@ void WorldSession::HandleMailTakeItem(WorldPackets::Mail::MailTakeItem& takeItem
     uint8 msg = _player->CanStoreItem(NULL_BAG, NULL_SLOT, dest, it, false);
     if (msg == EQUIP_ERR_OK)
     {
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleMailTakeItem");
         m->RemoveItem(takeItem.AttachID);
         m->removedItems.push_back(takeItem.AttachID);
 
@@ -530,7 +530,7 @@ void WorldSession::HandleMailTakeMoney(WorldPackets::Mail::MailTakeMoney& takeMo
     player->SendMailResult(takeMoney.MailID, MAIL_MONEY_TAKEN, MAIL_OK);
 
     // save money and mail to prevent cheating
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleMailTakeMoney");
     player->SaveGoldToDB(trans);
     player->_SaveMail(trans);
     CharacterDatabase.CommitTransaction(trans);

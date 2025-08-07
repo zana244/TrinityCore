@@ -95,7 +95,7 @@ bool Corpse::Create(ObjectGuid::LowType guidlow, Player* owner)
 void Corpse::SaveToDB()
 {
     // prevent DB data inconsistence problems and duplicates
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Corpse::SaveToDB");
     DeleteFromDB(trans);
 
     uint16 index = 0;

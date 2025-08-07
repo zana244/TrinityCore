@@ -1106,7 +1106,7 @@ bool Guild::Create(Player* pLeader, std::string_view name)
     TC_LOG_DEBUG("guild", "GUILD: creating guild [{}] for leader {} {}",
         m_name, pLeader->GetName(), m_leaderGuid.ToString());
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Guild::Create");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_GUILD_MEMBERS);
     stmt->setUInt32(0, m_id);
@@ -1147,7 +1147,7 @@ void Guild::Disband()
 
     _BroadcastEvent(GE_DISBANDED, ObjectGuid::Empty);
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Guild::Disband");
     // Remove all members
     while (!m_members.empty())
     {
@@ -1703,7 +1703,7 @@ void Guild::HandleMemberDepositMoney(WorldSession* session, uint32 amount)
         return;
     }
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Guild::HandleMemberDepositMoney");
     _ModifyBankMoney(trans, amount, true);
 
     player->ModifyMoney(-int32(amount));
@@ -1742,7 +1742,7 @@ bool Guild::HandleMemberWithdrawMoney(WorldSession* session, uint32 amount, bool
     // Call script after validation and before money transfer.
     sScriptMgr->OnGuildMemberWitdrawMoney(this, player, amount, repair);
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Guild::HandleMemberWithdrawMoney");
     // Add money to player (if required)
     if (!repair)
     {
@@ -2068,7 +2068,7 @@ bool Guild::Validate()
     bool broken_ranks = false;
     uint8 ranks = _GetRanksSize();
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Guild::Validate");
     if (ranks < GUILD_RANKS_MIN_COUNT || ranks > GUILD_RANKS_MAX_COUNT)
     {
         TC_LOG_ERROR("guild", "Guild {} has invalid number of ranks, creating new...", m_id);
@@ -2416,7 +2416,7 @@ void Guild::_CreateNewBankTab()
     uint8 tabId = _GetPurchasedTabsSize();                      // Next free id
     m_bankTabs.emplace_back(m_id, tabId);
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Guild::_CreateNewBankTab");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_GUILD_BANK_TAB);
     stmt->setUInt32(0, m_id);
@@ -2466,7 +2466,7 @@ bool Guild::_CreateRank(CharacterDatabaseTransaction trans, std::string_view nam
 
     bool const isInTransaction = bool(trans);
     if (!isInTransaction)
-        trans = CharacterDatabase.BeginTransaction();
+        trans = CharacterDatabase.BeginTransaction("Guild::_CreateRank");
 
     info.CreateMissingTabsIfNeeded(_GetPurchasedTabsSize(), trans);
     info.SaveToDB(trans);
@@ -2530,7 +2530,7 @@ bool Guild::_ModifyBankMoney(CharacterDatabaseTransaction trans, uint64 amount, 
 
 void Guild::_SetLeaderGUID(Member& pLeader)
 {
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Guild::_SetLeaderGUID");
     m_leaderGuid = pLeader.GetGUID();
     pLeader.ChangeRank(trans, GR_GUILDMASTER);
 
@@ -2648,7 +2648,7 @@ inline bool Guild::_MemberHasTabRights(ObjectGuid guid, uint8 tabId, uint32 righ
 // Add new event log record
 inline void Guild::_LogEvent(GuildEventLogTypes eventType, ObjectGuid::LowType playerGuid1, ObjectGuid::LowType playerGuid2, uint8 newRank)
 {
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Guild::_LogEvent");
     m_eventLog.AddEvent(trans, m_id, m_eventLog.GetNextGUID(), eventType, playerGuid1, playerGuid2, newRank);
     CharacterDatabase.CommitTransaction(trans);
 
@@ -2763,7 +2763,7 @@ bool Guild::_DoItemsMove(MoveItemData* pSrc, MoveItemData* pDest, bool sendError
     if (swap)
         pSrc->LogAction(pDest);
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("Guild::_DoItemsMove");
     // 3. Log bank events
     pDest->LogBankEvent(trans, pSrc, pSrcItem->GetCount());
     if (swap)

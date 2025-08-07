@@ -539,7 +539,7 @@ void AchievementMgr::ResetAchievementCriteria(AchievementCriteriaCondition condi
 
 void AchievementMgr::DeleteFromDB(ObjectGuid guid)
 {
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("AchievementMgr::DeleteFromDB");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_ACHIEVEMENT);
     stmt->setUInt32(0, guid.GetCounter());
@@ -1617,7 +1617,7 @@ void AchievementMgr::CompletedAchievement(AchievementEntry const* achievement)
             draft = MailDraft(subject, text);
         }
 
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("AchievementMgr::CompletedAchievement");
 
         Item* item = reward->ItemId ? Item::CreateItem(reward->ItemId, 1, GetPlayer()) : nullptr;
         if (item)

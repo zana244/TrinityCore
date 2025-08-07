@@ -137,7 +137,7 @@ void InstanceSaveManager::DeleteInstanceFromDB(uint32 instanceid)
 {
     ZoneScopedNC("InstanceSaveManager::DeleteInstanceFromDB", WORLD_UPDATE_COLOR)
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("InstanceSaveManager::DeleteInstanceFromDB");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_INSTANCE_BY_INSTANCE);
     stmt->setUInt32(0, instanceid);
@@ -660,7 +660,7 @@ void InstanceSaveManager::_ResetOrWarnAll(uint32 mapid, Difficulty difficulty, b
             return;
 
         // delete/promote instance binds from the DB, even if not loaded
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("InstanceSaveManager::_ResetOrWarnAll");
 
         CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_EXPIRED_CHAR_INSTANCE_BY_MAP_DIFF);
         stmt->setUInt16(0, uint16(mapid));

@@ -15,6 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Define.h"
 #include "ScriptMgr.h"
 #include "AccountMgr.h"
 #include "ArenaTeamMgr.h"
@@ -51,8 +52,9 @@
 #include "WeatherMgr.h"
 #include "World.h"
 #include "WorldSession.h"
-
-#include <chrono>
+#include "QueryCallback.h"
+#include "AsyncLog.h"
+#include <unordered_map>
 
 // temporary hack until includes are sorted out (don't want to pull in Windows.h)
 #ifdef GetClassName
@@ -127,7 +129,8 @@ public:
             { "unstuck",          HandleUnstuckCommand,          rbac::RBAC_PERM_COMMAND_UNSTUCK,          Console::Yes },
             { "wchange",          HandleChangeWeather,           rbac::RBAC_PERM_COMMAND_WCHANGE,          Console::No },
             { "mailbox",          HandleMailBoxCommand,          rbac::RBAC_PERM_COMMAND_MAILBOX,          Console::No },
-            { "log_player_locations",          HandleLogPlayerLocationsCommand,          rbac::RBAC_PERM_COMMAND_ADDITEM,          Console::Yes },
+            { "async_log",        HandleAsyncLogCommand,         rbac::RBAC_PERM_COMMAND_ASYNC_LOG,        Console::Yes },
+            { "choke_db",         HandleChokeDBCommand,          rbac::RBAC_PERM_COMMAND_CHOKE_DB,         Console::Yes },
         };
         return commandTable;
     }
@@ -2669,33 +2672,115 @@ public:
         return true;
     }
 
-    static bool HandleLogPlayerLocationsCommand(ChatHandler* handler)
-    {
-#pragma pack(push,1)
-struct PlayerPosition
-{
-    float x;
-    float y;
-    float z;
-    uint32 mapId;
-};
-#pragma pack(pop)
-        std::vector<PlayerPosition> positions;
-        std::shared_lock<std::shared_mutex> lock(*HashMapHolder<Player>::GetLock());
-        HashMapHolder<Player>::MapType const& m = ObjectAccessor::GetPlayers();
-        for (HashMapHolder<Player>::MapType::const_iterator itr = m.begin(); itr != m.end(); ++itr) {
-            Player* player = itr->second;
-            positions.push_back(PlayerPosition{player->GetPosition().m_positionX, player->GetPosition().m_positionY,
-                                               player->GetPosition().m_positionZ, player->GetMapId()});
-        }
-        // Get current unix timestamp
-        auto now = std::chrono::system_clock::now();
-        auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(
-            now.time_since_epoch()).count();
+    static bool HandleAsyncLogCommand(ChatHandler* handler, Optional<size_t> shown, Optional<size_t> length) {
+        uint64 now = static_cast<uint64>(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count());
 
-        std::ofstream ofs(fmt::format("player_location_dump_{}", timestamp), std::ios::binary);
-        ofs.write(reinterpret_cast<char*>(positions.data()), positions.size() * sizeof(PlayerPosition));
+        std::unordered_map<uint64, AsyncLogData> logData = GetAsyncLogData();
+
+        size_t totalCount = 0;
+        size_t totalTime = 0;
+        struct CountEntry
+        {
+            std::string name;
+            uint64 count;
+            uint64 totalTime;
+        };
+
+        auto PrintCountEntries = [&](std::vector<CountEntry>& entries) {
+            std::sort(entries.begin(), entries.end(),
+                      [](CountEntry const& a, CountEntry const& b)
+                      {
+                          return a.totalTime > b.totalTime;
+                      });
+            handler->SendSysMessage("Count      | Total Time | Query");
+            for (size_t i = 0; i < std::min(entries.size(), shown.value_or(10)); ++i)
+            {
+                std::string str =
+                    fmt::format("{:<10} | {:<10} | {}", entries[i].count, entries[i].totalTime,
+                                entries[i].name.substr(0, std::min(entries[i].name.size(), static_cast<size_t>(length.value_or(100)))));
+                handler->SendSysMessage(str);
+            }
+        };
+
+        std::unordered_map<std::string, CountEntry> countMap;
+        for (auto const& [key, entry] : logData)
+        {
+            CountEntry& countEntry = countMap[entry.query];
+            countEntry.name = entry.query;
+            countEntry.count++;
+            countEntry.totalTime += now - entry.createTime;
+            totalCount++;
+            totalTime += now - entry.createTime;
+        }
+
+        std::vector<CountEntry> countVec;
+        for (auto const& [key, entry] : countMap)
+        {
+            countVec.push_back(entry);
+        }
+        handler->SendSysMessage(fmt::format("Current"));
+        handler->SendSysMessage(fmt::format("Current Total Count: {}, current total time: {}", totalCount, totalTime));
+        PrintCountEntries(countVec);
+
+        std::unordered_map<std::string, AsyncLogTotals> logTotals = GetAsyncLogTotals();
+        std::vector<CountEntry> totalCountVec;
+        size_t totalQueries = 0;
+        for (auto const& [key, entry] : logTotals)
+        {
+            totalQueries += entry.Count;
+            totalCountVec.push_back(CountEntry{key, entry.Count, entry.Time});
+        }
+        handler->SendSysMessage(fmt::format("Total"));
+        handler->SendSysMessage(fmt::format("Total Count: {}", totalQueries));
+        PrintCountEntries(totalCountVec);
+
         return true;
+    }
+
+    static bool HandleChokeDBCommand(ChatHandler* handler, std::string dbName, Optional<uint32> amount, Optional<uint32> queries) {
+        auto Query =
+            [&](auto& db)
+        {
+            uint32 amountV    = amount.value_or(100000000);
+            uint32 queriesV   = queries.value_or(1);
+            std::string query = fmt::format("SELECT BENCHMARK({}, SHA2('Hi', 256));", amountV);
+            for (size_t i = 0; i < queriesV; ++i)
+            {
+                db.AsyncQuery(query.c_str());
+            }
+
+            std::string playerName = [&]() -> std::string
+            {
+                if (Player* player = handler->GetPlayer())
+                {
+                    return player->GetName();
+                }
+                else
+                {
+                    return "console";
+                }
+            }();
+            std::string message =
+                fmt::format("Choking {} db for {} iterations of SHA256 with {} queries (by {})", dbName, amountV, queriesV, playerName);
+            handler->SendSysMessage(message);
+            TC_LOG_INFO("choke_db", "{}", message);
+        };
+        if (dbName == "auth" || dbName == "login") {
+            Query(LoginDatabase);
+            return true;
+        }
+        else if (dbName == "characters" || dbName == "character") {
+            Query(CharacterDatabase);
+            return true;
+        }
+        else if (dbName == "world") {
+            Query(WorldDatabase);
+            return true;
+        }
+
+        return false;
     }
 };
 

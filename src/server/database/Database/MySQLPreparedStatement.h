@@ -44,6 +44,7 @@ class TC_DATABASE_API MySQLPreparedStatement
 
         uint32 GetParameterCount() const { return m_paramCount; }
 
+        std::string GetQueryString() const { return m_queryString; }
     protected:
         void SetParameter(uint8 index, std::nullptr_t);
         void SetParameter(uint8 index, bool value);

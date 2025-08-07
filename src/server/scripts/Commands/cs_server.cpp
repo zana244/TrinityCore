@@ -103,6 +103,11 @@ public:
             { "info",         rbac::RBAC_PERM_COMMAND_SERVER_INFO,         true, &HandleServerInfoCommand,    "" },
             { "motd",         rbac::RBAC_PERM_COMMAND_SERVER_MOTD,         true, &HandleServerMotdCommand,    "" },
             { "plimit",       rbac::RBAC_PERM_COMMAND_SERVER_PLIMIT,       true, &HandleServerPLimitCommand,  "" },
+            { "climit",       rbac::RBAC_PERM_COMMAND_SERVER_PLIMIT,       true, &HandleServerCLimitCommand,  "" },
+            { "queuetime",    rbac::RBAC_PERM_COMMAND_SERVER_PLIMIT,       true, &HandleServerQueueTimeThresholdCommand, "" },
+            { "queuedelay",   rbac::RBAC_PERM_COMMAND_SERVER_PLIMIT,       true, &HandleServerQueueDelayCommand, "" },
+            { "maptime",      rbac::RBAC_PERM_COMMAND_SERVER_PLIMIT,       true, &HandleServerMapTimeThresholdCommand, "" },
+            { "maprespawn",   rbac::RBAC_PERM_COMMAND_SERVER_PLIMIT,       true, &HandleServerMapRespawnCommand, "" },
             { "restart",      rbac::RBAC_PERM_COMMAND_SERVER_RESTART,      true, nullptr,                     "", serverRestartCommandTable },
             { "shutdown",     rbac::RBAC_PERM_COMMAND_SERVER_SHUTDOWN,     true, nullptr,                     "", serverShutdownCommandTable },
             { "set",          rbac::RBAC_PERM_COMMAND_SERVER_SET,          true, nullptr,                     "", serverSetCommandTable },
@@ -306,7 +311,7 @@ public:
                 sWorld->SetPlayerSecurityLimit(SEC_ADMINISTRATOR);
             else if (strncmp(paramStr, "reset", limit) == 0)
             {
-                sWorld->SetPlayerAmountLimit(sConfigMgr->GetIntDefault("PlayerLimit", 100));
+                sWorld->SetPlayerLimit(sConfigMgr->GetIntDefault("PlayerLimit", 100));
                 sWorld->LoadDBAllowedSecurityLevel();
             }
             else
@@ -315,11 +320,11 @@ public:
                 if (value < 0)
                     sWorld->SetPlayerSecurityLimit(AccountTypes(-value));
                 else
-                    sWorld->SetPlayerAmountLimit(uint32(value));
+                    sWorld->SetPlayerLimit(uint32(value));
             }
         }
 
-        uint32 playerAmountLimit = sWorld->GetPlayerAmountLimit();
+        uint32 playerLimit = sWorld->GetPlayerLimit();
         AccountTypes allowedAccountType = sWorld->GetPlayerSecurityLimit();
         char const* secName = "";
         switch (allowedAccountType)
@@ -340,7 +345,77 @@ public:
                 secName = "<unknown>";
                 break;
         }
-        handler->PSendSysMessage("Player limits: amount %u, min. security level %s.", playerAmountLimit, secName);
+        handler->PSendSysMessage("Player limits: amount %u, min. security level %s.", playerLimit, secName);
+
+        return true;
+    }
+
+    static bool HandleServerCLimitCommand(ChatHandler* handler, char const* args)
+    {
+        if (*args)
+        {
+            uint32 value = uint32(atoi(args));
+            sWorld->SetConnectionLimit(value);
+        }
+
+        uint32 connectionLimit = sWorld->GetConnectionLimit();
+        handler->PSendSysMessage("Connection limit: %u", connectionLimit);
+
+        return true;
+    }
+
+    static bool HandleServerQueueTimeThresholdCommand(ChatHandler* handler, char const* args)
+    {
+        if (*args)
+        {
+            uint32 value = uint32(atoi(args));
+            sWorld->setIntConfig(CONFIG_QUEUE_UPDATE_TIME_THRESHOLD, value);
+        }
+
+        uint32 threshold = sWorld->getIntConfig(CONFIG_QUEUE_UPDATE_TIME_THRESHOLD);
+        handler->PSendSysMessage("Queue time threshold: %u ms", threshold);
+
+        return true;
+    }
+
+    static bool HandleServerQueueDelayCommand(ChatHandler* handler, char const* args)
+    {
+        if (*args)
+        {
+            uint32 value = uint32(atoi(args));
+            sWorld->setIntConfig(CONFIG_QUEUE_UPDATE_DELAY, value);
+        }
+
+        uint32 delay = sWorld->getIntConfig(CONFIG_QUEUE_UPDATE_DELAY);
+        handler->PSendSysMessage("Queue update delay: %u ms", delay);
+
+        return true;
+    }
+
+    static bool HandleServerMapTimeThresholdCommand(ChatHandler* handler, char const* args)
+    {
+        if (*args)
+        {
+            uint32 value = uint32(atoi(args));
+            sWorld->setIntConfig(CONFIG_MAP_UPDATE_TIME_THRESHOLD, value);
+        }
+
+        uint32 threshold = sWorld->getIntConfig(CONFIG_MAP_UPDATE_TIME_THRESHOLD);
+        handler->PSendSysMessage("Map time threshold: %u ms", threshold);
+
+        return true;
+    }
+
+    static bool HandleServerMapRespawnCommand(ChatHandler* handler, char const* args)
+    {
+        if (*args)
+        {
+            uint32 value = uint32(atoi(args));
+            sWorld->setIntConfig(CONFIG_MAX_RESPAWN_COUNT_ON_UPDATE, value);
+        }
+
+        uint32 respawnCount = sWorld->getIntConfig(CONFIG_MAX_RESPAWN_COUNT_ON_UPDATE);
+        handler->PSendSysMessage("Max respawn count on update: %u", respawnCount);
 
         return true;
     }

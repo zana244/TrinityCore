@@ -24,8 +24,8 @@
 #include "MySQLWorkaround.h"
 #include <fmt/chrono.h>
 
-PreparedStatementBase::PreparedStatementBase(uint32 index, uint8 capacity) :
-m_index(index), statement_data(capacity) { }
+PreparedStatementBase::PreparedStatementBase(uint32 index, uint8 capacity, std::string name) :
+m_name(std::move(name)), m_index(index), statement_data(capacity) { }
 
 PreparedStatementBase::~PreparedStatementBase() { }
 

@@ -185,7 +185,7 @@ void CalendarMgr::RemoveEvent(CalendarEvent* calendarEvent, ObjectGuid remover)
 
     SendCalendarEventRemovedAlert(*calendarEvent);
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("CalendarMgr::RemoveEvent");
     CharacterDatabasePreparedStatement* stmt;
 
     CalendarInviteStore& eventInvites = _invites[calendarEvent->GetEventId()];
@@ -233,7 +233,7 @@ void CalendarMgr::RemoveInvite(uint64 inviteId, uint64 eventId, ObjectGuid /*rem
     if (itr == _invites[eventId].end())
         return;
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans       = CharacterDatabase.BeginTransaction("CalendarMgr::RemoveInvite");
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CALENDAR_INVITE);
     stmt->setUInt64(0, (*itr)->GetInviteId());
     trans->Append(stmt);

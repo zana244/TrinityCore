@@ -313,7 +313,7 @@ void WorldSession::HandleOpenWrappedItemCallback(uint16 pos, ObjectGuid itemGuid
         return;
     }
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("WorldSession::HandleOpenWrappedItemCallback");
 
     Field* fields = result->Fetch();
     uint32 entry = fields[0].GetUInt32();

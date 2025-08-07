@@ -22,6 +22,11 @@ GroupSources(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_definitions(-DTRINITY_API_EXPORT_GAME)
 
+# Add TRINITY_BUILD_NAME definition if provided (livescripts reference)
+if(DEFINED TRINITY_BUILD_NAME)
+  add_definitions(-DTRINITY_BUILD_NAME="${TRINITY_BUILD_NAME}")
+endif()
+
 CollectIncludeDirectories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC_INCLUDES

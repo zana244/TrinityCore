@@ -126,7 +126,7 @@ AccountOpResult AccountMgr::DeleteAccount(uint32 accountId)
     stmt->setUInt32(0, accountId);
     CharacterDatabase.Execute(stmt);
 
-    LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction();
+    LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction("AccountMgr::DeleteAccount");
 
     loginStmt = LoginDatabase.GetPreparedStatement(LOGIN_DEL_ACCOUNT);
     loginStmt->setUInt32(0, accountId);
@@ -507,7 +507,7 @@ void AccountMgr::UpdateAccountAccess(rbac::RBACData* rbac, uint32 accountId, uin
     if (rbac && securityLevel != rbac->GetSecurityLevel())
         rbac->SetSecurityLevel(securityLevel);
 
-    LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction();
+    LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction("AccountMgr::UpdateAccountAccess");
     // Delete old security level from DB
     if (realmId == -1)
     {

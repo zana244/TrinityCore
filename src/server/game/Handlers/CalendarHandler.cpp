@@ -250,7 +250,7 @@ void WorldSession::HandleCalendarAddEvent(WorldPackets::Calendar::CalendarAddEve
     {
         CharacterDatabaseTransaction trans;
         if (calendarAddEvent.Invites.size() > 1)
-            trans = CharacterDatabase.BeginTransaction();
+            trans = CharacterDatabase.BeginTransaction("WorldSession::HandleCalendarAddEvent");
 
         for (uint32 i = 0; i < calendarAddEvent.Invites.size(); ++i)
         {
@@ -375,7 +375,7 @@ void WorldSession::HandleCalendarCopyEvent(WorldPackets::Calendar::CalendarCopyE
         CalendarInviteStore invites = sCalendarMgr->GetEventInvites(calendarCopyEvent.EventID);
         CharacterDatabaseTransaction trans;
         if (invites.size() > 1)
-            trans = CharacterDatabase.BeginTransaction();
+            trans = CharacterDatabase.BeginTransaction("WorldSession::HandleCalendarCopyEvent");
 
         for (CalendarInviteStore::const_iterator itr = invites.begin(); itr != invites.end(); ++itr)
             sCalendarMgr->AddInvite(newEvent, new CalendarInvite(**itr, sCalendarMgr->GetFreeInviteId(), newEvent->GetEventId()), trans);

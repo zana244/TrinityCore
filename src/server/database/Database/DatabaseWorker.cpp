@@ -18,13 +18,18 @@
 #include "DatabaseWorker.h"
 #include "SQLOperation.h"
 #include "ProducerConsumerQueue.h"
+#include "Tracy.hpp"
+#include <cstddef>
+#include <map>
+#include <mutex>
 
-DatabaseWorker::DatabaseWorker(ProducerConsumerQueue<SQLOperation*>* newQueue, MySQLConnection* connection)
+DatabaseWorker::DatabaseWorker(ProducerConsumerQueue<SQLOperation*>* newQueue, MySQLConnection* connection, std::string name)
 {
     _connection = connection;
     _queue = newQueue;
     _cancelationToken = false;
     _workerThread = std::thread(&DatabaseWorker::WorkerThread, this);
+    _name = name;
 }
 
 DatabaseWorker::~DatabaseWorker()
@@ -36,11 +41,20 @@ DatabaseWorker::~DatabaseWorker()
     _workerThread.join();
 }
 
+std::map<std::string, std::size_t> curId;
+std::mutex curIdMutex;
 void DatabaseWorker::WorkerThread()
 {
     if (!_queue)
         return;
 
+    std::string name = [&]() {
+        std::scoped_lock lock(curIdMutex);
+        return fmt::format("{} Database {}", _name, curId[_name]++);
+    }();
+
+    ZoneScopedN("DatabaseWorker::WorkerThread");
+    tracy::SetThreadName(name.c_str());
     for (;;)
     {
         SQLOperation* operation = nullptr;
@@ -52,7 +66,6 @@ void DatabaseWorker::WorkerThread()
 
         operation->SetConnection(_connection);
         operation->call();
-
         delete operation;
     }
 }

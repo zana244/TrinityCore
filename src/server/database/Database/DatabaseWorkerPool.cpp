@@ -33,10 +33,12 @@
 #include "Transaction.h"
 #include "MySQLWorkaround.h"
 #include <mysqld_error.h>
+#include "Tracy.hpp"
 #ifdef TRINITY_DEBUG
 #include <sstream>
 #include <boost/stacktrace.hpp>
 #endif
+#include <chrono>
 
 #define MIN_MYSQL_SERVER_VERSION 50700u
 #define MIN_MYSQL_SERVER_VERSION_STRING "5.7"
@@ -158,6 +160,9 @@ bool DatabaseWorkerPool<T>::PrepareStatements()
             if (_preparedStatementSize.size() < preparedSize)
                 _preparedStatementSize.resize(preparedSize);
 
+            if (_preparedStatementNames.size() < preparedSize)
+                _preparedStatementNames.resize(preparedSize);
+
             for (size_t i = 0; i < preparedSize; ++i)
             {
                 // already set by another connection
@@ -173,6 +178,7 @@ bool DatabaseWorkerPool<T>::PrepareStatements()
                     ASSERT(paramCount < std::numeric_limits<uint8>::max());
 
                     _preparedStatementSize[i] = static_cast<uint8>(paramCount);
+                    _preparedStatementNames[i] = stmt->GetQueryString();
                 }
             }
         }
@@ -201,12 +207,15 @@ QueryResult DatabaseWorkerPool<T>::Query(char const* sql, T* connection /*= null
 template <class T>
 PreparedQueryResult DatabaseWorkerPool<T>::Query(PreparedStatement<T>* stmt)
 {
+    std::string name = stmt ? stmt->GetName() : "unknown";
+
     auto connection = GetFreeConnection();
     PreparedResultSet* ret = connection->Query(stmt);
     connection->Unlock();
 
     //! Delete proxy-class. Not needed anymore
     delete stmt;
+
 
     if (!ret || !ret->GetRowCount())
     {
@@ -224,17 +233,18 @@ QueryCallback DatabaseWorkerPool<T>::AsyncQuery(char const* sql)
     // Store future result before enqueueing - task might get already processed and deleted before returning from this method
     QueryResultFuture result = task->GetFuture();
     Enqueue(task);
-    return QueryCallback(std::move(result));
+    return QueryCallback(std::move(result), sql);
 }
 
 template <class T>
 QueryCallback DatabaseWorkerPool<T>::AsyncQuery(PreparedStatement<T>* stmt)
 {
+    std::string name            = stmt ? stmt->GetName() : "unknown";
     PreparedStatementTask* task = new PreparedStatementTask(stmt, true);
     // Store future result before enqueueing - task might get already processed and deleted before returning from this method
     PreparedQueryResultFuture result = task->GetFuture();
     Enqueue(task);
-    return QueryCallback(std::move(result));
+    return QueryCallback(std::move(result), name);
 }
 
 template <class T>
@@ -248,9 +258,9 @@ SQLQueryHolderCallback DatabaseWorkerPool<T>::DelayQueryHolder(std::shared_ptr<S
 }
 
 template <class T>
-SQLTransaction<T> DatabaseWorkerPool<T>::BeginTransaction()
+SQLTransaction<T> DatabaseWorkerPool<T>::BeginTransaction(std::string const& name)
 {
-    return std::make_shared<Transaction<T>>();
+    return std::make_shared<Transaction<T>>(name);
 }
 
 template <class T>
@@ -279,6 +289,7 @@ void DatabaseWorkerPool<T>::CommitTransaction(SQLTransaction<T> transaction)
 template <class T>
 TransactionCallback DatabaseWorkerPool<T>::AsyncCommitTransaction(SQLTransaction<T> transaction)
 {
+    std::string name                = transaction ? transaction->GetName() : "unknown";
 #ifdef TRINITY_DEBUG
     //! Only analyze transaction weaknesses in Debug mode.
     //! Ideally we catch the faults in Debug mode and then correct them,
@@ -299,7 +310,7 @@ TransactionCallback DatabaseWorkerPool<T>::AsyncCommitTransaction(SQLTransaction
     TransactionWithResultTask* task = new TransactionWithResultTask(transaction);
     TransactionFuture result = task->GetFuture();
     Enqueue(task);
-    return TransactionCallback(std::move(result));
+    return TransactionCallback(std::move(result), name);
 }
 
 template <class T>
@@ -335,7 +346,18 @@ void DatabaseWorkerPool<T>::DirectCommitTransaction(SQLTransaction<T>& transacti
 template <class T>
 PreparedStatement<T>* DatabaseWorkerPool<T>::GetPreparedStatement(PreparedStatementIndex index)
 {
-    return new PreparedStatement<T>(index, _preparedStatementSize[index]);
+    std::string name = [&]() -> std::string
+    {
+        if (index >= _preparedStatementNames.size())
+        {
+            return "unknown";
+        }
+        else
+        {
+            return _preparedStatementNames[index];
+        }
+    }();
+    return new PreparedStatement<T>(index, _preparedStatementSize[index], name);
 }
 
 template <class T>
@@ -493,6 +515,8 @@ void DatabaseWorkerPool<T>::Execute(PreparedStatement<T>* stmt)
 template <class T>
 void DatabaseWorkerPool<T>::DirectExecute(char const* sql)
 {
+    ZoneScoped;
+    ZoneText(sql ? sql : "unknown", sql ? strlen(sql) : strlen("unknown"));
     if (Trinity::IsFormatEmptyOrNull(sql))
         return;
 
@@ -504,6 +528,8 @@ void DatabaseWorkerPool<T>::DirectExecute(char const* sql)
 template <class T>
 void DatabaseWorkerPool<T>::DirectExecute(PreparedStatement<T>* stmt)
 {
+    ZoneScoped;
+    ZoneText(stmt ? stmt->GetName().c_str() : "unknown", stmt ? stmt->GetName().size() : strlen("unknown"));
     T* connection = GetFreeConnection();
     connection->Execute(stmt);
     connection->Unlock();

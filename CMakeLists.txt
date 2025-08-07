@@ -96,7 +96,7 @@ SET(TRACY_ONLY_LOCALHOST OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
   tracy
   GIT_REPOSITORY https://github.com/ihm-tswow/tracy.git
-  GIT_TAG 8fc309632737e44e976471fc4123d47de639793c
+  GIT_TAG 759760b022e34bd3fe058755da2a48fc46a93623
 )
 FetchContent_MakeAvailable (tracy)
 target_compile_definitions(TracyClient

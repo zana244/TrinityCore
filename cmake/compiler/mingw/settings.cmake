@@ -28,7 +28,8 @@ if(WITH_WARNINGS)
       -Winit-self
       -Winvalid-pch
       -Wfatal-errors
-      -Woverloaded-virtual)
+      -Woverloaded-virtual
+      -Werror=return-type)
 
   message(STATUS "GCC: All warnings enabled")
 endif()

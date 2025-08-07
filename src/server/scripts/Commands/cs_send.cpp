@@ -89,7 +89,7 @@ public:
         MailSender sender(MAIL_NORMAL, handler->GetSession() ? handler->GetSession()->GetPlayer()->GetGUID().GetCounter() : 0, MAIL_STATIONERY_GM);
 
         /// @todo Fix poor design
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("send_commandscript::HandleSendMailCommand");
         MailDraft(subject, text)
             .SendMailTo(trans, MailReceiver(target, targetGuid.GetCounter()), sender);
 
@@ -188,9 +188,9 @@ public:
         MailSender sender(MAIL_NORMAL, handler->GetSession() ? handler->GetSession()->GetPlayer()->GetGUID().GetCounter() : 0, MAIL_STATIONERY_GM);
 
         // fill mail
-        MailDraft draft(subject, text);
+MailDraft draft(subject, text);
 
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("send_commandscript::HandleSendItemsCommand");
 
         for (ItemPairs::const_iterator itr = items.begin(); itr != items.end(); ++itr)
         {
@@ -214,9 +214,9 @@ public:
         /// format: name "subject text" "mail text" money
 
         // from console show nonexisting sender
-        MailSender sender(MAIL_NORMAL, handler->GetSession() ? handler->GetSession()->GetPlayer()->GetGUID().GetCounter() : 0, MAIL_STATIONERY_GM);
+MailSender sender(MAIL_NORMAL, handler->GetSession() ? handler->GetSession()->GetPlayer()->GetGUID().GetCounter() : 0, MAIL_STATIONERY_GM);
 
-        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction("send_commandscript::HandleSendMoneyCommand");
 
         MailDraft(subject, text)
             .AddMoney(money)
