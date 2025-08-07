@@ -3186,7 +3186,7 @@ void Unit::_UpdateAutoRepeatSpell()
     SpellInfo const* autoRepeatSpellInfo = m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_spellInfo;
 
     // check "realtime" interrupts
-    if ((GetTypeId() == TYPEID_PLAYER && ToPlayer()->isMoving()) || IsNonMeleeSpellCast(false, false, true, autoRepeatSpellInfo->Id == 75))
+    if ((GetTypeId() == TYPEID_PLAYER && ToPlayer()->isMoving()) || IsNonMeleeSpellCast(false, false, true, false))
     {
         // cancel wand shoot
         if (autoRepeatSpellInfo->Id != 75)

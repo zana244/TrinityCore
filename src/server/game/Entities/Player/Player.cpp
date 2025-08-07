@@ -27637,19 +27637,22 @@ bool Player::CanExecutePendingSpellCastRequest(SpellInfo const* spellInfo, bool 
             }
         }
 
-    // For hunter Steady/Multi-Shot, we want to queue them after our auto shot
-    if ((spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER) &&
-        ((spellInfo->SpellFamilyFlags[1] & 0x1) || // Steady Shot
-//        (spellInfo->SpellFamilyFlags[0] & 0x20000) || // Aimed Shot
-        (spellInfo->SpellFamilyFlags[0] & 0x1000))) // Multi-Shot
+    // check active auto-repeating skills
+    if (Spell *spell = GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
     {
-        if (Spell *spell = GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
+        if (spell->m_spellInfo->Id == 75) // Auto-Shot
         {
-            if (spell->m_spellInfo->Id == 75) // Auto-Shot
+            // For hunter Steady/Multi-Shot, we want to queue them after our auto shot
+            if ((spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER) &&
+            ((spellInfo->SpellFamilyFlags[1] & 0x1) || // Steady Shot
+//          (spellInfo->SpellFamilyFlags[0] & 0x20000) || // Aimed Shot
+            (spellInfo->SpellFamilyFlags[0] & 0x1000))) // Multi-Shot
             {
                 if (isMoving()) // Need to cancel request otherwise it stays queued
                 {
-                    CancelPendingCastRequest(spellInfo->StartRecoveryCategory);
+                    if (request && !without_queue)
+                        CancelPendingCastRequest(spellInfo->StartRecoveryCategory);
+
                     return false;
                 }
                 if (getAttackTimer(RANGED_ATTACK) < 500) // Note: Might need to include haste later
