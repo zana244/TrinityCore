@@ -24,6 +24,8 @@
 #include <atomic>
 #include <type_traits>
 
+// warning: this class assumes ownership of any pointers stored in it until popped
+//       if Cancel is called, the pointers are deleted
 template <typename T>
 class ProducerConsumerQueue
 {
@@ -32,10 +34,11 @@ private:
     std::queue<T> _queue;
     std::condition_variable _condition;
     std::atomic<bool> _shutdown;
+    std::atomic<bool> _shutdownGraceful;
 
 public:
 
-    ProducerConsumerQueue() : _shutdown(false) { }
+    ProducerConsumerQueue() : _shutdown(false), _shutdownGraceful(false) { }
 
     void Push(T const& value)
     {
@@ -81,21 +84,22 @@ public:
         return true;
     }
 
-    void WaitAndPop(T& value)
+    [[nodiscard]] bool WaitAndPop(T& value)
     {
         std::unique_lock<std::mutex> lock(_queueLock);
 
         // we could be using .wait(lock, predicate) overload here but it is broken
         // https://connect.microsoft.com/VisualStudio/feedback/details/1098841
-        while (_queue.empty() && !_shutdown)
+        while (_queue.empty() && !_shutdown && !_shutdownGraceful)
             _condition.wait(lock);
 
         if (_queue.empty() || _shutdown)
-            return;
+            return false;
 
         value = _queue.front();
 
         _queue.pop();
+        return true;
     }
 
     void Cancel()
@@ -114,6 +118,11 @@ public:
 
         _shutdown = true;
 
+        _condition.notify_all();
+    }
+
+    void CancelGraceful() {
+        _shutdownGraceful = true;
         _condition.notify_all();
     }
 };

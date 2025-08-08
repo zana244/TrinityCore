@@ -21,6 +21,7 @@
 #include "Define.h"
 #include <atomic>
 #include <thread>
+#include <string>
 
 template <typename T>
 class ProducerConsumerQueue;
@@ -31,7 +32,7 @@ class SQLOperation;
 class TC_DATABASE_API DatabaseWorker
 {
     public:
-        DatabaseWorker(ProducerConsumerQueue<SQLOperation*>* newQueue, MySQLConnection* connection, std::string name);
+        DatabaseWorker(ProducerConsumerQueue<SQLOperation*>* newQueue, MySQLConnection* connection, std::string type);
         ~DatabaseWorker();
 
     private:
@@ -41,8 +42,6 @@ class TC_DATABASE_API DatabaseWorker
 
         void WorkerThread();
         std::thread _workerThread;
-
-        std::atomic<bool> _cancelationToken;
 
         DatabaseWorker(DatabaseWorker const& right) = delete;
         DatabaseWorker& operator=(DatabaseWorker const& right) = delete;

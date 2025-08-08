@@ -22,46 +22,41 @@
 #include <cstddef>
 #include <map>
 #include <mutex>
+#include <memory>
 
+static std::map<std::string, std::size_t> curId;
+static std::mutex curIdMutex; // todo: probably not needed
 DatabaseWorker::DatabaseWorker(ProducerConsumerQueue<SQLOperation*>* newQueue, MySQLConnection* connection, std::string name)
 {
     _connection = connection;
     _queue = newQueue;
-    _cancelationToken = false;
+    {
+        std::scoped_lock lock(curIdMutex);
+        _name = fmt::format("{}{}", name, curId[name]++);
+    }
     _workerThread = std::thread(&DatabaseWorker::WorkerThread, this);
-    _name = name;
 }
 
 DatabaseWorker::~DatabaseWorker()
 {
-    _cancelationToken = true;
-
-    _queue->Cancel();
+    _queue->CancelGraceful();
 
     _workerThread.join();
+    ASSERT(_queue->Empty());
+    TC_LOG_INFO("server.database", "Database worker {} gracefully shut down", _name);
 }
 
-std::map<std::string, std::size_t> curId;
-std::mutex curIdMutex;
 void DatabaseWorker::WorkerThread()
 {
     if (!_queue)
         return;
 
-    std::string name = [&]() {
-        std::scoped_lock lock(curIdMutex);
-        return fmt::format("{} Database {}", _name, curId[_name]++);
-    }();
-
     ZoneScopedN("DatabaseWorker::WorkerThread");
-    tracy::SetThreadName(name.c_str());
+    tracy::SetThreadName(_name.c_str());
     for (;;)
     {
         SQLOperation* operation = nullptr;
-
-        _queue->WaitAndPop(operation);
-
-        if (_cancelationToken || !operation)
+        if (!_queue->WaitAndPop(operation) || !operation)
             return;
 
         operation->SetConnection(_connection);

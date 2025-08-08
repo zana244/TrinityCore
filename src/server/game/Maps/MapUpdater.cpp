@@ -122,10 +122,7 @@ void MapUpdater::WorkerThread(int id)
     while (true)
     {
         MapUpdateRequest* request = nullptr;
-
-        _queue.WaitAndPop(request);
-
-        if (_cancelationToken)
+        if (_cancelationToken || !_queue.WaitAndPop(request))
             return;
 
         request->call();
