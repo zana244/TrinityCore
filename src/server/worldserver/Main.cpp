@@ -67,6 +67,7 @@
 #include <boost/program_options.hpp>
 #include <csignal>
 #include <iostream>
+#include <exception>
 
 using namespace boost::program_options;
 namespace fs = boost::filesystem;
@@ -295,7 +296,7 @@ extern int main(int argc, char** argv)
     if (!StartDB())
         return 1;
 
-    std::shared_ptr<void> dbHandle(nullptr, [](void*) { StopDB(); });
+    //std::shared_ptr<void> dbHandle(nullptr, [](void*) { StopDB(); });
 
     if (vm.count("update-databases-only"))
         return 0;
@@ -445,6 +446,10 @@ extern int main(int argc, char** argv)
     // 1 - shutdown at error
     // 2 - restart command used, this code can be used by restarter for restart Trinityd
 
+    // tracy hackfix
+    StopDB();
+    std::exit(World::GetExitCode());
+
     return World::GetExitCode();
 }
 
@@ -559,8 +564,17 @@ void WorldUpdateLoop()
     WorldDatabase.WarnAboutSyncQueries(false);
 }
 
-void SignalHandler(boost::system::error_code const& error, int /*signalNumber*/)
+void SignalHandler(boost::system::error_code const& error, int signalNumber)
 {
+    if (error.failed())
+    {
+        TC_LOG_ERROR("server.worldserver", "Received signal: {} and error: {}", signalNumber, error.message());
+    }
+    else
+    {
+        TC_LOG_ERROR("server.worldserver", "Received signal: {}", signalNumber);
+    }
+
     if (!error)
         World::StopNow(SHUTDOWN_EXIT_CODE);
 }

@@ -294,8 +294,16 @@ void StopDB()
     MySQL::Library_End();
 }
 
-void SignalHandler(std::weak_ptr<Trinity::Asio::IoContext> ioContextRef, boost::system::error_code const& error, int /*signalNumber*/)
+void SignalHandler(std::weak_ptr<Trinity::Asio::IoContext> ioContextRef, boost::system::error_code const& error, int signalNumber)
 {
+    if (error.failed())
+    {
+        TC_LOG_ERROR("server.authserver", "Received signal: {} and error: {}", signalNumber, error.message());
+    }
+    else
+    {
+        TC_LOG_ERROR("server.authserver", "Received signal: {}", signalNumber);
+    }
     if (!error)
         if (std::shared_ptr<Trinity::Asio::IoContext> ioContext = ioContextRef.lock())
             ioContext->stop();
