@@ -1203,6 +1203,8 @@ void Map::RemovePlayerFromPartition(Player* player)
     player->RemoveFromPartition();
     SendRemoveTransports(player);
 
+    _updateMapPartitionPlayers.erase(player);
+
     // note: RemoveFromWorld does this for inWorld objects
     //if (!inWorld) // if was in world, RemoveFromWorld() called DestroyForNearbyPlayers()
     //    player->DestroyForNearbyPlayers(); // previous player->UpdateObjectVisibility(true)
@@ -1225,7 +1227,6 @@ void Map::RemoveFromMap(T *obj, bool remove)
     if (obj->IsCreature())
     {
         RemoveFromWaypointCreatures(obj->ToCreature());
-        // This shouldn't be necessary as this ges cleared at the end of the DelayedUpdate, but just to be safe
         _updateMapPartitionCreatures.erase(obj->ToCreature());
     }
 

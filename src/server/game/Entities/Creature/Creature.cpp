@@ -430,9 +430,15 @@ bool Creature::ShouldRelocateUpdateMapPartition()
 
 void Creature::UpdateMapPartition(Map* forcedMap)
 {
-    if ((m_vehicle || m_transport || (m_formation && !m_formation->IsLeader(this)) || (GetCharmerOrOwner() && !IsVehicle())) && !forcedMap)
+    // All cases where we need to be updated from the vehicle, transport, or leader
+    if ((m_vehicle || m_transport || (m_formation && !m_formation->IsLeader(this))) && !forcedMap)
         return;
 
+    // For now, Units release all charms when they update partitions, pets have a special procedure where they get unsummoned and resummoned
+    if (GetCharmerOrOwner() && !IsVehicle())
+        return;
+
+    // Sanity checks
     Map* currentMap = IsInWorld() ? GetMap() : nullptr;
     if (!currentMap || !currentMap->IsWorldMap())
         return;

@@ -761,7 +761,34 @@ void Transport::UpdateMapPartition()
     newMap->AddToMap<Transport>(this);
     LoadStaticPassengers();
 
-    // Check passenger maps since they cannot update themselves
+    // Update players first, dont want to try to move controlled pets first
+    for (PassengerSet::iterator itr = _passengers.begin(); itr != _passengers.end(); ++itr)
+    {
+        WorldObject* passenger = *itr;
+        // Passenger sanity check
+        if (!passenger->IsInWorld() || passenger->GetMap() == newMap)
+            continue;
+
+        // if passenger is on a vehicle we have to assume the vehicle is also on transport
+        // and its the vehicle that will be updating its passengers
+        if (Unit* unit = passenger->ToUnit())
+            if (unit->GetVehicle())
+                continue;
+
+        switch (passenger->GetTypeId())
+        {
+            case TYPEID_PLAYER:
+                // if player is teleporting we need to wait for it to finish before updating partitions
+                // this will be handled in HandleMoveTeleportAck in that case
+                if (!passenger->ToPlayer()->IsBeingTeleported())
+                    passenger->ToPlayer()->UpdateMapPartition(newMap);
+                break;
+            default:
+                break;
+        }
+    }
+
+    // Then everything else
     for (PassengerSet::iterator itr = _passengers.begin(); itr != _passengers.end(); ++itr)
     {
         WorldObject* passenger = *itr;
@@ -780,12 +807,6 @@ void Transport::UpdateMapPartition()
             case TYPEID_UNIT:
                 // owned units will be ignored in here and updated when player is updated
                 passenger->ToCreature()->UpdateMapPartition(newMap);
-                break;
-            case TYPEID_PLAYER:
-                // if player is teleporting we need to wait for it to finish before updating partitions
-                // this will be handled in HandleMoveTeleportAck in that case
-                if (!passenger->ToPlayer()->IsBeingTeleported())
-                    passenger->ToPlayer()->UpdateMapPartition(newMap);
                 break;
             case TYPEID_GAMEOBJECT:
                 // Only Units have UpdateMapPartition/AddToPartition/RemoveFromPartition methods defined
